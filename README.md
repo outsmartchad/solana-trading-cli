@@ -10,7 +10,7 @@
 3. npm install
 4. node help.js (to see commands or read CLI_Doc.txt file)
 
-### Make sure you know the code before running it, we are not responsible for any loss of your asset.
+### Make sure you fully understand the code before running it, we are not responsible for any loss of your asset.
 
 ### TODO:
 0. we have added a .env.copy file for you to follow and paste your keys to the code.
