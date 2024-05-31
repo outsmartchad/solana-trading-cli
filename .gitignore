@@ -17,6 +17,7 @@ token_keypair/devnet
 token_keypair/mainnet
 image_file
 metadata_file
+config.js
 
 # Runtime data
 pids
