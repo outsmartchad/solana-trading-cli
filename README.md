@@ -10,8 +10,6 @@
 3. npm install
 4. node help.js (to see commands or read CLI_Doc.txt file)
 
-### Make sure you fully understand the code before running it, we are not responsible for any loss of your asset.
-
 ### TODO:
 0. we have added a .env.copy file for you to follow and paste your keys to the code.
 1. Add your mainnet wallet secret key, devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(if you need to add/remove liquidity to liq pool on raydium)
@@ -72,4 +70,5 @@
 
 - src/helpers/check_balance.js: check the balance of a given token in your wallet
 
-## ***Other dex functions is still in development, stay tuned for the updates.***
+### Make sure you fully understand the code before running it, we are not responsible for any loss of your asset.
+### ***Other dex integration is still in development, stay tuned for the updates.***
