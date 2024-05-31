@@ -3,7 +3,19 @@
 - This is a CLI tool for creating and managing Solana SPL tokens. It is written in Javascript.
 - The code is written in a modular way, so that it can be easily extended to support other Solana-based projects.
 - We are only supporting Raydium Dex for now, but we will add more dex support in the future.
+- 
+## Installation
+1. git clone https://github.com/ManofDiligence/Memecoin-Solana-CLI.git
+2. cd Memecoin-Solana-CLI
+3. npm install
+4. node help.js (to see commands or read CLI_Doc.txt file)
 
+### Make sure you know the code before running it, we are not responsible for any loss of your asset.
+
+### TODO:
+0. we have added a .env.copy file for you to follow and paste your keys to the code.
+1. Add your mainnet wallet secret key, devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(if you need to add/remove liquidity to liq pool on raydium)
+2. change the .env.copy file to .env
 ## Completed Features ✅:
 
 - Create a new SPL token
@@ -25,19 +37,6 @@
 - airdrop tokens to a list of addresses
 - phantom wallet integration
 - more features to come...
-
-## Installation
-1. git clone https://github.com/ManofDiligence/Memecoin-Solana-CLI.git
-2. Memecoin-Solana-CLI
-3. npm install
-4. node help.js (to see commands or read CLI_Doc.txt file)
-
-### Make sure you know the code before running it, we are not responsible for any loss of your asset.
-
-### TODO:
-0. we have added a .env.copy file for you to follow and paste your keys to the code.
-1. Add your mainnet wallet secret key, devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(if you need to add/remove liquidity to liq pool on raydium)
-2. change the .env.copy file to .env
 
 ### Usage:
 
