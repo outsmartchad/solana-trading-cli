@@ -11,12 +11,12 @@ lerna-debug.log*
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # personal wallet's private key or file with token data
-data/payer_keypair/mainnet/
-data/payer_keypair/devnet/
-token_keypair/devnet/
-token_keypair/mainnet/
-image_file/
-metadata_file/
+data/payer_keypair/mainnet
+data/payer_keypair/devnet
+token_keypair/devnet
+token_keypair/mainnet
+image_file
+metadata_file
 
 # Runtime data
 pids
