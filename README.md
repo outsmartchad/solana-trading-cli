@@ -1,18 +1,22 @@
 # SPL token ALL-IN-ONE Command line tool
+
 - We are only supporting Raydium Dex for now, Orca and Meteora integrations is still in development.
-- A CLI tool for creating and trading Solana ***SPL tokens***, performing ***On-chain AMM liquidity Pools operation*** of Raydium, Orca and Meteora.
+- A CLI tool for creating and trading Solana **_SPL tokens_**, performing **_On-chain AMM liquidity Pools operation_** of Raydium, Orca and Meteora.
 - The code is written in a modular way, so that it can be easily extended to support other Solana-based projects.
-  
+
 ## Installation
+
 1. git clone [https://github.com/ManofDiligence/Solana-Memecoin-CLI.git](https://github.com/ManofDiligence/Solana-Memecoin-CLI.git)
 2. cd Solana-Memecoin-CLI
 3. npm install
-4. node help.js (to see commands or read CLI_Doc.txt file)
+4. node help.js (to see commands or read cli_doc.txt file)
 
 ### TODO:
+
 0. we have added a .env.copy file for you to follow and paste your keys to the code.
 1. Add your mainnet wallet secret key, devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(if you need to add/remove liquidity to liq pool on raydium)
 2. change the .env.copy file to .env
+
 ## Completed Features ✅:
 
 - Create a new SPL token
@@ -70,4 +74,5 @@
 - src/helpers/check_balance.js: check the balance of a given token in your wallet
 
 ### Make sure you fully understand the code before running it, we are not responsible for any loss of your asset.
-### ***Other dex integration is still in development, stay tuned for the updates.***
+
+### **_Other dex integration is still in development, stay tuned for the updates._**
