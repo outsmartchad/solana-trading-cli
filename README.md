@@ -1,4 +1,4 @@
-# Memecoin-Solana-CLI
+## SPL token ALL-IN-ONE Command line tool
 
 - This is a CLI tool for creating and managing Solana SPL tokens. It is written in Javascript.
 - The code is written in a modular way, so that it can be easily extended to support other Solana-based projects.
