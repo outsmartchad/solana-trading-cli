@@ -20,7 +20,7 @@
 2. change the .env.copy file to .env
 3. in src/helpers/config.js, please fill your .env path.
 
-## Completed Features ✅:
+## Features ✅:
 
 - Create a new SPL token
 - Burn a percentage of a token
