@@ -3,7 +3,7 @@
 - This is a CLI tool for creating and managing Solana SPL tokens. It is written in Javascript.
 - The code is written in a modular way, so that it can be easily extended to support other Solana-based projects.
 - We are only supporting Raydium Dex for now, but we will add more dex support in the future.
-- 
+  
 ## Installation
 1. git clone https://github.com/ManofDiligence/Memecoin-Solana-CLI.git
 2. cd Memecoin-Solana-CLI
