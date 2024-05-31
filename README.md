@@ -1,5 +1,5 @@
 # SPL token ALL-IN-ONE Command line tool
-- We are only supporting Raydium Dex for now, Orca and Meteora is still in development.
+- We are only supporting Raydium Dex for now, Orca and Meteora integrations is still in development.
 - A CLI tool for creating and trading Solana ***SPL tokens***, performing ***On-chain AMM liquidity Pools operation*** of Raydium, Orca and Meteora.
 - The code is written in a modular way, so that it can be easily extended to support other Solana-based projects.
   
