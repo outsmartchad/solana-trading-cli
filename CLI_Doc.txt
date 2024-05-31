@@ -5,11 +5,11 @@
 
 ##########  --cluster <CLUSTER_OF_SOL> (e.g: mainnet, devnet) can be used in every command ###########
 
-1. node create --payer <PATH_TO_SECRET_KEY> --symbol <TOKEN_SYMBOL> --token_name <TOKEN_NAME> --mint <PATH_TO_MINT_KEYPAIR> --supply <SUPPLY_OF_TOKEN> --decimals <DECIMALS> --metadata <PATH_METADATA_JSON> --image <PATH_TO_IMAGE> --cluster <CLUSTER> --file_type <FILE_TYPE>
+1. node create --payer <PATH_TO_SECRET_KEY> --symbol <TOKEN_SYMBOL> --token_name <TOKEN_NAME> --mint <PATH_TO_MINT_KEYPAIR> --supply <SUPPLY_OF_TOKEN> --decimals <DECIMALS> --metadata <PATH_METADATA_JSON> --image <PATH_TO_IMAGE> --cluster <CLUSTER> --priority-fee <PRIORITY_FEE> --file_type <FILE_TYPE>
 
 2. node burn --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <BURN_PERCENTAGE> --cluster <CLUSTER>
 
-3. node revoke_authority --payer <PATH_TO_SECRET_KEY> --mint_address <ADDRESS_TOKEN> -m -f
+3. node revoke_authority --payer <PATH_TO_SECRET_KEY> --mint_address <ADDRESS_TOKEN> --cluster <CLUSTER> --mint --freeze
 
 4. node transfer --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --amount <AMOUNT> --destination <RECEIVE_ADDRESS>
 
@@ -23,9 +23,9 @@
 
 9. node query --token-address <ADDRESS_TOKEN>
 
-10. node add_pool --payer <PATH_WALLET> --token-address <ADDRESS_TOKEN> --pool-id <POOL_ID> --SOL <NUMBER_OF_SOL>
+10. node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <POOL_ID> --sol <NUMBER_OF_SOL> --cluster <CLUSTER> --priority_fee <PRIORITY_FEE>
 
-11. node remove_pool --payer <PATH_PAYER> --token <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
+11. node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
 
 12. node check_pool --pool-id <POOL_ID>
 

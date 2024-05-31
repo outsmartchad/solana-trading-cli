@@ -1,34 +1,40 @@
-import assert from "assert";
+const assert = require("assert");
 
-// jsonInfo2PoolKeys,
-// Liquidity,
-// LiquidityPoolKeys,
-// TokenAmount,
-// Token,
-import * as raydium from "@raydium-io/raydium-sdk";
+const {
+  jsonInfo2PoolKeys,
+  Liquidity,
+  LiquidityPoolKeys,
+  TokenAmount,
+  Token,
+  TOKEN_PROGRAM_ID,
+} = require("@raydium-io/raydium-sdk");
 
-import { Keypair, PublicKey } from "@solana/web3.js";
-import { Decimal } from "decimal.js";
-import {
+const { Keypair, PublicKey } = require("@solana/web3.js");
+const { Decimal } = require("decimal.js");
+const {
   connection,
   DEFAULT_TOKEN,
   makeTxVersion,
   wallet,
   dev_connection,
-} from "./config.js";
-import { formatAmmKeysById } from "./formatAmmKeysById.js";
-import {
+} = require("../helpers/config.js");
+const { formatAmmKeysById } = require("./formatAmmKeysById.js");
+const {
   buildAndSendTx,
   getWalletTokenAccount,
   loadOrCreateKeypair_wallet,
   checkTx,
-} from "./util.js";
-import { getPoolId, getPoolIdByPair, queryLpByToken } from "./query_pool.js";
-import { getSPLTokenBalance } from "../helpers/check_balance.js";
-import { getDecimals, getTokenMetadata } from "./util.js";
-import { BN } from "@project-serum/anchor";
+} = require("../helpers/util.js");
+const {
+  getPoolId,
+  getPoolIdByPair,
+  queryLpByToken,
+} = require("./query_pool.js");
+const { getSPLTokenBalance } = require("../helpers/check_balance.js");
+const { getDecimals, getTokenMetadata } = require("../helpers/util.js");
+const { BN } = require("@project-serum/anchor");
 
-import { program } from "commander";
+const { program } = require("commander");
 // node remove_pool.mjs --payer <PATH_PAYER> --token <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
 let payer_keypair = null,
   tokenAddress = null,
@@ -36,7 +42,7 @@ let payer_keypair = null,
   cluster = null;
 program
   .option("--payer <PATH_TO_SECRET_KEY>", "Specify the path to the secret key")
-  .option("--token <TOKEN_ADDRESS>", "Specify the token address")
+  .option("--token_address <TOKEN_ADDRESS>", "Specify the token address")
   .option(
     "--percentage <LP_TOKEN_PERCENTAGE>",
     "Specify the percentage of LP token to remove"
@@ -46,21 +52,18 @@ program
   .action((options) => {
     if (options.help) {
       console.log(
-        "node remove_pool --payer <PATH_PAYER> --token <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>"
+        "node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>"
       );
       process.exit(0);
     }
-    if (
-      !options.payer ||
-      !options.token ||
-      !options.percentage ||
-      !options.cluster
-    ) {
+    if (!options.token_address || !options.percentage || !options.cluster) {
       console.error("❌ Missing required options");
       process.exit(1);
     }
-    payer_keypair = options.payer;
-    tokenAddress = new PublicKey(options.token);
+    if (options.payer) {
+      payer_keypair = options.payer;
+    }
+    tokenAddress = new PublicKey(options.token_address);
     percentage = options.percentage;
     cluster = options.cluster;
   });
@@ -83,9 +86,9 @@ async function ammRemoveLiquidity(input) {
     assert(targetPoolInfo, "cannot find the target pool");
 
     // -------- step 1: make instructions --------
-    const poolKeys = raydium.jsonInfo2PoolKeys(targetPoolInfo);
+    const poolKeys = jsonInfo2PoolKeys(targetPoolInfo);
     const removeLiquidityInstructionResponse =
-      await raydium.Liquidity.makeRemoveLiquidityInstructionSimple({
+      await Liquidity.makeRemoveLiquidityInstructionSimple({
         connection,
         poolKeys,
         userKeys: {
@@ -140,7 +143,12 @@ async function ammRemoveLiquidityHelper(input) {
  * @returns {Promise<void>} A promise that resolves when the pool removal is complete.
  */
 async function main() {
-  payer_keypair = await loadOrCreateKeypair_wallet(payer_keypair);
+  if (payer_keypair !== null) {
+    payer_keypair = await loadOrCreateKeypair_wallet(payer_keypair);
+  } else {
+    payer_keypair = Keypair.fromSecretKey(wallet.secretKey);
+  }
+
   const lpTokenAddress = await findLPTokenAddress(tokenAddress);
   const lpTokenAccount = new PublicKey(lpTokenAddress);
   const lpTokenBalance = await getSPLTokenBalance(
@@ -153,8 +161,8 @@ async function main() {
   console.log("decimals", decimals);
   const { tokenName, tokenSymbol } = await getTokenMetadata(lpTokenAddress);
 
-  const lpToken = new raydium.Token(
-    raydium.TOKEN_PROGRAM_ID,
+  const lpToken = new Token(
+    TOKEN_PROGRAM_ID,
     new PublicKey(lpTokenAddress),
     decimals,
     tokenSymbol,
@@ -164,7 +172,7 @@ async function main() {
   const percentageOfLpToken = percentage / 100;
   const inputTokenAmount = new Decimal(lpTokenBalance * percentageOfLpToken);
 
-  const removeLpTokenAmount = new raydium.TokenAmount(
+  const removeLpTokenAmount = new TokenAmount(
     lpToken,
     new BN(inputTokenAmount.mul(10 ** lpToken.decimals).toFixed(0))
   );

@@ -29,7 +29,8 @@ const {
   dev_connection,
   dev_endpoint,
   connection,
-} = require("./config.js");
+  wallet,
+} = require("../helpers/config");
 
 // info
 let payer_keypair_path = null,
@@ -75,7 +76,6 @@ program
       process.exit(0);
     }
     if (
-      !options.payer ||
       !options.symbol ||
       !options.token_name ||
       !options.supply ||
@@ -90,7 +90,10 @@ program
       );
       process.exit(1);
     }
-    payer_keypair_path = options.payer;
+    if (options.payer) {
+      payer_keypair_path = options.payer;
+    }
+
     symbol = options.symbol;
     token_name = options.token_name;
     mintkeypair_path = options.mint;
@@ -131,13 +134,19 @@ if (!mintkeypair_path) {
 } else {
   mintSecret = loadOrCreateKeypair(mintkeypair_path);
 }
-
-const payerSecret = loadOrCreateKeypair(payer_keypair_path);
-
+let payerSecret = null,
+  PayerWallet = null;
 const umi = createUmi(endpoint); //Replace with your RPC Endpoint
-const PayerWallet = umi.eddsa.createKeypairFromSecretKey(
-  new Uint8Array(payerSecret)
-);
+
+if (payer_keypair_path) {
+  payerSecret = loadOrCreateKeypair(payer_keypair_path);
+  PayerWallet = umi.eddsa.createKeypairFromSecretKey(
+    new Uint8Array(payerSecret)
+  );
+} else {
+  PayerWallet = umi.eddsa.createKeypairFromSecretKey(wallet.secretKey);
+}
+
 const userWalletSigner = createSignerFromKeypair(umi, PayerWallet);
 
 const mintKeypair = umi.eddsa.createKeypairFromSecretKey(
@@ -237,7 +246,9 @@ async function revokeMint(mint, payer, owner) {
  * @returns {Promise<Metaplex>} The Metaplex instance.
  */
 async function getMetaplex(walletPath) {
-  const WALLET = await loadOrCreateKeypair_wallet(walletPath);
+  let WALLET = null;
+  if (walletPath === null) WALLET = wallet;
+  else WALLET = await loadOrCreateKeypair_wallet(walletPath);
   const METAPLEX = Metaplex.make(newConnection)
     .use(keypairIdentity(WALLET))
     .use(
@@ -400,9 +411,12 @@ async function createMeme(
   ).catch((e) => {
     console.log(e);
   });
-  const ownerWallet_keypair = Keypair.fromSecretKey(
-    new Uint8Array(payerSecret)
-  );
+  let ownerWallet_keypair = null;
+  if (payerSecret === null) {
+    ownerWallet_keypair = Keypair.fromSecretKey(wallet.secretKey);
+  } else {
+    ownerWallet_keypair = Keypair.fromSecretKey(new Uint8Array(payerSecret));
+  }
   await revokeMint(
     new PublicKey(mint.publicKey),
     ownerWallet_keypair,

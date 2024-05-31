@@ -1,4 +1,4 @@
-import { swap } from "../../../Pool/swap";
+const { swap } = require("../../../Pool/swap.js");
 /**
  * Buys a specified amount of a token using a amount of sol.
  *
@@ -8,6 +8,8 @@ import { swap } from "../../../Pool/swap";
  * @param {string} payer - The payer of the transaction.
  * @returns {Promise<void>} - A promise that resolves when the trade is completed.
  */
-export async function buy(side, address, no_of_sol, payer) {
+async function buy(side, address, no_of_sol, payer) {
   await swap(side, address, no_of_sol, -1, payer);
 }
+
+module.exports = { buy };

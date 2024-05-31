@@ -1,7 +1,13 @@
-import * as raydium from "@raydium-io/raydium-sdk";
-import { PublicKey } from "@solana/web3.js";
+const {
+  LIQUIDITY_STATE_LAYOUT_V4,
+  MARKET_STATE_LAYOUT_V3,
+  SPL_MINT_LAYOUT,
+  Liquidity,
+  Market,
+} = require("@raydium-io/raydium-sdk");
+const { PublicKey } = require("@solana/web3.js");
 
-import { connection } from "./config.js";
+const { connection } = require("../helpers/config.js");
 
 // Promise<ApiPoolInfoV4>
 /**
@@ -10,20 +16,20 @@ import { connection } from "./config.js";
  * @returns {Object} - The formatted AMM keys.
  * @throws {Error} - If there is an error retrieving the account information.
  */
-export async function formatAmmKeysById(id) {
+async function formatAmmKeysById(id) {
   const account = await connection.getAccountInfo(new PublicKey(id));
   if (account === null) throw Error(" get id info error ");
-  const info = raydium.LIQUIDITY_STATE_LAYOUT_V4.decode(account.data);
+  const info = LIQUIDITY_STATE_LAYOUT_V4.decode(account.data);
 
   const marketId = info.marketId;
   const marketAccount = await connection.getAccountInfo(marketId);
   if (marketAccount === null) throw Error(" get market info error");
-  const marketInfo = raydium.MARKET_STATE_LAYOUT_V3.decode(marketAccount.data);
+  const marketInfo = MARKET_STATE_LAYOUT_V3.decode(marketAccount.data);
 
   const lpMint = info.lpMint;
   const lpMintAccount = await connection.getAccountInfo(lpMint);
   if (lpMintAccount === null) throw Error(" get lp mint info error");
-  const lpMintInfo = raydium.SPL_MINT_LAYOUT.decode(lpMintAccount.data);
+  const lpMintInfo = SPL_MINT_LAYOUT.decode(lpMintAccount.data);
 
   return {
     id,
@@ -35,7 +41,7 @@ export async function formatAmmKeysById(id) {
     lpDecimals: lpMintInfo.decimals,
     version: 4,
     programId: account.owner.toString(),
-    authority: raydium.Liquidity.getAssociatedAuthority({
+    authority: Liquidity.getAssociatedAuthority({
       programId: account.owner,
     }).publicKey.toString(),
     openOrders: info.openOrders.toString(),
@@ -47,7 +53,7 @@ export async function formatAmmKeysById(id) {
     marketVersion: 3,
     marketProgramId: info.marketProgramId.toString(),
     marketId: info.marketId.toString(),
-    marketAuthority: raydium.Market.getAssociatedAuthority({
+    marketAuthority: Market.getAssociatedAuthority({
       programId: info.marketProgramId,
       marketId: info.marketId,
     }).publicKey.toString(),
@@ -59,3 +65,5 @@ export async function formatAmmKeysById(id) {
     lookupTableAccount: PublicKey.default.toString(),
   };
 }
+
+module.exports = { formatAmmKeysById };

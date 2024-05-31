@@ -1,26 +1,34 @@
-import assert from "assert";
-import * as raydium from "@raydium-io/raydium-sdk";
-import * as solana from "@solana/web3.js";
-import { getPoolId, getPoolIdByPair } from "./query_pool.js";
-import Decimal from "decimal.js";
+const assert = require("assert");
+const {
+  jsonInfo2PoolKeys,
+  Liquidity,
+  Token,
+  TOKEN_PROGRAM_ID,
+  TokenAmount,
+  Percent,
+} = require("@raydium-io/raydium-sdk");
+const { PublicKey, Keypair } = require("@solana/web3.js");
+const { getPoolId, getPoolIdByPair } = require("./query_pool.js");
+const Decimal = require("decimal.js");
 
-import {
+const {
   connection,
   DEFAULT_TOKEN,
   makeTxVersion,
   dev_connection,
-} from "./config.js";
-import { formatAmmKeysById } from "./formatAmmKeysById.js";
-import {
+  wallet,
+} = require("../helpers/config.js");
+const { formatAmmKeysById } = require("./formatAmmKeysById.js");
+const {
   buildAndSendTx,
   getWalletTokenAccount,
   loadOrCreateKeypair_wallet,
   getDecimals,
   getTokenMetadata,
   checkTx,
-} from "./util.js";
-import BN from "bn.js";
-import { program } from "commander";
+} = require("../helpers/util.js");
+const BN = require("bn.js");
+const { program } = require("commander");
 
 // 10. node add_pool.mjs --payer <PATH_WALLET> --token-address <ADDRESS_TOKEN> --pool-id <POOL_ID> --SOL <NUMBER_OF_SOL>
 let payer_keypair = null,
@@ -47,7 +55,6 @@ program
     }
 
     if (
-      !options.payer ||
       !options.token_address ||
       !options.sol ||
       !options.cluster
@@ -57,8 +64,10 @@ program
       );
       process.exit(1);
     }
-    payer_keypair = options.payer;
-    token_address = new solana.PublicKey(options.token_address);
+    if(options.payer){
+      payer_keypair = options.payer;
+    }
+    token_address = new PublicKey(options.token_address);
     pool_id = options.pool_id;
     sol = options.sol;
     cluster = options.cluster;
@@ -86,13 +95,13 @@ async function ammAddLiquidity(input) {
 
     // -------- step 1: compute another amount --------
 
-    const poolKeys = raydium.jsonInfo2PoolKeys(targetPoolInfo);
-    const extraPoolInfo = await raydium.Liquidity.fetchInfo({
+    const poolKeys = jsonInfo2PoolKeys(targetPoolInfo);
+    const extraPoolInfo = await Liquidity.fetchInfo({
       connection,
       poolKeys,
     });
     const { maxAnotherAmount, anotherAmount, liquidity } =
-      raydium.Liquidity.computeAnotherAmount({
+      Liquidity.computeAnotherAmount({
         poolKeys,
         poolInfo: { ...targetPoolInfo, ...extraPoolInfo },
         amount: input.Amount,
@@ -109,7 +118,7 @@ async function ammAddLiquidity(input) {
 
     // -------- step 2: make instructions --------
     const addLiquidityInstructionResponse =
-      await raydium.Liquidity.makeAddLiquidityInstructionSimple({
+      await Liquidity.makeAddLiquidityInstructionSimple({
         connection,
         poolKeys,
         userKeys: {
@@ -161,12 +170,17 @@ async function ammAddLiquidityHelper(input) {
  * @returns {Promise<void>} A promise that resolves when the pool is added.
  */
 async function main() {
-  payer_keypair = await loadOrCreateKeypair_wallet(payer_keypair);
+  if(payer_keypair !== null){
+    payer_keypair = await loadOrCreateKeypair_wallet(payer_keypair);
+  }
+  else{
+    payer_keypair = Keypair.fromSecretKey(wallet.secretKey);
+  }
   const baseToken = DEFAULT_TOKEN.WSOL;
   const { tokenName, tokenSymbol } = await getTokenMetadata(token_address);
   console.log("token symbol: ", tokenSymbol);
-  const quoteToken = new raydium.Token(
-    raydium.TOKEN_PROGRAM_ID,
+  const quoteToken = new Token(
+    TOKEN_PROGRAM_ID,
     token_address,
     await getDecimals(token_address),
     tokenSymbol,
@@ -184,11 +198,11 @@ async function main() {
   }
   console.log("targetPool: ", targetPool);
   const inputTokenAmount = new Decimal(sol);
-  const Amount = new raydium.TokenAmount(
+  const Amount = new TokenAmount(
     baseToken,
     new BN(inputTokenAmount.mul(10 ** baseToken.decimals).toFixed(0))
   );
-  const slippage = new raydium.Percent(5, 1000);
+  const slippage = new Percent(5, 1000);
   const walletTokenAccounts = await getWalletTokenAccount(
     connection,
     payer_keypair.publicKey

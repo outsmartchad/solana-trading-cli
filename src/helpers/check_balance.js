@@ -3,15 +3,9 @@ const {
   getDomainKeySync,
   NameRegistryState,
 } = require("@bonfida/spl-name-service");
-
-const connectionDev = new Connection(
-  "https://api.devnet.solana.com",
-  "confirmed"
-);
-const connectionMain = new Connection(
-  "https://api.mainnet-beta.solana.com",
-  "confirmed"
-);
+const { main_endpoint, dev_endpoint } = require("./config");
+const connectionDev = new Connection(dev_endpoint, "confirmed");
+const connectionMain = new Connection(main_endpoint);
 const { getAssociatedTokenAddressSync } = require("@solana/spl-token");
 
 /**

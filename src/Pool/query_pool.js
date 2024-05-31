@@ -1,11 +1,10 @@
-import { Connection, PublicKey } from "@solana/web3.js";
-import { OpenOrders } from "@project-serum/serum";
-import { gql, GraphQLClient } from "graphql-request";
+const { Connection, PublicKey } = require("@solana/web3.js");
+const { OpenOrders } = require("@project-serum/serum");
+const { gql, GraphQLClient } = require("graphql-request");
+const { shyft_api_key } = require("../helpers/config");
 
-const SHYFT_API_KEY = "YOUR_SHYFT_API_KEY";
-
-const graphQLEndpoint = `https://programs.shyft.to/v0/graphql/?api_key=${SHYFT_API_KEY}`;
-const rpcEndpoint = `https://rpc.shyft.to/?api_key=${SHYFT_API_KEY}`;
+const graphQLEndpoint = `https://programs.shyft.to/v0/graphql/?api_key=${shyft_api_key}`;
+const rpcEndpoint = `https://rpc.shyft.to/?api_key=${shyft_api_key}`;
 
 const graphQLClient = new GraphQLClient(graphQLEndpoint, {
   method: `POST`,
@@ -20,7 +19,7 @@ const graphQLClient = new GraphQLClient(graphQLEndpoint, {
  * @param {string} token - The token to query the liquidity pool for.
  * @returns {Promise<Object>} - The response object containing the liquidity pool information.
  */
-export async function queryLpByToken(token) {
+async function queryLpByToken(token) {
   // Get all proposalsV2 accounts
   const query = gql`
     query MyQuery(
@@ -284,7 +283,7 @@ async function queryLpPair(tokenOne, tokenTwo) {
  * @param {string} token - The token to query the pool ID for.
  * @returns {Promise<string|null>} The pool ID if found, or null if no pool is found.
  */
-export async function getPoolId(token) {
+async function getPoolId(token) {
   const poolId = await queryLpByToken(token);
   if (poolId.Raydium_LiquidityPoolv4.length === 0) {
     console.log(`Cannot find any liquidity pool related to ${token}`);
@@ -299,7 +298,7 @@ export async function getPoolId(token) {
  * @param {string} baseToken - The base token.
  * @returns {string|null} - The pool ID if found, otherwise null.
  */
-export async function getPoolIdByPair(baseToken) {
+async function getPoolIdByPair(baseToken) {
   // token/SOL pair
   const quoteToken = "So11111111111111111111111111111111111111112";
   const poolId = await queryLpPair(baseToken, quoteToken);
@@ -321,7 +320,6 @@ async function main() {
   // get token supply by token address
   //   const poolInfo: any = await queryLpByAddress('TOKEN_ADDRESS');
   //   await parsePoolInfo(poolInfo.Raydium_LiquidityPoolv4[0]);
-
   // get the pair of liquidity pool of two tokens
   // like sol/slerf
   // const poolIdByPair = await getPoolIdByPair(
@@ -331,3 +329,11 @@ async function main() {
   // console.log(poolIdByPair);
 }
 // main().catch(console.error);
+module.exports = {
+  getPoolIdByPair,
+  queryLpByToken,
+  queryLpByAddress,
+  parsePoolInfo,
+  queryLpPair,
+  getPoolId,
+};

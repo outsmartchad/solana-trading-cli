@@ -1,34 +1,34 @@
-import assert from "assert";
+const assert = require("assert");
 
-// jsonInfo2PoolKeys,
-// Liquidity,
-// LiquidityPoolKeys,
-// Percent,
-// Token,
-// TOKEN_PROGRAM_ID,
-// TokenAmount,
-import * as raydium from "@raydium-io/raydium-sdk";
-import { Keypair, PublicKey } from "@solana/web3.js";
-import { Decimal } from "decimal.js";
-import { BN } from "@project-serum/anchor";
-import { getSPLTokenBalance } from "../helpers/check_balance.js";
-import {
+const {
+  jsonInfo2PoolKeys,
+  Liquidity,
+  LiquidityPoolKeys,
+  Percent,
+  Token,
+  TOKEN_PROGRAM_ID,
+  TokenAmount,
+} = require("@raydium-io/raydium-sdk");
+const { Keypair, PublicKey } = require("@solana/web3.js");
+const { Decimal } = require("decimal.js");
+const { BN } = require("@project-serum/anchor");
+const { getSPLTokenBalance } = require("../helpers/check_balance.js");
+const {
   connection,
   DEFAULT_TOKEN,
-  ENDPOINT,
   makeTxVersion,
   RAYDIUM_MAINNET_API,
-  wallet,
-} from "./config.js";
-import {
+  _ENDPOINT,
+} = require("../helpers/config.js");
+const {
   buildAndSendTx,
   getWalletTokenAccount,
   loadOrCreateKeypair_wallet,
   getDecimals,
   getTokenMetadata,
   checkTx,
-} from "./util.js";
-import { getPoolId, getPoolIdByPair } from "./query_pool.js";
+} = require("../helpers/util.js");
+const { getPoolId, getPoolIdByPair } = require("./query_pool.js");
 /**
  * pre-action: get pool info
  * step 1: coumpute amount out
@@ -42,39 +42,38 @@ import { getPoolId, getPoolIdByPair } from "./query_pool.js";
  * @returns {Object} - The transaction IDs of the executed swap operation.
  */
 async function swapOnlyAmm(input) {
-  // -------- pre-action: get pool info --------
+  // -------- pre-action: get pool info --------\
   const ammPool = await (
-    await fetch(ENDPOINT + RAYDIUM_MAINNET_API.poolInfo)
+    await fetch(_ENDPOINT + RAYDIUM_MAINNET_API.poolInfo)
   ).json(); // If the Liquidity pool is not required for routing, then this variable can be configured as undefined
   const targetPoolInfo = [...ammPool.official, ...ammPool.unOfficial].find(
     (info) => info.id === input.targetPool
   );
   assert(targetPoolInfo, "cannot find the target pool");
-  const poolKeys = raydium.jsonInfo2PoolKeys(targetPoolInfo);
+  const poolKeys = jsonInfo2PoolKeys(targetPoolInfo);
 
   // -------- step 1: coumpute amount out --------
-  const { amountOut, minAmountOut } = raydium.Liquidity.computeAmountOut({
+  const { amountOut, minAmountOut } = Liquidity.computeAmountOut({
     poolKeys: poolKeys,
-    poolInfo: await raydium.Liquidity.fetchInfo({ connection, poolKeys }),
+    poolInfo: await Liquidity.fetchInfo({ connection, poolKeys }),
     amountIn: input.inputTokenAmount,
     currencyOut: input.outputToken,
     slippage: input.slippage,
   });
 
   // -------- step 2: create instructions by SDK function --------
-  const { innerTransactions } =
-    await raydium.Liquidity.makeSwapInstructionSimple({
-      connection,
-      poolKeys,
-      userKeys: {
-        tokenAccounts: input.walletTokenAccounts,
-        owner: input.wallet.publicKey,
-      },
-      amountIn: input.inputTokenAmount,
-      amountOut: minAmountOut,
-      fixedSide: "in",
-      makeTxVersion,
-    });
+  const { innerTransactions } = await Liquidity.makeSwapInstructionSimple({
+    connection,
+    poolKeys,
+    userKeys: {
+      tokenAccounts: input.walletTokenAccounts,
+      owner: input.wallet.publicKey,
+    },
+    amountIn: input.inputTokenAmount,
+    amountOut: minAmountOut,
+    fixedSide: "in",
+    makeTxVersion,
+  });
 
   console.log(
     "amountOut:",
@@ -118,7 +117,7 @@ async function swapOnlyAmmHelper(input) {
  * @param {object} payer_wallet - The payer's wallet object.
  * @returns {Promise<void>} - A promise that resolves when the swap operation is completed.
  */
-export async function swap(
+async function swap(
   side,
   tokenAddr,
   buy_AmountOfSol,
@@ -130,8 +129,8 @@ export async function swap(
     const tokenAddress = tokenAddr;
     const tokenAccount = new PublicKey(tokenAddress);
     const { tokenName, tokenSymbol } = await getTokenMetadata(tokenAddress);
-    const outputToken = new raydium.Token(
-      raydium.TOKEN_PROGRAM_ID,
+    const outputToken = new Token(
+      TOKEN_PROGRAM_ID,
       tokenAccount,
       await getDecimals(tokenAccount),
       tokenSymbol,
@@ -147,11 +146,11 @@ export async function swap(
       return;
     }
     const amountOfSol = new Decimal(buy_AmountOfSol);
-    const inputTokenAmount = new raydium.TokenAmount(
+    const inputTokenAmount = new TokenAmount(
       inputToken,
       new BN(amountOfSol.mul(10 ** inputToken.decimals).toFixed(0))
     );
-    const slippage = new raydium.Percent(1, 1000);
+    const slippage = new Percent(1, 1000);
     const walletTokenAccounts = await getWalletTokenAccount(
       connection,
       payer_wallet.publicKey
@@ -170,8 +169,8 @@ export async function swap(
     const tokenAddress = tokenAddr;
     const tokenAccount = new PublicKey(tokenAddress);
     const { tokenName, tokenSymbol } = await getTokenMetadata(tokenAddress);
-    const inputToken = new raydium.Token(
-      raydium.TOKEN_PROGRAM_ID,
+    const inputToken = new Token(
+      TOKEN_PROGRAM_ID,
       tokenAccount,
       await getDecimals(tokenAccount),
       tokenSymbol,
@@ -198,8 +197,8 @@ export async function swap(
     const percentage = sell_PercentageOfToken / 100;
     const amount = new Decimal(percentage * balnaceOfToken);
     console.log("amount: ", amount.toFixed(0));
-    const slippage = new raydium.Percent(1, 1000);
-    const inputTokenAmount = new raydium.TokenAmount(
+    const slippage = new Percent(1, 100);
+    const inputTokenAmount = new TokenAmount(
       inputToken,
       new BN(amount.mul(10 ** inputToken.decimals).toFixed(0))
     );
@@ -213,3 +212,5 @@ export async function swap(
     });
   }
 }
+
+module.exports = { swap };

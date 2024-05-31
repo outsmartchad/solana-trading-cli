@@ -10,6 +10,14 @@ lerna-debug.log*
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
+# personal wallet's private key or file with token data
+payer_keypair/mainnet/
+payer_keypair/devnet/
+token_keypair/devnet/
+token_keypair/mainnet/
+image_file/
+metadata_file/
+
 # Runtime data
 pids
 *.pid

@@ -14,13 +14,9 @@ const {
   createBurnCheckedInstruction,
 } = require("@solana/spl-token");
 const { create } = require("domain");
-const {
-  connection,
-  main_endpoint,
-  dev_connection,
-  dev_endpoint,
-} = require("./config");
+const { connection, dev_connection } = require("../helpers/config");
 
+const { wallet } = require("../helpers/config");
 // node burn --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <BURN_PERCENTAGE>
 let payer_keypair_path = null,
   token_address = null,
@@ -42,16 +38,13 @@ program
       );
       process.exit(0);
     }
-    if (
-      !options.payer ||
-      !options.token_address ||
-      !options.cluster ||
-      !options.percentage
-    ) {
+    if (!options.token_address || !options.cluster || !options.percentage) {
       console.error("❌ Missing required options");
       process.exit(1);
     }
-    payer_keypair_path = options.payer;
+    if (options.payer) {
+      payer_keypair_path = options.payer;
+    }
     token_address = new PublicKey(options.token_address);
     percentage = options.percentage;
     cluster = options.cluster;
@@ -165,5 +158,11 @@ async function burnToken(tokenAddress, payer, percentage) {
     burnToken(tokenAddress, payer, percentage);
   }
 }
-payerKeypair = Keypair.fromSecretKey(loadOrCreateKeypair(payer_keypair_path));
+
+if (payer_keypair_path) {
+  payerKeypair = Keypair.fromSecretKey(loadOrCreateKeypair(payer_keypair_path));
+} else {
+  payerKeypair = Keypair.fromSecretKey(wallet.secretKey);
+}
+
 burnToken(token_address, payerKeypair, percentage);

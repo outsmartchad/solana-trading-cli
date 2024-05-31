@@ -3,8 +3,9 @@ const bs58 = require("bs58");
 const fs = require("fs");
 const { Connection, PublicKey, Keypair } = require("@solana/web3.js");
 const { program } = require("commander");
-const { connection, dev_connection } = "../Pool/config.js";
-
+const { connection, dev_connection } = require("../helpers/config");
+const { loadOrCreateKeypair_wallet } = require("../helpers/util");
+const { wallet } = require("../helpers/config");
 let newConnection = null;
 // node revoke_authority --payer <PATH_TO_SECRET_KEY> --token-address <ADDRESS_TOKEN> mint freeze
 let payer_keypair_path = null,
@@ -13,7 +14,7 @@ let payer_keypair_path = null,
   freeze = false;
 program
   .option("--payer <PATH_TO_SECRET_KEY>", "Specify the path to the secret key")
-  .option("--mint_address <ADDRESS_TOKEN>", "Specify the token address")
+  .option("--token_address <ADDRESS_TOKEN>", "Specify the token address")
   .option("--cluster <CLUSTER>", "Specify the cluster")
   .option("-m, --mint", "Specify the mint")
   .option("-f, --freeze", "Specify the freeze")
@@ -25,12 +26,14 @@ program
       );
       process.exit(0);
     }
-    if (!options.payer || !options.mint_address || !options.cluster) {
+    if (!options.token_address || !options.cluster) {
       console.error("❌ Missing required options");
       process.exit(1);
     }
-    payer_keypair_path = options.payer;
-    token_address = options.mint_address;
+    if (options.payer) {
+      payer_keypair_path = options.payer;
+    }
+    token_address = options.token_address;
     if (options.mint) {
       mint = true;
     }
@@ -48,19 +51,7 @@ program
     }
   });
 program.parse();
-function loadOrCreateKeypair(filepath) {
-  try {
-    const keypairStringArr = fs.readFileSync(filepath, {
-      encoding: "utf8",
-    });
-    const res = Uint8Array.from(JSON.parse(keypairStringArr));
-    return res;
-  } catch (error) {
-    console.log(error);
-    console.log(`File ${filepath} not Found!`);
-    process.exit(1);
-  }
-}
+
 async function revokeMint(mint, payer, owner) {
   console.log("Disabling the mint authority...");
   await setAuthority(
@@ -93,14 +84,30 @@ async function revokeFreeze(mint, payer, owner) {
 }
 
 async function revokeAuthority() {
-  const payerSecretKey = loadOrCreateKeypair(payer_keypair_path);
-  const payer = Keypair.fromSecretKey(payerSecretKey);
+  // let payer_wallet = null;
+  // if (payer_keypair !== null) {
+  //   payer_wallet = await loadOrCreateKeypair_wallet(payer_keypair);
+  //   await swap(side, address, no_of_sol, -1, payer_wallet);
+  // } else {
+  //   await swap(side, address, no_of_sol, -1, wallet);
+  // }
+  let payer_wallet = null;
   const token_mint = new PublicKey(token_address);
-  if (mint) {
-    await revokeMint(token_mint, payer, payer);
-  }
-  if (freeze) {
-    await revokeFreeze(token_mint, payer, payer);
+  if (payer_keypair_path !== null) {
+    payer_wallet = await loadOrCreateKeypair_wallet(payer_keypair_path);
+    if (mint) {
+      await revokeMint(token_mint, payer_wallet, payer_wallet);
+    }
+    if (freeze) {
+      await revokeFreeze(token_mint, payer_wallet, payer_wallet);
+    }
+  } else {
+    if (mint) {
+      await revokeMint(token_mint, payer_wallet, wallet);
+    }
+    if (freeze) {
+      await revokeFreeze(token_mint, payer_wallet, wallet);
+    }
   }
 }
 

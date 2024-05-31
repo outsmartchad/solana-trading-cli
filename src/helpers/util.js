@@ -1,29 +1,31 @@
-import * as raydium from "@raydium-io/raydium-sdk";
-import * as solana from "@solana/web3.js";
-import {
+const {
+  TOKEN_PROGRAM_ID,
+  SPL_ACCOUNT_LAYOUT,
+  buildSimpleTransaction,
+} = require("@raydium-io/raydium-sdk");
+const { PublicKey, VersionedTransaction, Keypair } = require("@solana/web3.js");
+const {
   addLookupTableInfo,
   connection,
   makeTxVersion,
   wallet,
-} from "./config.js";
-import { Metaplex } from "@metaplex-foundation/js";
-import fs from "fs";
-import {
+} = require("./config.js");
+const { Metaplex } = require("@metaplex-foundation/js");
+const fs = require("fs");
+const {
   Connection,
-  Keypair,
   LAMPORTS_PER_SOL,
   SystemProgram,
   TransactionInstruction,
   TransactionMessage,
-  VersionedTransaction,
-} from "@solana/web3.js";
+} = require("@solana/web3.js");
 
 /**
  * Retrieves the number of decimals for a given mint address.
  * @param {string} mintAddress - The address of the mint.
  * @returns {Promise<number>} The number of decimals.
  */
-export async function getDecimals(mintAddress) {
+async function getDecimals(mintAddress) {
   const info = await connection.getParsedAccountInfo(mintAddress);
   const result = (info.value?.data).parsed.info.decimals || 0;
   return result;
@@ -33,10 +35,10 @@ export async function getDecimals(mintAddress) {
  * @param {string} address - The address of the token.
  * @returns {Promise<{ tokenName: string, tokenSymbol: string }>} The token metadata, including the token name and symbol.
  */
-export async function getTokenMetadata(address) {
+async function getTokenMetadata(address) {
   const metaplex = Metaplex.make(connection);
 
-  const mintAddress = new solana.PublicKey(address);
+  const mintAddress = new PublicKey(address);
 
   let tokenName;
   let tokenSymbol;
@@ -65,11 +67,11 @@ export async function getTokenMetadata(address) {
  * @param {TransactionSendOptions} options - The options for sending the transactions.
  * @returns {Promise<Array<string>>} - A promise that resolves to an array of transaction IDs.
  */
-export async function sendTx(connection, payer, txs, options) {
+async function sendTx(connection, payer, txs, options) {
   const txids = [];
   try {
     for (const iTx of txs) {
-      if (iTx instanceof solana.VersionedTransaction) {
+      if (iTx instanceof VersionedTransaction) {
         iTx.sign([payer]);
 
         txids.push(await connection.sendTransaction(iTx, options));
@@ -90,17 +92,17 @@ export async function sendTx(connection, payer, txs, options) {
  * @param {Wallet} localwallet - The wallet object.
  * @returns {Array} An array of token account objects.
  */
-export async function getWalletTokenAccount(localconnection, localwallet) {
-  const walletTokenAccount = await connection.getTokenAccountsByOwner(
+async function getWalletTokenAccount(localconnection, localwallet) {
+  const walletTokenAccount = await localconnection.getTokenAccountsByOwner(
     localwallet,
     {
-      programId: raydium.TOKEN_PROGRAM_ID,
+      programId: TOKEN_PROGRAM_ID,
     }
   );
   return walletTokenAccount.value.map((i) => ({
     pubkey: i.pubkey,
     programId: i.account.owner,
-    accountInfo: raydium.SPL_ACCOUNT_LAYOUT.decode(i.account.data),
+    accountInfo: SPL_ACCOUNT_LAYOUT.decode(i.account.data),
   }));
 }
 
@@ -110,9 +112,9 @@ export async function getWalletTokenAccount(localconnection, localwallet) {
  * @param {Object} options - The options for the transaction.
  * @returns {Promise} - A promise that resolves with the result of the transaction.
  */
-export async function buildAndSendTx(innerSimpleV0Transaction, options) {
+async function buildAndSendTx(innerSimpleV0Transaction, options) {
   try {
-    const willSendTx = await raydium.buildSimpleTransaction({
+    const willSendTx = await buildSimpleTransaction({
       connection: connection,
       makeTxVersion: makeTxVersion,
       payer: wallet.publicKey,
@@ -131,7 +133,7 @@ export async function buildAndSendTx(innerSimpleV0Transaction, options) {
  * @param {number} ms - The duration to sleep in milliseconds.
  * @returns {Promise<void>} - A promise that resolves after the specified duration.
  */
-export async function sleepTime(ms) {
+async function sleepTime(ms) {
   console.log(new Date().toLocaleString(), "sleepTime", ms);
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -142,16 +144,14 @@ export async function sleepTime(ms) {
  * If the file does not exist, it generates a new keypair, saves it to the file, and returns it.
  *
  * @param {string} filepath - The path to the file where the keypair is stored or will be stored.
- * @returns {Promise<solana.Keypair>} The loaded or newly created keypair.
+ * @returns {Promise<Keypair>} The loaded or newly created keypair.
  */
-export async function loadOrCreateKeypair_wallet(filepath) {
+async function loadOrCreateKeypair_wallet(filepath) {
   try {
     const keypairString = fs.readFileSync(filepath, { encoding: "utf8" });
-    return solana.Keypair.fromSecretKey(
-      Uint8Array.from(JSON.parse(keypairString))
-    );
+    return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(keypairString)));
   } catch (error) {
-    const newKeypair = solana.Keypair.generate();
+    const newKeypair = Keypair.generate();
     fs.writeFileSync(
       filepath,
       JSON.stringify(Array.from(newKeypair.secretKey))
@@ -180,7 +180,7 @@ async function isBlockhashExpired(lastValidBlockHeight) {
 const sleep = (ms) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
-export async function checkTx(txId) {
+async function checkTx(txId) {
   const blockhashResponse = await connection.getLatestBlockhashAndContext(
     "finalized"
   );
@@ -220,3 +220,14 @@ export async function checkTx(txId) {
     await sleep(2500);
   }
 }
+
+module.exports = {
+  getDecimals,
+  getTokenMetadata,
+  getWalletTokenAccount,
+  sendTx,
+  buildAndSendTx,
+  sleepTime,
+  loadOrCreateKeypair_wallet,
+  checkTx,
+};
