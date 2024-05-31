@@ -5,8 +5,8 @@
 - We are only supporting Raydium Dex for now, but we will add more dex support in the future.
   
 ## Installation
-1. git clone https://github.com/ManofDiligence/Memecoin-Solana-CLI.git
-2. cd Memecoin-Solana-CLI
+1. git clone [https://github.com/ManofDiligence/Memecoin-Solana-CLI.git](https://github.com/ManofDiligence/Solana-Memecoin-CLI.git)
+2. cd Solana-Memecoin-CLI
 3. npm install
 4. node help.js (to see commands or read CLI_Doc.txt file)
 
