@@ -35,10 +35,10 @@
 
 ## Features in Development 🚧:
 
+- A Website for anyone to do these thing with their browser-based wallet
+- Function to create a market for your token on raydium
 - More dexes support, (Orca, Meteora, etc.)
-- function to create a market for your token on raydium
-- A Website for anyone to do these thing with their browser-based wallet extensions
-- phantom wallet integration
+- Phantom wallet integration
 - more features to come...
 
 # Code Usage:
