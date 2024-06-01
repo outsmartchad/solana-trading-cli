@@ -36,9 +36,8 @@
 ## Features in Development 🚧:
 
 - More dexes support, (Orca, Meteora, etc.)
-- Auto trading bots powered by Jupiter aggregating protocol
-- create a raydium dex pool (create market)
-- airdrop tokens to a list of addresses
+- function to create a market for your token on raydium
+- A Website for anyone to do these thing with their browser-based wallet extensions
 - phantom wallet integration
 - more features to come...
 
