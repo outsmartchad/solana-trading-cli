@@ -1,7 +1,10 @@
 # if you already fill in your private key to src/helpers/.env.copy, 
 # change it to .env and fill in your .env path in src/helpers/config.js
 
-example 1: (make sure you are at src/Token)
+- supporting both devnet and mainnet right now
+- make sure you are at src/Token
+
+example 1: (already set up ur secret key)
 node create --symbol wif --token_name dogwifhat --supply 69696969 --decimals 9 --metadata /Users/{your_user_name}/Desktop/Memecoin-Solana-CLI/data/metadata_file/metadata.json 
 --image /Users/{your_user_name}/Desktop/Memecoin-Solana-CLI/data/Image_file/FTW.jpeg --cluster devnet --file_type jpeg
 
