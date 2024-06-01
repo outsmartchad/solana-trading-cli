@@ -43,7 +43,7 @@
 - Phantom wallet integration
 - more features to come...
 
-# Commands </> (~please see the examples in examples/ to get start~)
+# Commands </> (please see the examples in examples/ to get start~)
 
 ### cluster options use devnet or mainnet
 
