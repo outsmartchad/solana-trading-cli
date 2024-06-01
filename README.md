@@ -14,6 +14,7 @@
 4. `nvm use v22.2.0`
 5. `npm install`
 6. `node help.js `（to see commands or read cli_doc.txt file)
+7. also see the command examples in examples/
 
 ### TODO 🚨
 
