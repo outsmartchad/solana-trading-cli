@@ -1,0 +1,4 @@
+run
+node add_pool --help
+or
+node add_pool -h

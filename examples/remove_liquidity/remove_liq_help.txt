@@ -1,0 +1,4 @@
+run
+node remove_pool --help
+or
+node remove_pool -h

@@ -1,8 +1,9 @@
 # if you already fill in your private key to src/helpers/.env.copy, 
 # change it to .env and fill in your .env path in src/helpers/config.js
 
-- supporting both devnet and mainnet right now
+- support both devnet and mainnet right now
 - make sure you are at src/Token
+- cd src/Token
 - percentage = 55 => burning 55% of the token
 
 example 1: (already set up ur secret key)
