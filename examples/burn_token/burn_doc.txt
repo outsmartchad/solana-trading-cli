@@ -1,0 +1,11 @@
+# if you already fill in your private key to src/helpers/.env.copy, 
+# change it to .env and fill in your .env path in src/helpers/config.js
+
+- make sure you are at src/Token
+- percentage = 55 => burning 55% of the token
+example 1: (already set up ur secret key)
+node burn --token_address <your_token_in_your_wallet> --percentage <burn_percentage/100> --cluster <devnet_or_mainnet>
+
+example 2: (use another wallet, in data/payer_keypair/devnet) (make sure the secret key is in uint8 array format)
+node burn --payer /Users/{your_user_name}/Desktop/Memecoin-Solana-CLI/data/payer_keypair/devnet/payer.json --token_address <your_token_in_your_wallet> --percentage <burn_percentage/100> --cluster <devnet_or_mainnet>
+

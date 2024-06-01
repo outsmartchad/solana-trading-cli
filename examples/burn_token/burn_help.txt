@@ -1,0 +1,4 @@
+run
+node burn -h
+or 
+node burn --help
