@@ -131,6 +131,8 @@ node transfer --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --amo
 
 - src/helpers/check_balance.js: check the balance of a given token in your wallet
 
-### Make sure you fully understand the code before running it, we are not responsible for any loss of your asset.
+### if you think this project is useful, please give us a star🌟, it will help us a lot or consider to buy us a coffee, solana address: 8FV2wovZuac8ZFMYMpRJGEG1vpBQGwLYiU31eR86Bp3g
+
+### it is a work in progress, we are still working on it, if you have any suggestions, please let us know.
 
 ### **_Other dex integration is still in development, stay tuned for the updates.🤖_**
