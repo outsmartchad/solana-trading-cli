@@ -31,8 +31,8 @@
 - Remove liquidity from a pool
 - Swap tokens in a raydium dex's AMM pool
 - Query the most liquid pool in a raydium dex by just providing the token address
-- Buy a token using SOL in a raydium dex
-- Sell a token for SOL in a raydium dex
+- Buy a token using SOL using raydium
+- Sell a token for SOL using raydium
 - Check the balance of a token in your wallet
 
 ## Features in Development 🚧:
