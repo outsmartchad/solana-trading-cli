@@ -53,27 +53,13 @@
 
 4. node transfer --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --amount <AMOUNT> --destination <RECEIVE_ADDRESS>
 
-5. node airdrop --payer <PATH_TO_SECRET_KEY> --token-address <ADDRESS_TOKEN> --destination-addresses <PATH_OF_RECEIVE_ADDRESSES>
+5. node buy --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL> --cluster <CLUSTER>
 
-6. node buy --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL> --cluster <CLUSTER>
+6. node sell --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>
 
-7. node sell --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>
+7. node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <POOL_ID> --sol <NUMBER_OF_SOL> --cluster <CLUSTER> --priority_fee <PRIORITY_FEE>
 
-8. node boost_volume --bot <PATH_BOT_SECRET_KEY> --token-address <ADDRESS_TOKEN> --volume <GOAL_OF_VOLUME>
-
-9. node query --token-address <ADDRESS_TOKEN>
-
-10. node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <POOL_ID> --sol <NUMBER_OF_SOL> --cluster <CLUSTER> --priority_fee <PRIORITY_FEE>
-
-11. node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
-
-12. node check_pool --pool-id <POOL_ID>
-
-13. node wallet --token-address <ADDRESS_TOKEN> balance
-    13a. node wallet balance # returns us the balance of SOL
-
-14. node set_rpc --rpc-url <STRING_OF_RPC_URL>
-    14a. node set_rpc public # set the default public mainnet rpc
+8. node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
 
 - Done💰: add_pool, remove_pool, buy, sell, create, burn, revoke_authority
 
