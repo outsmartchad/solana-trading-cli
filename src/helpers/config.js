@@ -14,7 +14,7 @@ const dotenv = require("dotenv");
 const bs58 = require("bs58");
 const path = require("path");
 dotenv.config({
-  path: "/Users/.../Memecoin-Solana-CLI/src/helpers/.env", // fill in your .env path
+  path: "/Users/chiwangso/Desktop/Memecoin-Solana-CLI/src/helpers/.env", // fill in your .env path
 });
 function loadKeypairFromFile(filename) {
   const secret = fs.readFileSync(filename, { encoding: "utf8" });
