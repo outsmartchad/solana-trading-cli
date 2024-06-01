@@ -45,9 +45,9 @@
 
 # Commands </>
 
-## cluster options => devnet, mainnet
+### cluster options => devnet, mainnet
 
-## payer is by default use the private key in .env file, but you can also specify the path to the secret key if you want to use another wallet
+### payer is by default use the private key in .env file, but you can also specify the path to the secret key if you want to use another wallet
 
 1. Specify the token symbol, name, mint keypair(optional, will help u to generate), supply, decimals, path to metadata json file, path to image file, the cluster you want to use, and the file type(png, jpg, jpeg).
 
