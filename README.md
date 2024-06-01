@@ -8,12 +8,12 @@
 
 ## Installation 🛠️
 
-1. git clone [https://github.com/ManofDiligence/Solana-Memecoin-CLI.git](https://github.com/ManofDiligence/Solana-Memecoin-CLI.git)
-2. cd Solana-Memecoin-CLI
-3. nvm install v22.2.0
-4. nvm use v22.2.0
-5. npm install
-6. node help.js (to see commands or read cli_doc.txt file)
+1. ```git clone https://github.com/ManofDiligence/Solana-Memecoin-CLI.git```
+2. ```cd Solana-Memecoin-CLI```
+3. ```nvm install v22.2.0```
+4. ```nvm use v22.2.0```
+5. ```npm install```
+6. ```node help.js ```（to see commands or read cli_doc.txt file)
 
 ### TODO 🚨
 
@@ -44,23 +44,30 @@
 - more features to come...
 
 # Commands </>
-
+```
 1. node create --payer <PATH_TO_SECRET_KEY> --symbol <TOKEN_SYMBOL> --token_name <TOKEN_NAME> --mint <PATH_TO_MINT_KEYPAIR> --supply <SUPPLY_OF_TOKEN> --decimals <DECIMALS> --metadata <PATH_METADATA_JSON> --image <PATH_TO_IMAGE> --cluster <CLUSTER> --priority-fee <PRIORITY_FEE> --file_type <FILE_TYPE>
-
+```
+```
 2. node burn --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <BURN_PERCENTAGE> --cluster <CLUSTER>
-
+```
+```
 3. node revoke_authority --payer <PATH_TO_SECRET_KEY> --mint_address <ADDRESS_TOKEN> --cluster <CLUSTER> --mint --freeze
-
+```
+```
 4. node transfer --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --amount <AMOUNT> --destination <RECEIVE_ADDRESS>
-
+```
+```
 5. node buy --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL> --cluster <CLUSTER>
-
+```
+```
 6. node sell --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>
-
+```
+```
 7. node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <POOL_ID> --sol <NUMBER_OF_SOL> --cluster <CLUSTER> --priority_fee <PRIORITY_FEE>
-
+```
+```
 8. node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
-
+```
 # Code Usage </>
 
 ## Token:
