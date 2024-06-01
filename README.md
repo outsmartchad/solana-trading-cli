@@ -61,10 +61,6 @@
 
 8. node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
 
-- Done💰: add_pool, remove_pool, buy, sell, create, burn, revoke_authority
-
-- Not done❌: boost_volume, check_pool, airdrop, set_rpc, wallet, query
-
 # Code Usage </>
 
 ## Token:
