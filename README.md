@@ -1,5 +1,7 @@
 # SPL token ALL-IN-ONE Command line tool 🚀
+
 [🔗doc](https://manofdiligence.github.io/Solana-Memecoin-CLI/)
+
 - We are only supporting Raydium Dex for now, Orca and Meteora integrations is still in development.
 - A CLI tool for creating and trading Solana **_SPL tokens_**, performing **_On-chain AMM liquidity Pools operation_** of Raydium, Orca and Meteora.
 - The code is written in a modular way, so that it can be easily extended to support other Solana-based projects.
@@ -40,6 +42,42 @@
 - More dexes support, (Orca, Meteora, etc.)
 - Phantom wallet integration
 - more features to come...
+
+# Commands </>
+
+1. node create --payer <PATH_TO_SECRET_KEY> --symbol <TOKEN_SYMBOL> --token_name <TOKEN_NAME> --mint <PATH_TO_MINT_KEYPAIR> --supply <SUPPLY_OF_TOKEN> --decimals <DECIMALS> --metadata <PATH_METADATA_JSON> --image <PATH_TO_IMAGE> --cluster <CLUSTER> --priority-fee <PRIORITY_FEE> --file_type <FILE_TYPE>
+
+2. node burn --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <BURN_PERCENTAGE> --cluster <CLUSTER>
+
+3. node revoke_authority --payer <PATH_TO_SECRET_KEY> --mint_address <ADDRESS_TOKEN> --cluster <CLUSTER> --mint --freeze
+
+4. node transfer --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --amount <AMOUNT> --destination <RECEIVE_ADDRESS>
+
+5. node airdrop --payer <PATH_TO_SECRET_KEY> --token-address <ADDRESS_TOKEN> --destination-addresses <PATH_OF_RECEIVE_ADDRESSES>
+
+6. node buy --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL> --cluster <CLUSTER>
+
+7. node sell --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>
+
+8. node boost_volume --bot <PATH_BOT_SECRET_KEY> --token-address <ADDRESS_TOKEN> --volume <GOAL_OF_VOLUME>
+
+9. node query --token-address <ADDRESS_TOKEN>
+
+10. node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <POOL_ID> --sol <NUMBER_OF_SOL> --cluster <CLUSTER> --priority_fee <PRIORITY_FEE>
+
+11. node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
+
+12. node check_pool --pool-id <POOL_ID>
+
+13. node wallet --token-address <ADDRESS_TOKEN> balance
+    13a. node wallet balance # returns us the balance of SOL
+
+14. node set_rpc --rpc-url <STRING_OF_RPC_URL>
+    14a. node set_rpc public # set the default public mainnet rpc
+
+- Done💰: add_pool, remove_pool, buy, sell, create, burn, revoke_authority
+
+- Not done❌: boost_volume, check_pool, airdrop, set_rpc, wallet, query
 
 # Code Usage </>
 
