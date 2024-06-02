@@ -25,7 +25,7 @@
 
 ## Features ✅:
 
-- Create a new SPL token
+- Create a new SPL token and it will automatically mint to your wallet
 - Burn a percentage of a token
 - Revoke mint and freeze authority of a token
 - Add liquidity to a pool
@@ -102,7 +102,7 @@ node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percenta
 
 ## Token:
 
-- src/Token/create.js: create a spl token on devnet or mainnet with a given name, symbol, token image(using irys decentralized storage), supply, decimals, the code by default revokes the mint authority and freeze authority after creating the token.
+- src/Token/create.js: create a spl token on devnet or mainnet with a given name, symbol, token image(using irys decentralized storage), metadata json file, supply, decimals, the code by default revokes the mint authority and freeze authority after creating the token so that the token has a cap and no one can feeze the token of the token holder, it will then mint the all the token to your wallet
 
 - src/Token/burn.js: burn spl token with a given percentage of the token from your wallet
 
