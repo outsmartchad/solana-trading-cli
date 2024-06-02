@@ -16,7 +16,7 @@
 6. `node help.js `（to see commands or read cli_doc.txt file)
 7. also see the command examples in examples/
 
-### TODO 🚨
+### Prerequisites 🚨
 
 0. we have added a .env.copy file in src/helpers/.env.copy for you to follow and paste your keys to the code.
 1. Add your mainnet wallet secret key, devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(if you need to add/remove liquidity to liq pool on raydium)

@@ -2,7 +2,7 @@ const { swap } = require("../../../Pool/swap.js");
 const { program } = require("commander");
 const { loadOrCreateKeypair_wallet } = require("../../../helpers/util.js");
 const { wallet } = require("../../../helpers/config.js");
-// node sell.mjs --payer <PATH_TO_SECRET_KEY> --token-address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>
+
 let payer_keypair = null,
   token_address = null,
   percentage = null,
@@ -32,6 +32,16 @@ program
     cluster = options.cluster;
   });
 program.parse();
+
+/**
+ * Sell function that executes a swap transaction.
+ *
+ * @param {string} side - The side of the swap (buy or sell).
+ * @param {string} address - The address to swap tokens.
+ * @param {number} sell_percentage - The percentage of tokens to sell.
+ * @param {string} payer - The payer address for the transaction.
+ * @returns {Promise<void>} - A promise that resolves when the swap transaction is completed.
+ */
 async function sell(side, address, sell_percentage, payer) {
   await swap(side, address, -1, sell_percentage, payer);
 }
