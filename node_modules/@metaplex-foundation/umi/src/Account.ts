@@ -17,7 +17,7 @@ export type AccountHeader = {
   executable: boolean;
   owner: PublicKey;
   lamports: SolAmount;
-  rentEpoch?: number;
+  rentEpoch?: bigint;
 };
 
 /**

@@ -42,7 +42,7 @@ export class TransactionBuilderGroup {
   ): TransactionBuilderGroup {
     const newBuilders = Array.isArray(builder) ? builder : [builder];
     return new TransactionBuilderGroup(
-      [...newBuilders, ...this.builders],
+      [...this.builders, ...newBuilders],
       this.options
     );
   }

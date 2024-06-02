@@ -1,14 +1,10 @@
-import { ExpectedFixedSizeSerializerError } from '@metaplex-foundation/umi-serializers-core';
+import type { NumberSerializer } from '@metaplex-foundation/umi-serializers-numbers';
 import { ArrayLikeSerializerSize } from './arrayLikeSerializerSize';
-import {
-  InvalidArrayLikeRemainderSizeError,
-  UnrecognizedArrayLikeSerializerSizeError,
-} from './errors';
+import { UnrecognizedArrayLikeSerializerSizeError } from './errors';
 import { sumSerializerSizes } from './sumSerializerSizes';
 
 export function getResolvedSize(
-  size: ArrayLikeSerializerSize,
-  childrenSizes: (number | null)[],
+  size: number | NumberSerializer,
   bytes: Uint8Array,
   offset: number
 ): [number | bigint, number] {
@@ -18,20 +14,6 @@ export function getResolvedSize(
 
   if (typeof size === 'object') {
     return size.deserialize(bytes, offset);
-  }
-
-  if (size === 'remainder') {
-    const childrenSize = sumSerializerSizes(childrenSizes);
-    if (childrenSize === null) {
-      throw new ExpectedFixedSizeSerializerError(
-        'Serializers of "remainder" size must have fixed-size items.'
-      );
-    }
-    const remainder = bytes.slice(offset).length;
-    if (remainder % childrenSize !== 0) {
-      throw new InvalidArrayLikeRemainderSizeError(remainder, childrenSize);
-    }
-    return [remainder / childrenSize, offset];
   }
 
   throw new UnrecognizedArrayLikeSerializerSizeError(size);

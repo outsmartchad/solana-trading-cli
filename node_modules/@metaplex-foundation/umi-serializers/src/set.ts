@@ -1,18 +1,17 @@
 import {
   BaseSerializerOptions,
-  ExpectedFixedSizeSerializerError,
   mergeBytes,
   Serializer,
 } from '@metaplex-foundation/umi-serializers-core';
 import { u32 } from '@metaplex-foundation/umi-serializers-numbers';
 import { ArrayLikeSerializerSize } from './arrayLikeSerializerSize';
+import { InvalidNumberOfItemsError } from './errors';
 import {
   getResolvedSize,
   getSizeDescription,
   getSizeFromChildren,
   getSizePrefix,
 } from './utils';
-import { InvalidNumberOfItemsError } from './errors';
 
 /**
  * Defines the options for `Set` serializers.
@@ -38,11 +37,6 @@ export function set<T, U extends T = T>(
   options: SetSerializerOptions = {}
 ): Serializer<Set<T>, Set<U>> {
   const size = options.size ?? u32();
-  if (size === 'remainder' && item.fixedSize === null) {
-    throw new ExpectedFixedSizeSerializerError(
-      'Serializers of "remainder" size must have fixed-size items.'
-    );
-  }
   return {
     description:
       options.description ??
@@ -61,17 +55,20 @@ export function set<T, U extends T = T>(
       if (typeof size === 'object' && bytes.slice(offset).length === 0) {
         return [set, offset];
       }
-      const [resolvedSize, newOffset] = getResolvedSize(
-        size,
-        [item.fixedSize],
-        bytes,
-        offset
-      );
+      if (size === 'remainder') {
+        while (offset < bytes.length) {
+          const [value, newOffset] = item.deserialize(bytes, offset);
+          set.add(value);
+          offset = newOffset;
+        }
+        return [set, offset];
+      }
+      const [resolvedSize, newOffset] = getResolvedSize(size, bytes, offset);
       offset = newOffset;
       for (let i = 0; i < resolvedSize; i += 1) {
         const [value, newOffset] = item.deserialize(bytes, offset);
-        offset = newOffset;
         set.add(value);
+        offset = newOffset;
       }
       return [set, offset];
     },

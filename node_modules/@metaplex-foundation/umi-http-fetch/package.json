@@ -1,0 +1,67 @@
+{
+  "name": "@metaplex-foundation/umi-http-fetch",
+  "version": "0.9.1",
+  "description": "An HTTP implementation relying on the fetch API",
+  "license": "MIT",
+  "sideEffects": false,
+  "module": "dist/esm/index.mjs",
+  "main": "dist/cjs/index.cjs",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.mjs",
+      "require": "./dist/cjs/index.cjs"
+    }
+  },
+  "files": [
+    "/dist/cjs",
+    "/dist/esm",
+    "/dist/types",
+    "/src"
+  ],
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  },
+  "peerDependencies": {
+    "@metaplex-foundation/umi": "^0.9.1"
+  },
+  "devDependencies": {
+    "@ava/typescript": "^3.0.1",
+    "@types/node-fetch": "^2.6.2",
+    "ava": "^5.1.0",
+    "json-server": "^0.17.1",
+    "@metaplex-foundation/umi": "^0.9.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "Metaplex Maintainers <contact@metaplex.com>",
+  "homepage": "https://metaplex.com",
+  "repository": {
+    "url": "https://github.com/metaplex-foundation/umi.git"
+  },
+  "typedoc": {
+    "entryPoint": "./src/index.ts",
+    "readmeFile": "./README.md",
+    "displayName": "umi-http-fetch"
+  },
+  "ava": {
+    "typescript": {
+      "compile": false,
+      "rewritePaths": {
+        "src/": "dist/test/src/",
+        "test/": "dist/test/test/"
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint --ext js,ts,tsx src",
+    "lint:fix": "eslint --fix --ext js,ts,tsx src",
+    "clean": "rimraf dist",
+    "build": "pnpm clean && tsc && tsc -p test/tsconfig.json && rollup -c",
+    "test": "pnpm server:start && ava; ret=$?; pnpm server:stop; exit $ret",
+    "server:start": "node ./test/_server.cjs > /dev/null &",
+    "server:stop": "kill $(lsof -t -i:3000) 2> /dev/null || true"
+  }
+}

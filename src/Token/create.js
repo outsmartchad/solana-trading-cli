@@ -21,7 +21,6 @@ const { mplCandyMachine } = require("@metaplex-foundation/mpl-candy-machine");
 const { AuthorityType, setAuthority } = require("@solana/spl-token");
 const bs58 = require("bs58");
 const fs = require("fs");
-const { getKeypairFromEnvironment } = require("@solana-developers/helpers");
 const { PublicKey, Keypair } = require("@solana/web3.js");
 const { program } = require("commander");
 const {

@@ -1,6 +1,5 @@
 import {
   BaseSerializerOptions,
-  ExpectedFixedSizeSerializerError,
   Serializer,
   mergeBytes,
 } from '@metaplex-foundation/umi-serializers-core';
@@ -38,11 +37,6 @@ export function array<T, U extends T = T>(
   options: ArraySerializerOptions = {}
 ): Serializer<T[], U[]> {
   const size = options.size ?? u32();
-  if (size === 'remainder' && item.fixedSize === null) {
-    throw new ExpectedFixedSizeSerializerError(
-      'Serializers of "remainder" size must have fixed-size items.'
-    );
-  }
   return {
     description:
       options.description ??
@@ -59,17 +53,20 @@ export function array<T, U extends T = T>(
       ]);
     },
     deserialize: (bytes: Uint8Array, offset = 0) => {
-      if (typeof size === 'object' && bytes.slice(offset).length === 0) {
-        return [[], offset];
-      }
-      const [resolvedSize, newOffset] = getResolvedSize(
-        size,
-        [item.fixedSize],
-        bytes,
-        offset
-      );
-      offset = newOffset;
       const values: U[] = [];
+      if (typeof size === 'object' && bytes.slice(offset).length === 0) {
+        return [values, offset];
+      }
+      if (size === 'remainder') {
+        while (offset < bytes.length) {
+          const [value, newOffset] = item.deserialize(bytes, offset);
+          values.push(value);
+          offset = newOffset;
+        }
+        return [values, offset];
+      }
+      const [resolvedSize, newOffset] = getResolvedSize(size, bytes, offset);
+      offset = newOffset;
       for (let i = 0; i < resolvedSize; i += 1) {
         const [value, newOffset] = item.deserialize(bytes, offset);
         values.push(value);

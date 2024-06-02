@@ -1,18 +1,17 @@
 import {
   BaseSerializerOptions,
-  ExpectedFixedSizeSerializerError,
   mergeBytes,
   Serializer,
 } from '@metaplex-foundation/umi-serializers-core';
 import { u32 } from '@metaplex-foundation/umi-serializers-numbers';
 import { ArrayLikeSerializerSize } from './arrayLikeSerializerSize';
+import { InvalidNumberOfItemsError } from './errors';
 import {
   getResolvedSize,
   getSizeDescription,
   getSizeFromChildren,
   getSizePrefix,
 } from './utils';
-import { InvalidNumberOfItemsError } from './errors';
 
 /**
  * Defines the options for `Map` serializers.
@@ -40,14 +39,6 @@ export function map<TK, TV, UK extends TK = TK, UV extends TV = TV>(
   options: MapSerializerOptions = {}
 ): Serializer<Map<TK, TV>, Map<UK, UV>> {
   const size = options.size ?? u32();
-  if (
-    size === 'remainder' &&
-    (key.fixedSize === null || value.fixedSize === null)
-  ) {
-    throw new ExpectedFixedSizeSerializerError(
-      'Serializers of "remainder" size must have fixed-size items.'
-    );
-  }
   return {
     description:
       options.description ??
@@ -70,12 +61,17 @@ export function map<TK, TV, UK extends TK = TK, UV extends TV = TV>(
       if (typeof size === 'object' && bytes.slice(offset).length === 0) {
         return [map, offset];
       }
-      const [resolvedSize, newOffset] = getResolvedSize(
-        size,
-        [key.fixedSize, value.fixedSize],
-        bytes,
-        offset
-      );
+      if (size === 'remainder') {
+        while (offset < bytes.length) {
+          const [deserializedKey, kOffset] = key.deserialize(bytes, offset);
+          offset = kOffset;
+          const [deserializedValue, vOffset] = value.deserialize(bytes, offset);
+          offset = vOffset;
+          map.set(deserializedKey, deserializedValue);
+        }
+        return [map, offset];
+      }
+      const [resolvedSize, newOffset] = getResolvedSize(size, bytes, offset);
       offset = newOffset;
       for (let i = 0; i < resolvedSize; i += 1) {
         const [deserializedKey, kOffset] = key.deserialize(bytes, offset);

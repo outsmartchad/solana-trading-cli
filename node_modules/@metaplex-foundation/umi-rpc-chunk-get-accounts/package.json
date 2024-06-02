@@ -1,0 +1,60 @@
+{
+  "name": "@metaplex-foundation/umi-rpc-chunk-get-accounts",
+  "version": "0.9.1",
+  "description": "RPC decorator that chunks getAccounts requests into batches",
+  "license": "MIT",
+  "sideEffects": false,
+  "module": "dist/esm/index.mjs",
+  "main": "dist/cjs/index.cjs",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.mjs",
+      "require": "./dist/cjs/index.cjs"
+    }
+  },
+  "files": [
+    "/dist/cjs",
+    "/dist/esm",
+    "/dist/types",
+    "/src"
+  ],
+  "peerDependencies": {
+    "@metaplex-foundation/umi": "^0.9.1"
+  },
+  "devDependencies": {
+    "@ava/typescript": "^3.0.1",
+    "ava": "^5.1.0",
+    "@metaplex-foundation/umi": "^0.9.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "Metaplex Maintainers <contact@metaplex.com>",
+  "homepage": "https://metaplex.com",
+  "repository": {
+    "url": "https://github.com/metaplex-foundation/umi.git"
+  },
+  "typedoc": {
+    "entryPoint": "./src/index.ts",
+    "readmeFile": "./README.md",
+    "displayName": "umi-rpc-chunk-get-accounts"
+  },
+  "ava": {
+    "typescript": {
+      "compile": false,
+      "rewritePaths": {
+        "src/": "dist/test/src/",
+        "test/": "dist/test/test/"
+      }
+    }
+  },
+  "scripts": {
+    "lint": "eslint --ext js,ts,tsx src",
+    "lint:fix": "eslint --fix --ext js,ts,tsx src",
+    "clean": "rimraf dist",
+    "build": "pnpm clean && tsc && tsc -p test/tsconfig.json && rollup -c",
+    "test": "ava"
+  }
+}
