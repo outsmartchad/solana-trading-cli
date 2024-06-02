@@ -1,0 +1,243 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.TransactionUploader = exports.FATAL_CHUNK_UPLOAD_ERRORS = void 0;
+const transaction_1 = __importDefault(require("./transaction"));
+const error_1 = require("./error");
+const utils_1 = require("./utils");
+// import { validatePath } from "./merkle";
+// Maximum amount of chunks we will upload in the body.
+const MAX_CHUNKS_IN_BODY = 1;
+// We assume these errors are intermitment and we can try again after a delay:
+// - not_joined
+// - timeout
+// - data_root_not_found (we may have hit a node that just hasn't seen it yet)
+// - exceeds_disk_pool_size_limit
+// We also try again after any kind of unexpected network errors
+// Errors from /chunk we should never try and continue on.
+exports.FATAL_CHUNK_UPLOAD_ERRORS = [
+    "invalid_json",
+    "chunk_too_big",
+    "data_path_too_big",
+    "offset_too_big",
+    "data_size_too_big",
+    "chunk_proof_ratio_not_attractive",
+    "invalid_proof",
+];
+// Amount we will delay on receiving an error response but do want to continue.
+const ERROR_DELAY = 1000 * 40;
+class TransactionUploader {
+    get isComplete() {
+        return this.txPosted && this.chunkIndex === this.transaction.chunks.chunks.length;
+    }
+    get totalChunks() {
+        return this.transaction.chunks.chunks.length;
+    }
+    get uploadedChunks() {
+        return this.chunkIndex;
+    }
+    get pctComplete() {
+        return Math.trunc((this.uploadedChunks / this.totalChunks) * 100);
+    }
+    constructor({ deps, transaction, }) {
+        this.chunkIndex = 0;
+        this.txPosted = false;
+        this.lastRequestTimeEnd = 0;
+        this.totalErrors = 0; // Not serialized.
+        this.lastResponseStatus = 0;
+        this.lastResponseError = "";
+        if (!transaction.id) {
+            throw new Error(`Transaction is not signed`);
+        }
+        if (!transaction.chunks) {
+            throw new Error(`Transaction chunks not prepared`);
+        }
+        this.api = deps.api;
+        this.crypto = deps.crypto;
+        this.merkle = deps.merkle;
+        this.deepHash = deps.deepHash;
+        // Make a copy of transaction, zeroing the data so we can serialize.
+        this.data = transaction.data;
+        this.transaction = new transaction_1.default({
+            attributes: Object.assign({}, transaction, { data: new Uint8Array(0) }),
+            deps: { merkle: deps.merkle, deepHash: deps.deepHash },
+        });
+    }
+    /**
+     * Uploads the next part of the transaction.
+     * On the first call this posts the transaction
+     * itself and on any subsequent calls uploads the
+     * next chunk until it completes.
+     */
+    uploadChunk(chunkIndex_) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.isComplete) {
+                throw new Error(`Upload is already complete`);
+            }
+            if (this.lastResponseError !== "") {
+                this.totalErrors++;
+            }
+            else {
+                this.totalErrors = 0;
+            }
+            // We have been trying for about an hour receiving an
+            // error every time, so eventually bail.
+            if (this.totalErrors === 100) {
+                throw new Error(`Unable to complete upload: ${this.lastResponseStatus}: ${this.lastResponseError}`);
+            }
+            let delay = this.lastResponseError === "" ? 0 : Math.max(this.lastRequestTimeEnd + ERROR_DELAY - Date.now(), ERROR_DELAY);
+            if (delay > 0) {
+                // Jitter delay bcoz networks, subtract up to 30% from 40 seconds
+                delay = delay - delay * Math.random() * 0.3;
+                yield new Promise((res) => setTimeout(res, delay));
+            }
+            this.lastResponseError = "";
+            if (!this.txPosted) {
+                yield this.postTransaction();
+                return;
+            }
+            if (chunkIndex_) {
+                this.chunkIndex = chunkIndex_;
+            }
+            const chunk = this.transaction.getChunk(chunkIndex_ || this.chunkIndex, this.data);
+            const chunkOk = yield this.merkle.validatePath(this.transaction.chunks.data_root, parseInt(chunk.offset), 0, parseInt(chunk.data_size), (0, utils_1.b64UrlToBuffer)(chunk.data_path));
+            if (!chunkOk) {
+                throw new Error(`Unable to validate chunk ${this.chunkIndex}`);
+            }
+            // Catch network errors and turn them into objects with status -1 and an error message.
+            const resp = yield this.api.post(`chunk`, this.transaction.getChunk(this.chunkIndex, this.data)).catch((e) => {
+                console.error(e.message);
+                return { status: -1, data: { error: e.message } };
+            });
+            this.lastRequestTimeEnd = Date.now();
+            this.lastResponseStatus = resp.status;
+            if (this.lastResponseStatus == 200) {
+                this.chunkIndex++;
+            }
+            else {
+                this.lastResponseError = (0, error_1.getError)(resp);
+                if (exports.FATAL_CHUNK_UPLOAD_ERRORS.includes(this.lastResponseError)) {
+                    throw new Error(`Fatal error uploading chunk ${this.chunkIndex}: ${this.lastResponseError}`);
+                }
+            }
+        });
+    }
+    /**
+     * Reconstructs an upload from its serialized state and data.
+     * Checks if data matches the expected data_root.
+     *
+     * @param serialized
+     * @param data
+     */
+    static fromSerialized({ serialized, data, deps, }) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!serialized || typeof serialized.chunkIndex !== "number" || typeof serialized.transaction !== "object") {
+                throw new Error(`Serialized object does not match expected format.`);
+            }
+            // Everything looks ok, reconstruct the TransactionUpload,
+            // prepare the chunks again and verify the data_root matches
+            const transaction = new transaction_1.default(serialized.transaction);
+            if (!transaction.chunks) {
+                yield transaction.prepareChunks(data);
+            }
+            const upload = new TransactionUploader({
+                deps,
+                transaction,
+            });
+            // Copy the serialized upload information, and data passed in.
+            upload.chunkIndex = serialized.chunkIndex;
+            upload.lastRequestTimeEnd = serialized.lastRequestTimeEnd;
+            upload.lastResponseError = serialized.lastResponseError;
+            upload.lastResponseStatus = serialized.lastResponseStatus;
+            upload.txPosted = serialized.txPosted;
+            upload.data = data;
+            if (upload.transaction.data_root !== serialized.transaction.data_root) {
+                throw new Error(`Data mismatch: Uploader doesn't match provided data.`);
+            }
+            return upload;
+        });
+    }
+    /**
+     * Reconstruct an upload from the tx metadata, ie /tx/<id>.
+     *
+     * @param api
+     * @param id
+     * @param data
+     */
+    static fromTransactionId(api, id) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const resp = yield api.get(`tx/${id}`);
+            if (resp.status !== 200) {
+                throw new Error(`Tx ${id} not found: ${resp.status}`);
+            }
+            const transaction = resp.data;
+            transaction.data = new Uint8Array(0);
+            const serialized = {
+                txPosted: true,
+                chunkIndex: 0,
+                lastResponseError: "",
+                lastRequestTimeEnd: 0,
+                lastResponseStatus: 0,
+                transaction,
+            };
+            return serialized;
+        });
+    }
+    toJSON() {
+        return {
+            chunkIndex: this.chunkIndex,
+            transaction: this.transaction,
+            lastRequestTimeEnd: this.lastRequestTimeEnd,
+            lastResponseStatus: this.lastResponseStatus,
+            lastResponseError: this.lastResponseError,
+            txPosted: this.txPosted,
+        };
+    }
+    // POST to /tx
+    postTransaction() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const uploadInBody = this.totalChunks <= MAX_CHUNKS_IN_BODY;
+            if (uploadInBody) {
+                // Post the transaction with data.
+                this.transaction.data = this.data;
+                const resp = yield this.api.post(`tx`, this.transaction).catch((e) => {
+                    console.error(e);
+                    return { status: -1, data: { error: e.message } };
+                });
+                this.lastRequestTimeEnd = Date.now();
+                this.lastResponseStatus = resp.status;
+                this.transaction.data = new Uint8Array(0);
+                if (resp.status >= 200 && resp.status < 300) {
+                    // We are complete.
+                    this.txPosted = true;
+                    this.chunkIndex = MAX_CHUNKS_IN_BODY;
+                    return;
+                }
+                this.lastResponseError = (0, error_1.getError)(resp);
+                throw new Error(`Unable to upload transaction: ${resp.status}, ${this.lastResponseError}`);
+            }
+            // Post the transaction with no data.
+            const resp = yield this.api.post(`tx`, this.transaction);
+            this.lastRequestTimeEnd = Date.now();
+            this.lastResponseStatus = resp.status;
+            if (!(resp.status >= 200 && resp.status < 300)) {
+                this.lastResponseError = (0, error_1.getError)(resp);
+                throw new Error(`Unable to upload transaction: ${resp.status}, ${this.lastResponseError}`);
+            }
+            this.txPosted = true;
+        });
+    }
+}
+exports.TransactionUploader = TransactionUploader;
+//# sourceMappingURL=transaction-uploader.js.map

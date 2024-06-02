@@ -1,1 +1,0 @@
-require(".").check("Function.prototype.bind");

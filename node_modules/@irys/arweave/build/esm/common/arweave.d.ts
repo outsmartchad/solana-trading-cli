@@ -1,0 +1,52 @@
+import Blocks from "./blocks.js";
+import Chunks from "./chunks.js";
+import type { ApiConfig } from "./lib/api.js";
+import type { AugmentedCrypto } from "./lib/crypto/crypto-augment.js";
+import type CryptoInterface from "./lib/crypto/crypto-interface.js";
+import { DeepHash } from "./lib/deepHash.js";
+import FallbackApi from "./lib/fallbackApi.js";
+import Merkle from "./lib/merkle.js";
+import type { Tag } from "./lib/transaction.js";
+import Transaction from "./lib/transaction.js";
+import * as ArweaveUtils from "./lib/utils.js";
+import type { JWKInterface } from "./lib/wallet.js";
+import Network from "./network.js";
+import Transactions from "./transactions.js";
+import Wallets from "./wallets.js";
+export type CreateTransactionInterface = {
+    format: number;
+    last_tx: string;
+    owner: string;
+    tags: Tag[];
+    target: string;
+    quantity: string;
+    data: string | Uint8Array | ArrayBuffer;
+    data_size: string;
+    data_root: string;
+    reward: string;
+};
+export type AbstractConfig = {
+    gateways?: URL | string | ApiConfig | ApiConfig[] | string[] | URL[];
+    crypto?: CryptoInterface;
+    miners?: ApiConfig[] | string[] | URL[];
+};
+export declare abstract class Arweave {
+    protected config: AbstractConfig;
+    api: FallbackApi;
+    wallets: Wallets;
+    transactions: Transactions;
+    network: Network;
+    blocks: Blocks;
+    chunks: Chunks;
+    static init: (apiConfig: ApiConfig) => Arweave;
+    static utils: typeof ArweaveUtils;
+    crypto: AugmentedCrypto;
+    protected deepHash: DeepHash;
+    merkle: Merkle;
+    static VERSION: string;
+    constructor(config: AbstractConfig);
+    get utils(): typeof ArweaveUtils;
+    getConfig(): AbstractConfig;
+    createTransaction(attributes: Partial<CreateTransactionInterface>, jwk?: JWKInterface | "use_wallet"): Promise<Transaction>;
+}
+export default Arweave;

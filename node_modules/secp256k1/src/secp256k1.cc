@@ -26,8 +26,7 @@
   } while (0)
 
 // Secp256k1
-Napi::FunctionReference Secp256k1Addon::constructor;
-unsigned int Secp256k1Addon::secp256k1_context_flags =
+const unsigned int Secp256k1Addon::secp256k1_context_flags =
     SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY;
 
 Napi::Value Secp256k1Addon::Init(Napi::Env env) {
@@ -66,8 +65,9 @@ Napi::Value Secp256k1Addon::Init(Napi::Env env) {
           InstanceMethod("ecdh", &Secp256k1Addon::ECDH),
       });
 
-  constructor = Napi::Persistent(func);
-  constructor.SuppressDestruct();
+  Napi::FunctionReference* constructor = new Napi::FunctionReference();
+  *constructor = Napi::Persistent(func);
+  env.SetInstanceData<Napi::FunctionReference>(constructor);
 
   return func;
 }

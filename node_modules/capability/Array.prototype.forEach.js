@@ -1,1 +1,0 @@
-require(".").check("Array.prototype.forEach");

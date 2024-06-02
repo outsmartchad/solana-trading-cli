@@ -1,5 +1,5 @@
 export * from './auctionHouseModule';
-export * from './bundlrStorage';
+export * from './irysStorage';
 export * from './candyMachineModule';
 export * from './candyMachineV2Module';
 export * from './corePlugins';

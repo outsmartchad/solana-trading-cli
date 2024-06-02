@@ -1,4 +1,4 @@
-export * from './BundlrError';
+export * from './IrysError';
 export * from './MetaplexError';
 export * from './ProgramError';
 export * from './RpcError';

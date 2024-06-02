@@ -1,1 +1,0 @@
-require(".").check("Object.defineProperties");

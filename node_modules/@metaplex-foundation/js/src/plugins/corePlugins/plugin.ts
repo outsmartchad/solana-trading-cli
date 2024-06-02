@@ -10,7 +10,7 @@ import { utilsModule } from '../utilsModule';
 
 // Default drivers.
 import { guestIdentity } from '../guestIdentity';
-import { bundlrStorage } from '../bundlrStorage';
+import { irysStorage } from '../irysStorage';
 
 // Verticals.
 import { systemModule } from '../systemModule';
@@ -32,7 +32,7 @@ export const corePlugins = () => ({
 
     // Default drivers.
     metaplex.use(guestIdentity());
-    metaplex.use(bundlrStorage());
+    metaplex.use(irysStorage());
 
     // Verticals.
     metaplex.use(systemModule());
