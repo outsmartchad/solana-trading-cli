@@ -1,0 +1,1 @@
+require(".").check("Error.captureStackTrace");

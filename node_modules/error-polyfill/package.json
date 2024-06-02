@@ -1,0 +1,53 @@
+{
+  "name": "error-polyfill",
+  "version": "0.1.3",
+  "description": "Javascript Error Polyfill",
+  "keywords": [
+    "error",
+    "stack trace",
+    "polyfill",
+    "v8",
+    "Error.captureStackTrace",
+    "Error.prepareStackTrace",
+    "stack"
+  ],
+  "license": "MIT",
+  "author": "László Lajos Jánszky",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inf3rno/error-polyfill"
+  },
+  "bugs": {
+    "url": "https://github.com/inf3rno/error-polyfill/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "npm run test-node & npm run test-browser",
+    "test-node": "mocha --reporter spec test/",
+    "test-browser": "karma start karma.conf.js"
+  },
+  "dependencies": {
+    "capability": "^0.2.5",
+    "o3": "^1.0.3",
+    "u3": "^0.1.1"
+  },
+  "devDependencies": {
+    "browserify": "^16.1.0",
+    "expect.js": "^0.3.1",
+    "karma": "^2.0.0",
+    "karma-browserify": "^5.2.0",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-firefox-launcher": "^1.1.0",
+    "karma-ie-launcher": "^1.0.0",
+    "karma-mocha": "^1.3.0",
+    "karma-opera-launcher": "^1.0.0",
+    "karma-phantomjs-launcher": "^1.0.4",
+    "mocha": "^5.0.1",
+    "phantomjs-prebuilt": "^2.1.16",
+    "sinon": "^4.4.2",
+    "watchify": "^3.10.0"
+  }
+}

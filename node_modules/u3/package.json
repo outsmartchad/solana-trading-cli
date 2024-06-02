@@ -1,0 +1,25 @@
+{
+  "name": "u3",
+  "version": "0.1.1",
+  "description": "u3 - Utility Functions",
+  "keywords": [
+    "utility functions"
+  ],
+  "license": "MIT",
+  "author": "László Lajos Jánszky",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/inf3rno/u3"
+  },
+  "bugs": {
+    "url": "https://github.com/inf3rno/u3/issues"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "jest test/"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "jest": "^27.2.1"
+  }
+}
