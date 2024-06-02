@@ -13,11 +13,9 @@ const {
   getAssociatedTokenAddress,
   createBurnCheckedInstruction,
 } = require("@solana/spl-token");
-const { create } = require("domain");
 const { connection, dev_connection } = require("../helpers/config");
-
 const { wallet } = require("../helpers/config");
-// node burn --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <BURN_PERCENTAGE>
+
 let payer_keypair_path = null,
   token_address = null,
   percentage = null,

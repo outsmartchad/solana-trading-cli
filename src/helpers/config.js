@@ -13,8 +13,8 @@ const fs = require("fs");
 const dotenv = require("dotenv");
 const bs58 = require("bs58");
 const path = require("path");
-// default: /Users/{your_user_name}/Desktop/Solana-Memecoin-CLI/src/helpers/.env
-// please specify your .env path
+// default path: /Users/{your_user_name}/Desktop/Solana-Memecoin-CLI/src/helpers/.env
+// please specify your own .env path
 dotenv.config({
   path: "/Users/{your_user_name}/Desktop/Solana-Memecoin-CLI/src/helpers/.env", // fill in your .env path
 });

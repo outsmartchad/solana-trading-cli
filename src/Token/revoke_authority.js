@@ -6,8 +6,8 @@ const { program } = require("commander");
 const { connection, dev_connection } = require("../helpers/config");
 const { loadOrCreateKeypair_wallet } = require("../helpers/util");
 const { wallet } = require("../helpers/config");
+
 let newConnection = null;
-// node revoke_authority --payer <PATH_TO_SECRET_KEY> --token-address <ADDRESS_TOKEN> mint freeze
 let payer_keypair_path = null,
   token_address = null,
   mint = false,
@@ -52,6 +52,13 @@ program
   });
 program.parse();
 
+/**
+ * Revokes the mint authority for a given mint.
+ * @param {string} mint - The mint address.
+ * @param {string} payer - The payer address.
+ * @param {string} owner - The owner address.
+ * @returns {Promise<void>} - A promise that resolves when the mint authority is revoked.
+ */
 async function revokeMint(mint, payer, owner) {
   console.log("Disabling the mint authority...");
   await setAuthority(
@@ -67,6 +74,13 @@ async function revokeMint(mint, payer, owner) {
     revokeMint(mint, payer, owner);
   });
 }
+/**
+ * Disables the freeze authority for a given mint and owner.
+ * @param {string} mint - The mint address.
+ * @param {string} payer - The payer address.
+ * @param {string} owner - The owner address.
+ * @returns {Promise<void>} - A promise that resolves when the freeze authority is disabled.
+ */
 async function revokeFreeze(mint, payer, owner) {
   console.log("Disabling the freeze authority...");
   await setAuthority(
@@ -83,6 +97,12 @@ async function revokeFreeze(mint, payer, owner) {
   });
 }
 
+/**
+ * Revoke authority for a token.
+ * @async
+ * @function revokeAuthority
+ * @returns {Promise<void>}
+ */
 async function revokeAuthority() {
   // let payer_wallet = null;
   // if (payer_keypair !== null) {

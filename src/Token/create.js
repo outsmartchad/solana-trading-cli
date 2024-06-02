@@ -46,7 +46,6 @@ let payer_keypair_path = null,
   newConnection = null,
   endpoint = null;
 
-// we test in the devnet first
 // handle the input value from the user's command line here
 program
   .option("--payer <PATH_TO_SECRET_KEY>", "Specify the path to the secret key")
@@ -110,6 +109,7 @@ program
   });
 program.parse();
 
+// handle the cluster logic here
 if (cluster === "devnet") {
   newConnection = dev_connection;
   endpoint = dev_endpoint;
@@ -120,7 +120,8 @@ if (cluster === "devnet") {
   console.log("Please provide the correct cluster name");
   process.exit(1);
 }
-// create meme token logic here
+
+// creating the wallet and the mint keypair
 let mintSecret, newKeypair; //
 
 const metadata = JSON.parse(
@@ -135,8 +136,10 @@ if (!mintkeypair_path) {
 }
 let payerSecret = null,
   PayerWallet = null;
+// create the Umi object
 const umi = createUmi(endpoint); //Replace with your RPC Endpoint
 
+// create the payer wallet
 if (payer_keypair_path) {
   payerSecret = loadOrCreateKeypair(payer_keypair_path);
   PayerWallet = umi.eddsa.createKeypairFromSecretKey(
@@ -153,6 +156,7 @@ const mintKeypair = umi.eddsa.createKeypairFromSecretKey(
 );
 const mintSigner = createSignerFromKeypair(umi, mintKeypair);
 
+// use the Umi object to create the token
 umi.use(signerIdentity(userWalletSigner));
 umi.use(mplCandyMachine());
 
@@ -326,7 +330,7 @@ async function uploadImage(
   return imgUri;
 }
 /**
- * Creates a meme token.
+ * Creates a meme token with a given cap that is minted to the owner's wallet.
  * @param {string} name - The name of the meme token.
  * @param {string} symbol - The symbol of the meme token.
  * @param {string} filetype - The file type of the meme image.
@@ -432,7 +436,7 @@ async function createMeme(
   });
 }
 /**
- * Mint a token with the specified parameters.
+ * Mint a token with the specified parameters that is owned by the specified owner.
  *
  * @param {Object} umi - The UMI object.
  * @param {Object} mint - The mint object.

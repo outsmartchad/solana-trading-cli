@@ -30,7 +30,6 @@ const {
 const BN = require("bn.js");
 const { program } = require("commander");
 
-// 10. node add_pool.mjs --payer <PATH_WALLET> --token-address <ADDRESS_TOKEN> --pool-id <POOL_ID> --SOL <NUMBER_OF_SOL>
 let payer_keypair = null,
   token_address = null,
   pool_id = null,
@@ -54,17 +53,13 @@ program
       process.exit(0);
     }
 
-    if (
-      !options.token_address ||
-      !options.sol ||
-      !options.cluster
-    ) {
+    if (!options.token_address || !options.sol || !options.cluster) {
       console.log(
         "Please provide the required param's value, except the pool id and the priority fee."
       );
       process.exit(1);
     }
-    if(options.payer){
+    if (options.payer) {
       payer_keypair = options.payer;
     }
     token_address = new PublicKey(options.token_address);
@@ -152,6 +147,11 @@ async function ammAddLiquidity(input) {
     };
   }
 }
+/**
+ * Helper function for adding liquidity to an AMM pool that retries the transaction if it fails.
+ * @param {Object} input - The input parameters for adding liquidity.
+ * @returns {Promise<void>} - A promise that resolves when the liquidity is added.
+ */
 async function ammAddLiquidityHelper(input) {
   const { txids, amount } = await ammAddLiquidity(input);
   console.log("txids:", txids);
@@ -166,14 +166,13 @@ async function ammAddLiquidityHelper(input) {
 }
 
 /**
- * Main function for adding a pool.
- * @returns {Promise<void>} A promise that resolves when the pool is added.
+ * Main function for adding liquidity to a pool.
+ * @returns {Promise<void>} A promise that resolves when liquidity is added.
  */
 async function main() {
-  if(payer_keypair !== null){
+  if (payer_keypair !== null) {
     payer_keypair = await loadOrCreateKeypair_wallet(payer_keypair);
-  }
-  else{
+  } else {
     payer_keypair = Keypair.fromSecretKey(wallet.secretKey);
   }
   const baseToken = DEFAULT_TOKEN.WSOL;

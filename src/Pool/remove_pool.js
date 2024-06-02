@@ -33,9 +33,8 @@ const {
 const { getSPLTokenBalance } = require("../helpers/check_balance.js");
 const { getDecimals, getTokenMetadata } = require("../helpers/util.js");
 const { BN } = require("@project-serum/anchor");
-
 const { program } = require("commander");
-// node remove_pool.mjs --payer <PATH_PAYER> --token <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
+
 let payer_keypair = null,
   tokenAddress = null,
   percentage = null,
@@ -126,6 +125,11 @@ async function findLPTokenAddress(tokenAddress) {
   return response.Raydium_LiquidityPoolv4[0].lpMint;
 }
 
+/**
+ * Helper function for removing liquidity from an AMM pool that retries the transaction if it fails.
+ * @param {Object} input - The input parameters for removing liquidity.
+ * @returns {Promise<void>} - A promise that resolves when the liquidity is removed.
+ */
 async function ammRemoveLiquidityHelper(input) {
   const { txids } = await ammRemoveLiquidity(input);
   console.log("txids:", txids);

@@ -37,7 +37,7 @@ const { getPoolId, getPoolIdByPair } = require("./query_pool.js");
  * step 4: send transactions
  */
 /**
- * Performs a swap operation using an Automated Market Maker (AMM) pool.
+ * Performs a swap operation using an Automated Market Maker (AMM) pool in Raydium.
  * @param {Object} input - The input parameters for the swap operation.
  * @returns {Object} - The transaction IDs of the executed swap operation.
  */
@@ -86,7 +86,7 @@ async function swapOnlyAmm(input) {
 }
 
 /**
- * Performs a swap operation.
+ * Performs a swap operation that retries the transaction if it fails.
  *
  * @param {string} side - The side of the swap operation ("buy" or "sell").
  * @param {string} tokenAddr - The address of the token.
