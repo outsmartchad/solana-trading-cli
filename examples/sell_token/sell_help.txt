@@ -1,0 +1,4 @@
+run
+node sell -h
+or 
+node sell --help

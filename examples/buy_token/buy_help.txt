@@ -1,0 +1,4 @@
+run
+node buy -h
+or 
+node buy --help

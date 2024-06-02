@@ -1,0 +1,12 @@
+# if you already fill in your private key to src/helpers/.env.copy, 
+# change it to .env and fill in your .env path in src/helpers/config.js
+
+- support only mainnet right now
+- make sure you are at src/Trading/dex/raydium
+- cd src/Trading/dex/raydium
+
+example 1: (already set up ur secret key)
+node sell --token_address kaicqYEgwrSk1GNqiNMcYJVf242YAaaMCmAT6eDjqjW --percentage 76 --cluster mainnet                 
+
+example 2: (use another wallet, in data/payer_keypair/mainnet) (make sure the secret key is in uint8 array format)
+node sell --token_address kaicqYEgwrSk1GNqiNMcYJVf242YAaaMCmAT6eDjqjW --percentage 76 --cluster mainnet --payer /Users/{your_user_name}/Desktop/Solana-Memecoin-CLI/data/payer_keypair/mainnet/payer0.json
