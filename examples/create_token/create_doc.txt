@@ -7,8 +7,8 @@
 
 example 1: (already set up ur secret key)
 node create --symbol wif --token_name dogwifhat --supply 69696969 --decimals 9 --metadata /Users/{your_user_name}/Desktop/Memecoin-Solana-CLI/data/metadata_file/metadata.json 
---image /Users/{your_user_name}/Desktop/Memecoin-Solana-CLI/data/Image_file/FTW.jpeg --cluster devnet --file_type jpeg
+--image /Users/{your_user_name}/Desktop/Solana-Memecoin-CLI/data/Image_file/FTW.jpeg --cluster devnet --file_type jpeg
 
 example 2: (use another wallet, in data/payer_keypair/devnet) (make sure the secret key is in uint8 array format)
 node create --payer /Users/{your_user_name}/Desktop/Memecoin-Solana-CLI/data/payer_keypair/devnet/wallet.json --symbol wif --token_name dogwifhat --supply 69696969 --decimals 9 --metadata /Users/{your_user_name}/Desktop/Memecoin-Solana-CLI/data/metadata_file/metadata.json 
---image /Users/{your_user_name}/Desktop/Memecoin-Solana-CLI/data/Image_file/FTW.jpeg --cluster devnet --file_type jpeg
+--image /Users/{your_user_name}/Desktop/Solana-Memecoin-CLI/data/Image_file/FTW.jpeg --cluster devnet --file_type jpeg

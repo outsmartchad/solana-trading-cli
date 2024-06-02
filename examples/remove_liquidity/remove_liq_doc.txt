@@ -9,4 +9,4 @@ example 1: (already set up ur secret key)
 node remove_pool --token_address kaicqYEgwrSk1GNqiNMcYJVf242YAaaMCmAT6eDjqjW --percentage 0.1 --cluster mainnet 
 
 example 2: (use another wallet, in data/payer_keypair/mainnet) (make sure the secret key is in uint8 array format)
-node remove_pool --token_address kaicqYEgwrSk1GNqiNMcYJVf242YAaaMCmAT6eDjqjW --percentage 0.1 --cluster mainnet --payer /Users/{your_user_name}/Desktop/Memecoin-Solana-CLI/data/payer_keypair/mainnet/payer0.json
+node remove_pool --token_address kaicqYEgwrSk1GNqiNMcYJVf242YAaaMCmAT6eDjqjW --percentage 0.1 --cluster mainnet --payer /Users/{your_user_name}/Desktop/Solana-Memecoin-CLI/data/payer_keypair/mainnet/payer0.json

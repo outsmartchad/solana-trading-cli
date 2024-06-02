@@ -10,5 +10,5 @@ example 1: (already set up ur secret key)
 node burn --token_address <your_token_in_your_wallet> --percentage <burn_percentage/100> --cluster <devnet_or_mainnet>
 
 example 2: (use another wallet, in data/payer_keypair/devnet) (make sure the secret key is in uint8 array format)
-node burn --payer /Users/{your_user_name}/Desktop/Memecoin-Solana-CLI/data/payer_keypair/devnet/payer.json --token_address <your_token_in_your_wallet> --percentage <burn_percentage/100> --cluster <devnet_or_mainnet>
+node burn --payer /Users/{your_user_name}/Desktop/Solana-Memecoin-CLI/data/payer_keypair/devnet/payer.json --token_address <your_token_in_your_wallet> --percentage <burn_percentage/100> --cluster <devnet_or_mainnet>
 
