@@ -1,0 +1,1 @@
+{"version":3,"file":"testnet.js","sourceRoot":"","sources":["../../../src/token/testnet.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,IAAI,EAAE,MAAM,OAAO,CAAA;AAG5B,MAAM,CAAC,MAAM,kBAAkB,GAAc;IAC3C,IAAI,EAAE,EAAE,GAAG,IAAI,EAAE;CAClB,CAAA;AAED,MAAM,CAAC,MAAM,iBAAiB,GAAa,EAAE,CAAA"}

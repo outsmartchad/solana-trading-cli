@@ -1,0 +1,1 @@
+{"version":3,"file":"lookupTableCache.js","sourceRoot":"","sources":["../../../src/base/lookupTableCache.ts"],"names":[],"mappings":";;;AAAA,6CAAsE;AAIzD,QAAA,kBAAkB,GAAa;IAC1C,8CAA8C,EAAE,IAAI,mCAAyB,CAAC;QAC5E,GAAG,EAAE,IAAI,mBAAS,CAAC,8CAA8C,CAAC;QAClE,KAAK,EAAE,mCAAyB,CAAC,WAAW,CAC1C,MAAM,CAAC,IAAI,CACT,8kCAA8kC,EAC9kC,QAAQ,CACT,CACF;KACF,CAAC;CACH,CAAA"}

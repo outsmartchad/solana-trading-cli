@@ -1,0 +1,32 @@
+import { SignatureConfig, SIG_CONFIG } from "../../constants.js";
+import { verifyTypedData } from "@ethersproject/wallet";
+import { domain, types } from "./TypedEthereumSigner.js";
+export class InjectedTypedEthereumSigner {
+    ownerLength = SIG_CONFIG[SignatureConfig.TYPEDETHEREUM].pubLength;
+    signatureLength = SIG_CONFIG[SignatureConfig.TYPEDETHEREUM].sigLength;
+    signatureType = SignatureConfig.TYPEDETHEREUM;
+    address;
+    signer;
+    publicKey;
+    constructor(provider) {
+        this.signer = provider.getSigner();
+    }
+    async ready() {
+        this.address = (await this.signer.getAddress()).toString().toLowerCase();
+        this.publicKey = Buffer.from(this.address); // pk *is* address
+    }
+    async sign(message) {
+        const signature = await this.signer._signTypedData(domain, types, {
+            address: this.address,
+            "Transaction hash": message,
+        });
+        return Buffer.from(signature.slice(2), "hex"); // trim leading 0x, convert to hex.
+    }
+    static verify(pk, message, signature) {
+        const address = pk.toString();
+        const addr = verifyTypedData(domain, types, { address, "Transaction hash": message }, signature);
+        return address.toLowerCase() === addr.toLowerCase();
+    }
+}
+export default InjectedTypedEthereumSigner;
+//# sourceMappingURL=InjectedTypedEthereumSigner.js.map
