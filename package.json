@@ -7,7 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
+  "author": "vincentso",
+  "url": "https://github.com/ManofDiligence/Solana-Memecoin-CLI/issues",
+  "homepage": "https://github.com/ManofDiligence/Solana-Memecoin-CLI/blob/main/README.md",
   "license": "ISC",
   "dependencies": {
     "@coral-xyz/anchor": "^0.27.0",
