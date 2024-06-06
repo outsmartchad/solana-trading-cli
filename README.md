@@ -34,6 +34,7 @@
 - Query the most liquid pool in a raydium dex by just providing the token address
 - Buy a token using SOL using raydium
 - Sell a token for SOL using raydium
+- Buy, Sell, and Create token in pump.fun
 - Check the balance of a token in your wallet
 
 ## Features in Development 🚧:
