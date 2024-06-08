@@ -1,26 +1,17 @@
 const assert = require("assert");
 
 const {
-  jsonInfo2PoolKeys,
   Liquidity,
-  LiquidityPoolKeys,
   Percent,
   Token,
   TOKEN_PROGRAM_ID,
   TokenAmount,
-  LiquidityPoolKeysV4,
-  LiquidityStateV4,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
 } = require("@raydium-io/raydium-sdk");
 const {
   PublicKey,
   TransactionMessage,
   ComputeBudgetProgram,
   VersionedTransaction,
-  MessageV0,
-  Transaction,
-  sendAndConfirmTransaction,
-  sendAndConfirmRawTransaction,
 } = require("@solana/web3.js");
 const { Decimal } = require("decimal.js");
 const { BN } = require("@project-serum/anchor");
@@ -32,11 +23,9 @@ const {
   RAYDIUM_MAINNET_API,
   _ENDPOINT,
   wallet,
+  jito_fee,
 } = require("../helpers/config.js");
 const {
-  buildAndSendTx,
-  getWalletTokenAccount,
-  loadOrCreateKeypair_wallet,
   getDecimals,
   getTokenMetadata,
   checkTx,
@@ -50,11 +39,12 @@ const {
 } = require("@solana/spl-token");
 const { mint } = require("@metaplex-foundation/mpl-candy-machine");
 const { formatAmmKeysById_swap } = require("./formatAmmKeysById.js");
-const { emit } = require("process");
 const {
   simple_executeAndConfirm,
 } = require("../Transactions/simple_tx_executor.js");
-
+const {
+  jito_executeAndConfirm,
+} = require("../Transactions/jito_tips_tx_executor.js");
 /**
  * pre-action: get pool info
  * step 1: coumpute amount out
@@ -140,10 +130,11 @@ async function swapOnlyAmm(input) {
   let signature = null,
     confirmed = null;
   try {
-    const res = await simple_executeAndConfirm(
+    const res = await jito_executeAndConfirm(
       transaction,
       wallet,
-      latestBlockhash
+      latestBlockhash,
+      jito_fee
     );
     signature = res.signature;
     confirmed = res.confirmed;
@@ -169,11 +160,15 @@ async function swapOnlyAmmHelper(input) {
   console.log("txids:", txid);
   const response = await checkTx(txid);
   if (response) {
-    console.log(
-      `https://dexscreener.com/solana/${input.outputToken.toString()}?maker=${
-        wallet.publicKey
-      }`
-    );
+    if (input.side === "buy") {
+      console.log(
+        `https://dexscreener.com/solana/${input.targetPool}?maker=${wallet.publicKey}`
+      );
+    } else {
+      console.log(
+        `https://dexscreener.com/solana/${input.targetPool}?maker=${wallet.publicKey}`
+      );
+    }
     console.log(`https://solscan.io/tx/${txid}?cluster=mainnet`);
   } else {
     console.log("Transaction failed");
@@ -273,7 +268,6 @@ async function swap(
       inputToken,
       new BN(amount.mul(10 ** inputToken.decimals).toFixed(0))
     );
-
     await swapOnlyAmmHelper({
       outputToken,
       sell_PercentageOfToken,

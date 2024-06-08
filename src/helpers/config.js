@@ -22,6 +22,7 @@ function loadKeypairFromFile(filename) {
   const secret = fs.readFileSync(filename, { encoding: "utf8" });
   return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(secret)));
 }
+const jito_fee = process.env.JITO_FEE; // 0.00009 SOL
 const shyft_api_key = process.env.SHYFT_API_KEY; // your shyft api key
 const wallet = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY)); // your wallet
 const dev_endpoint = process.env.DEVNET_ENDPOINT; // devnet endpoint
@@ -70,4 +71,5 @@ module.exports = {
   addLookupTableInfo,
   _ENDPOINT,
   shyft_api_key,
+  jito_fee,
 };
