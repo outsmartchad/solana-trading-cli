@@ -28,20 +28,21 @@
 - Create a new SPL token and it will automatically mint to your wallet
 - Burn a percentage of a token
 - Revoke mint and freeze authority of a token
-- Add liquidity to a pool
-- Remove liquidity from a pool
-- Swap tokens in a raydium dex's AMM pool
+- **Add liquidity** to a pool
+- **Remove liquidity** from a pool
+- Swap tokens in a **raydium dex's AMM pool**
 - Query the most liquid pool in a raydium dex by just providing the token address
 - Buy a token using SOL using raydium
 - Sell a token for SOL using raydium
+- **Buy, Sell, and Create token and market in pump.fun**
 - Check the balance of a token in your wallet
 
 ## Features in Development 🚧:
 
 - A Website for anyone to do these thing with their browser-based wallet
-- Function to create a market for your token on raydium
-- More dexes support, (Orca, Meteora, etc.)
-- Phantom wallet integration
+- Function to **create a market for your token on raydium**
+- **More dexes support**, (Orca, Meteora, etc.)
+- **Phantom wallet integration**
 - more features to come...
 
 # Commands </> (Please see the command examples in examples/ to get start~)
