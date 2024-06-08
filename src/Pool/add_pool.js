@@ -18,7 +18,7 @@ const {
   dev_connection,
   wallet,
 } = require("../helpers/config.js");
-const { formatAmmKeysById } = require("./formatAmmKeysById.js");
+const { formatAmmKeysById_pool } = require("./formatAmmKeysById.js");
 const {
   buildAndSendTx,
   getWalletTokenAccount,
@@ -85,7 +85,7 @@ program.parse();
  */
 async function ammAddLiquidity(input) {
   try {
-    const targetPoolInfo = await formatAmmKeysById(input.targetPool);
+    const targetPoolInfo = await formatAmmKeysById_pool(input.targetPool);
     assert(targetPoolInfo, "cannot find the target pool");
 
     // -------- step 1: compute another amount --------

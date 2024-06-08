@@ -10,10 +10,11 @@ const {
   PublicKey,
   VersionedTransaction,
   TransactionMessage,
+  ComputeBudgetProgram,
 } = require("@solana/web3.js");
+const { Currency, CurrencyAmount } = require("@raydium-io/raydium-sdk");
 const base58 = require("bs58");
 const {
-  createAssociatedTokenAccount,
   findAssociatedTokenAddress,
   getbondingCurveFromToken,
 } = require("./utils");
@@ -22,8 +23,23 @@ const { idl } = require("./idl");
 const { PUMP_FUN_PROGRAM_ID } = require("./constants");
 const { connection, wallet } = require("../../helpers/config");
 const { checkTx, getDecimals } = require("../../helpers/util");
+const {
+  getOrCreateAssociatedTokenAccount,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccount,
+  createAssociatedTokenAccountIdempotentInstruction,
+  getAssociatedTokenAddress,
+} = require("@solana/spl-token");
 
-async function buy(tokenAddress, amtOfSolToSpend) {
+// # if using default executor, fee below will be applied
+// COMPUTE_UNIT_LIMIT=101337
+// COMPUTE_UNIT_PRICE=421197
+// # if using warp or jito executor, fee below will be applied
+// CUSTOM_FEE=0.006
+//const fee = new CurrencyAmount(Currency.SOL);
+
+async function buy(tokenAddress, amtOfSolToSpend, tried, bc, abc) {
   // things we need
   const pump_fun_program_id = new PublicKey(PUMP_FUN_PROGRAM_ID);
   // owner = wallet, that we already defined in src/helpers/config.js
@@ -31,9 +47,19 @@ async function buy(tokenAddress, amtOfSolToSpend) {
   const mint = new PublicKey(tokenAddress);
 
   // logic to buy using the pump.fun program
-  const { bondingCurve, associatedBondingCurve } =
-    await getbondingCurveFromToken(tokenAddress);
+  let bondingCurve = bc,
+    associatedBondingCurve = abc,
+    result = null;
+  if (!tried) {
+    result = await getbondingCurveFromToken(tokenAddress);
+    bondingCurve = result.bondingCurve;
+    associatedBondingCurve = result.associatedBondingCurve;
+    console.log("result: ", result);
+    console.log("bondingCurve: ", bondingCurve);
+  }
+
   const tokenAccount = await findAssociatedTokenAddress(wallet.publicKey, mint);
+  console.log("token account: ", tokenAccount);
   const provider = new AnchorProvider(
     connection,
     owner,
@@ -41,13 +67,9 @@ async function buy(tokenAddress, amtOfSolToSpend) {
   );
   setProvider(provider);
   const program = new Program(idl, pump_fun_program_id, provider);
-  const associatedTokenAccount = await createAssociatedTokenAccount(
-    connection,
-    wallet,
-    mint
-  );
+
   // pump.fun.buy(arg1: tokenamount, arg2: solamount)
-  const instruction = program.methods
+  const instruction = await program.methods
     .buy(new BN(0), new BN(amtOfSolToSpend * 10 ** 9))
     .accounts({
       global: new PublicKey("4wTV1YmiEkRvAtNtsSGPtUrqRYQMe5SKy2uB4Jjaxnjf"),
@@ -71,14 +93,34 @@ async function buy(tokenAddress, amtOfSolToSpend) {
       program: pump_fun_program_id,
     })
     .instruction();
+  console.log("instruction: ", instruction);
   const instructions = [];
   instructions.push(instruction);
   const blockhash = await connection.getLatestBlockhash("finalized");
+  console.log(wallet.publicKey);
   const final_tx = new VersionedTransaction(
     new TransactionMessage({
       payerKey: wallet.publicKey,
       recentBlockhash: blockhash.blockhash,
-      instructions: instructions,
+      instructions: [
+        [
+          ComputeBudgetProgram.setComputeUnitPrice({
+            microLamports: 421197,
+          }),
+          ComputeBudgetProgram.setComputeUnitLimit({
+            units: 101337,
+          }),
+        ],
+        [
+          createAssociatedTokenAccountIdempotentInstruction(
+            wallet.publicKey,
+            tokenAccount,
+            wallet.publicKey,
+            mint
+          ),
+        ],
+        instructions,
+      ],
     }).compileToV0Message()
   );
   final_tx.sign([owner.payer]);
@@ -93,6 +135,14 @@ async function buy(tokenAddress, amtOfSolToSpend) {
   } else {
     console.log(`❌ failed to buy ${tokenAddress}`);
     console.log("trying again...");
-    await buy(tokenAddress, amtOfSolToSpend);
+    await buy(
+      tokenAddress,
+      amtOfSolToSpend,
+      true,
+      bondingCurve,
+      associatedBondingCurve
+    );
   }
 }
+
+buy("token_address", 0.001, false, null, null);

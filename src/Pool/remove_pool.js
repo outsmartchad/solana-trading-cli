@@ -18,7 +18,10 @@ const {
   wallet,
   dev_connection,
 } = require("../helpers/config.js");
-const { formatAmmKeysById } = require("./formatAmmKeysById.js");
+const {
+  formatAmmKeysById_pool,
+  formatAmmKeysById_swap,
+} = require("./formatAmmKeysById.js");
 const {
   buildAndSendTx,
   getWalletTokenAccount,
@@ -29,6 +32,7 @@ const {
   getPoolId,
   getPoolIdByPair,
   queryLpByToken,
+  queryLpPair,
 } = require("./query_pool.js");
 const { getSPLTokenBalance } = require("../helpers/check_balance.js");
 const { getDecimals, getTokenMetadata } = require("../helpers/util.js");
@@ -81,7 +85,7 @@ program.parse();
 async function ammRemoveLiquidity(input) {
   try {
     // -------- pre-action: fetch basic info --------
-    const targetPoolInfo = await formatAmmKeysById(input.targetPool);
+    const targetPoolInfo = await formatAmmKeysById_pool(input.targetPool);
     assert(targetPoolInfo, "cannot find the target pool");
 
     // -------- step 1: make instructions --------
@@ -101,14 +105,20 @@ async function ammRemoveLiquidity(input) {
 
     return {
       txids: await buildAndSendTx(
-        removeLiquidityInstructionResponse.innerTransactions
+        removeLiquidityInstructionResponse.innerTransactions,
+        {
+          preflightCommitment: "confirmed",
+        }
       ),
     };
   } catch (err) {
     console.log(err);
     return {
       txids: await buildAndSendTx(
-        removeLiquidityInstructionResponse.innerTransactions
+        removeLiquidityInstructionResponse.innerTransactions,
+        {
+          preflightCommitment: "confirmed",
+        }
       ),
     };
   }
@@ -121,6 +131,7 @@ async function ammRemoveLiquidity(input) {
  */
 async function findLPTokenAddress(tokenAddress) {
   const response = await queryLpByToken(tokenAddress);
+  console.log(response);
   console.log(response.Raydium_LiquidityPoolv4[0].lpMint);
   return response.Raydium_LiquidityPoolv4[0].lpMint;
 }

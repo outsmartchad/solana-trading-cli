@@ -1,8 +1,10 @@
 const { PublicKey, Connection } = require("@solana/web3.js");
 const {
-  Token,
+  getAssociatedTokenAddress,
   TOKEN_PROGRAM_ID,
+  createAssociatedTokenAccount,
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  getOrCreateAssociatedTokenAccount,
 } = require("@solana/spl-token");
 /**
  * Checks the associated token account for a given wallet and token address.
@@ -18,54 +20,30 @@ async function checkAssociatedTokenAcount(
 ) {
   try {
     // Get the associated token address for your wallet and token mint
-    const associatedTokenAddress = await Token.getAssociatedTokenAddress(
-      ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
+    // const associatedTokenAddress = await getAssociatedTokenAddress(
+    //   ASSOCIATED_TOKEN_PROGRAM_ID,
+    //   TOKEN_PROGRAM_ID,
+    //   tokenAddress,
+    //   walletPubKey
+    // );
+    const associatedTokenAddress = await getAssociatedTokenAddress(
       tokenAddress,
-      walletPubKey
+      walletPubKey,
+      true,
+      TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
     );
 
     // Get account info
     const accountInfo = await connection.getAccountInfo(associatedTokenAddress);
 
     if (accountInfo) {
-      return associatedTokenAddress.toBase58();
+      return associatedTokenAddress;
     } else {
       return false;
     }
   } catch (e) {
     console.log("Error while checking associated token account: ", e);
-  }
-}
-
-/**
- * Creates an associated token account for a given owner and mint public key.
- * @param {Connection} connection - The connection object.
- * @param {Account} owner - The owner account.
- * @param {PublicKey} mintPubKey - The mint public key.
- * @returns {string} - The base58 encoded associated token address.
- */
-async function createAssociatedTokenAccount(connection, owner, mintPubKey) {
-  try {
-    const associatedTokenAddress = await Token.getAssociatedTokenAddress(
-      ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
-      mintPubKey,
-      owner.publicKey
-    );
-    // Check if the associated token account already exists
-    const associatedTokenAccountInfo = await connection.getAccountInfo(
-      associatedTokenAddress
-    );
-    const mint = new Token(connection, mintPubKey, TOKEN_PROGRAM_ID, owner);
-
-    if (!associatedTokenAccountInfo) {
-      // Create the associated token account if it doesn't exist
-      await mint.createAssociatedTokenAccount(owner.publicKey);
-    }
-    return associatedTokenAddress.toBase58();
-  } catch (e) {
-    console.log("Error while creating associated token account: ", e);
   }
 }
 
@@ -76,7 +54,7 @@ async function createAssociatedTokenAccount(connection, owner, mintPubKey) {
  * @returns {Promise<PublicKey>} - The associated token address.
  */
 async function findAssociatedTokenAddress(walletAddress, tokenAddress) {
-  const [result] = PublicKey.findProgramAddressSync(
+  const result = PublicKey.findProgramAddressSync(
     [
       walletAddress.toBuffer(),
       TOKEN_PROGRAM_ID.toBuffer(),
@@ -84,7 +62,7 @@ async function findAssociatedTokenAddress(walletAddress, tokenAddress) {
     ],
     ASSOCIATED_TOKEN_PROGRAM_ID
   );
-  return result;
+  return result[0];
 }
 
 /**
@@ -94,8 +72,9 @@ async function findAssociatedTokenAddress(walletAddress, tokenAddress) {
  */
 async function getbondingCurveFromToken(tokenAddress) {
   const response = await fetch(
-    `https://client-api-2-74b1891ee9f9.herokuapp.com/coins/${tokenMintAddress}`
+    `https://client-api-2-74b1891ee9f9.herokuapp.com/coins/${tokenAddress}` // or your API
   );
+  console.log("response: ", response);
   const details = await response.json();
 
   return {

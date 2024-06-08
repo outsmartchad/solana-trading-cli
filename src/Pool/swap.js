@@ -8,8 +8,20 @@ const {
   Token,
   TOKEN_PROGRAM_ID,
   TokenAmount,
+  LiquidityPoolKeysV4,
+  LiquidityStateV4,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
 } = require("@raydium-io/raydium-sdk");
-const { Keypair, PublicKey } = require("@solana/web3.js");
+const {
+  PublicKey,
+  TransactionMessage,
+  ComputeBudgetProgram,
+  VersionedTransaction,
+  MessageV0,
+  Transaction,
+  sendAndConfirmTransaction,
+  sendAndConfirmRawTransaction,
+} = require("@solana/web3.js");
 const { Decimal } = require("decimal.js");
 const { BN } = require("@project-serum/anchor");
 const { getSPLTokenBalance } = require("../helpers/check_balance.js");
@@ -19,6 +31,7 @@ const {
   makeTxVersion,
   RAYDIUM_MAINNET_API,
   _ENDPOINT,
+  wallet,
 } = require("../helpers/config.js");
 const {
   buildAndSendTx,
@@ -29,6 +42,19 @@ const {
   checkTx,
 } = require("../helpers/util.js");
 const { getPoolId, getPoolIdByPair } = require("./query_pool.js");
+const {
+  getAssociatedTokenAddress,
+  getAssociatedTokenAddressSync,
+  createAssociatedTokenAccountIdempotentInstruction,
+  createCloseAccountInstruction,
+} = require("@solana/spl-token");
+const { mint } = require("@metaplex-foundation/mpl-candy-machine");
+const { formatAmmKeysById_swap } = require("./formatAmmKeysById.js");
+const { emit } = require("process");
+const {
+  simple_executeAndConfirm,
+} = require("../Transactions/simple_tx_executor.js");
+
 /**
  * pre-action: get pool info
  * step 1: coumpute amount out
@@ -43,46 +69,89 @@ const { getPoolId, getPoolIdByPair } = require("./query_pool.js");
  */
 async function swapOnlyAmm(input) {
   // -------- pre-action: get pool info --------\
-  const ammPool = await (
-    await fetch(_ENDPOINT + RAYDIUM_MAINNET_API.poolInfo)
-  ).json(); // If the Liquidity pool is not required for routing, then this variable can be configured as undefined
-  const targetPoolInfo = [...ammPool.official, ...ammPool.unOfficial].find(
-    (info) => info.id === input.targetPool
-  );
-  assert(targetPoolInfo, "cannot find the target pool");
-  const poolKeys = jsonInfo2PoolKeys(targetPoolInfo);
 
+  const poolKeys = await formatAmmKeysById_swap(
+    new PublicKey(input.targetPool)
+  );
+  assert(poolKeys, "cannot find the target pool");
+  const poolInfo = await Liquidity.fetchInfo({
+    connection: connection,
+    poolKeys: poolKeys,
+  });
   // -------- step 1: coumpute amount out --------
   const { amountOut, minAmountOut } = Liquidity.computeAmountOut({
     poolKeys: poolKeys,
-    poolInfo: await Liquidity.fetchInfo({ connection, poolKeys }),
+    poolInfo: poolInfo,
     amountIn: input.inputTokenAmount,
     currencyOut: input.outputToken,
     slippage: input.slippage,
   });
-
   // -------- step 2: create instructions by SDK function --------
-  const { innerTransactions } = await Liquidity.makeSwapInstructionSimple({
-    connection,
-    poolKeys,
-    userKeys: {
-      tokenAccounts: input.walletTokenAccounts,
-      owner: input.wallet.publicKey,
+  const { innerTransaction } = await Liquidity.makeSwapFixedInInstruction(
+    {
+      poolKeys: poolKeys,
+      userKeys: {
+        tokenAccountIn: input.ataIn,
+        tokenAccountOut: input.ataOut,
+        owner: wallet.publicKey,
+      },
+      amountIn: input.inputTokenAmount.raw,
+      minAmountOut: minAmountOut.raw,
     },
-    amountIn: input.inputTokenAmount,
-    amountOut: minAmountOut,
-    fixedSide: "in",
-    makeTxVersion,
-  });
-
-  console.log(
-    "amountOut:",
-    amountOut.toFixed(),
-    "  minAmountOut: ",
-    minAmountOut.toFixed()
+    poolKeys.version
   );
-
-  return { txids: await buildAndSendTx(innerTransactions) };
+  const latestBlockhash = await connection.getLatestBlockhash();
+  const messageV0 = new TransactionMessage({
+    payerKey: wallet.publicKey,
+    recentBlockhash: latestBlockhash.blockhash,
+    instructions: [
+      ...[
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: 101337,
+        }),
+        ComputeBudgetProgram.setComputeUnitPrice({
+          microLamports: 421197,
+        }),
+      ],
+      ...(input.side === "buy"
+        ? [
+            createAssociatedTokenAccountIdempotentInstruction(
+              wallet.publicKey,
+              input.ataOut,
+              wallet.publicKey,
+              input.outputToken.mint
+            ),
+          ]
+        : []),
+      ...innerTransaction.instructions,
+      ...(input.side === "sell" && input.sell_PercentageOfToken === 100
+        ? [
+            createCloseAccountInstruction(
+              input.ataIn,
+              wallet.publicKey,
+              wallet.publicKey
+            ),
+          ]
+        : []),
+    ],
+  }).compileToV0Message();
+  const transaction = new VersionedTransaction(messageV0);
+  transaction.sign([wallet, ...innerTransaction.signers]);
+  let signature = null,
+    confirmed = null;
+  try {
+    const res = await simple_executeAndConfirm(
+      transaction,
+      wallet,
+      latestBlockhash
+    );
+    signature = res.signature;
+    confirmed = res.confirmed;
+  } catch (e) {
+    console.log(e);
+    return { txid: e.signature };
+  }
+  return { txid: signature };
 }
 
 /**
@@ -96,11 +165,16 @@ async function swapOnlyAmm(input) {
  */
 
 async function swapOnlyAmmHelper(input) {
-  const { txids } = await swapOnlyAmm(input);
-  console.log("txids:", txids);
-  const response = await checkTx(txids[0]);
+  const { txid } = await swapOnlyAmm(input);
+  console.log("txids:", txid);
+  const response = await checkTx(txid);
   if (response) {
-    console.log(`https://solscan.io/tx/${txids}?cluster=mainnet`);
+    console.log(
+      `https://dexscreener.com/solana/${input.outputToken.toString()}?maker=${
+        wallet.publicKey
+      }`
+    );
+    console.log(`https://solscan.io/tx/${txid}?cluster=mainnet`);
   } else {
     console.log("Transaction failed");
     console.log("trying to send the transaction again");
@@ -124,19 +198,25 @@ async function swap(
   sell_PercentageOfToken,
   payer_wallet
 ) {
+  const tokenAddress = tokenAddr;
+  const tokenAccount = new PublicKey(tokenAddress);
+  const mintAta = await getAssociatedTokenAddress(
+    tokenAccount,
+    wallet.publicKey
+  );
+  const quoteAta = await getAssociatedTokenAddressSync(
+    Token.WSOL.mint,
+    wallet.publicKey
+  );
   if (side === "buy") {
     // buy - use sol to swap to the token
-    const tokenAddress = tokenAddr;
-    const tokenAccount = new PublicKey(tokenAddress);
-    const { tokenName, tokenSymbol } = await getTokenMetadata(tokenAddress);
+
+    //const { tokenName, tokenSymbol } = await getTokenMetadata(tokenAddress);
     const outputToken = new Token(
       TOKEN_PROGRAM_ID,
       tokenAccount,
-      await getDecimals(tokenAccount),
-      tokenSymbol,
-      tokenName
+      await getDecimals(tokenAccount)
     );
-    console.log("output token: ", outputToken);
     const inputToken = DEFAULT_TOKEN.WSOL; // SOL
     const targetPool = await getPoolIdByPair(tokenAddress);
     if (targetPool === null) {
@@ -150,24 +230,18 @@ async function swap(
       inputToken,
       new BN(amountOfSol.mul(10 ** inputToken.decimals).toFixed(0))
     );
-    const slippage = new Percent(1, 1000);
-    const walletTokenAccounts = await getWalletTokenAccount(
-      connection,
-      payer_wallet.publicKey
-    );
+    const slippage = new Percent(1, 100);
     swapOnlyAmmHelper({
       outputToken,
       targetPool,
       inputTokenAmount,
       slippage,
-      walletTokenAccounts,
-      wallet: payer_wallet,
+      ataIn: quoteAta,
+      ataOut: mintAta,
+      side,
     });
   } else {
     // sell
-
-    const tokenAddress = tokenAddr;
-    const tokenAccount = new PublicKey(tokenAddress);
     const { tokenName, tokenSymbol } = await getTokenMetadata(tokenAddress);
     const inputToken = new Token(
       TOKEN_PROGRAM_ID,
@@ -185,30 +259,31 @@ async function swap(
       );
       return;
     }
-    const walletTokenAccounts = await getWalletTokenAccount(
-      connection,
-      payer_wallet.publicKey
-    );
+
     const balnaceOfToken = await getSPLTokenBalance(
       connection,
       tokenAccount,
-      payer_wallet.publicKey
+      wallet.publicKey
     );
     const percentage = sell_PercentageOfToken / 100;
     const amount = new Decimal(percentage * balnaceOfToken);
     console.log("amount: ", amount.toFixed(0));
-    const slippage = new Percent(1, 100);
+    const slippage = new Percent(1, 1000);
     const inputTokenAmount = new TokenAmount(
       inputToken,
       new BN(amount.mul(10 ** inputToken.decimals).toFixed(0))
     );
+
     await swapOnlyAmmHelper({
       outputToken,
+      sell_PercentageOfToken,
       targetPool,
       inputTokenAmount,
       slippage,
-      walletTokenAccounts,
       wallet: payer_wallet,
+      ataIn: mintAta,
+      ataOut: quoteAta,
+      side,
     });
   }
 }

@@ -18,11 +18,13 @@ const {
   SystemProgram,
   TransactionInstruction,
   TransactionMessage,
+  Transaction,
+  ComputeBudgetProgram,
 } = require("@solana/web3.js");
 
 /**
  * Retrieves the number of decimals for a given mint address.
- * @param {string} mintAddress - The address of the mint.
+ * @param {PublicKey} mintAddress - The address of the mint.
  * @returns {Promise<number>} The number of decimals.
  */
 async function getDecimals(mintAddress) {
@@ -74,7 +76,9 @@ async function sendTx(connection, payer, txs, options) {
       if (iTx instanceof VersionedTransaction) {
         iTx.sign([payer]);
 
-        txids.push(await connection.sendTransaction(iTx, options));
+        txids.push(
+          await connection.sendRawTransaction(iTx.serialize(), options)
+        );
       } else {
         txids.push(await connection.sendTransaction(iTx, [payer], options));
       }
@@ -114,6 +118,23 @@ async function getWalletTokenAccount(localconnection, localwallet) {
  */
 async function buildAndSendTx(innerSimpleV0Transaction, options) {
   try {
+    const recentBlockhash = await connection.getLatestBlockhash("confirmed");
+    const priority_fee_arr = [
+      ComputeBudgetProgram.setComputeUnitLimit({
+        units: 101337,
+      }),
+      ComputeBudgetProgram.setComputeUnitPrice({
+        microLamports: 421197,
+      }),
+    ];
+    console.log(innerSimpleV0Transaction);
+    const original_inner_instructions =
+      innerSimpleV0Transaction[0].instructions;
+    innerSimpleV0Transaction[0].instructions = [
+      ...priority_fee_arr,
+      ...original_inner_instructions,
+    ];
+    console.log("innerSimpleV0Transaction: ", innerSimpleV0Transaction);
     const willSendTx = await buildSimpleTransaction({
       connection: connection,
       makeTxVersion: makeTxVersion,
@@ -121,6 +142,7 @@ async function buildAndSendTx(innerSimpleV0Transaction, options) {
       innerTransactions: innerSimpleV0Transaction,
       addLookupTableInfo: addLookupTableInfo,
     });
+    console.log("willSendTx", willSendTx);
 
     return await sendTx(connection, wallet, willSendTx, options);
   } catch (e) {
