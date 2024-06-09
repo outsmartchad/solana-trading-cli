@@ -100,9 +100,10 @@ node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <P
 node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
 ```
 
-9. Specify the token address you want to query and the cluster you want to use.
+9. Specify the token address you want to query and the cluster for boosting the volume of the token.
 
-```node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> --cluster <CLUSTER> --sol_per_order <SOL_PER_ORDER>
+```
+node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> --cluster <CLUSTER> --sol_per_order <SOL_PER_ORDER>
 
 ```
 
