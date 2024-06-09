@@ -18,7 +18,7 @@
 
 ### Prerequisites 🚨
 
-0. we have added a .env.copy file in src/helpers/.env.copy for you to follow and paste your keys to the code.
+0. we have added a .env.copy file in src/helpers/.env.copy for you to follow and paste your keys to the code (specify the custom jito fee if you need).
 1. Add your mainnet wallet secret key, devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(if you need to add/remove liquidity to liq pool on raydium)
 2. change the .env.copy file to .env
 3. in src/helpers/config.js, please copy and fill in your .env path.
@@ -28,6 +28,7 @@
 - Create a new SPL token and it will automatically mint to your wallet
 - Burn a percentage of a token
 - Revoke mint and freeze authority of a token
+- boost volume of a token by creating buy and sell orders in just **one transaction**
 - **Add liquidity** to a pool
 - **Remove liquidity** from a pool
 - Swap tokens in a **raydium dex's AMM pool**
@@ -99,6 +100,12 @@ node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <P
 node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
 ```
 
+9. Specify the token address you want to query and the cluster you want to use.
+
+```node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> --cluster <CLUSTER> --sol_per_order <SOL_PER_ORDER>
+
+```
+
 # Code Usage </>
 
 ## Token:
@@ -109,6 +116,20 @@ node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percenta
 
 - src/Token/revoke_authority.js: revoke mint and freeze authority of a given token
 
+## Trading:
+
+- src/Trading/dex/raydium/sell.js: selling spl token for SOL in your wallet using raydium dex swap function
+
+- src/Trading/dex/raydium/buy.js: buying spl token using SOL in your wallet using raydium dex swap function
+
+- src/Trading/volume/boost_volume.js: boost the volume of a token by creating a buy and sell order in just one transaction in a way to avoid possible MEV
+
+## Transactions:
+
+- src/Transactions/jito_tips_tx_executor.js: execute the transaction by sending the bundles and request to Jito validators, it will send the transaction to the Solana blockchain.
+
+- src/Transactions/simple_tx_executor.js: execute the transaction by sending the request to the Solana blockchain with a given priority gas fee.
+
 ## Pool:
 
 - src/Pool/add_pool.js: add liquidity to a pool in a given token address, the code find the most liquid pool (TOKEN_ADDRESS/SOL) in the raydium dex and add liquidity to it. You need to specify the amount of liquidity(sol) you want to add.
@@ -118,12 +139,6 @@ node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percenta
 - src/Pool/swap.js: swap token for another token in the raydium dex, src/Trading/dex/raydium/buy.js and src/Trading/dex/raydium/sell.js are based on this code.
 
 - src/Pool/query_pool.js: query the pool information of a given pool address in the raydium dex, it use shyft api to get the pool information. Please make sure you have your shyft api key inside the code before running this code.
-
-## Trading:
-
-- src/Trading/dex/raydium/sell.js: selling spl token for SOL in your wallet using raydium dex swap function
-
-- src/Trading/dex/raydium/buy.js: buying spl token using SOL in your wallet using raydium dex swap function
 
 ## Helper methods:
 
