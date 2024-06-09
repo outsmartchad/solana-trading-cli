@@ -46,9 +46,9 @@ async function buy(side, address, no_of_sol, payer) {
   let payer_wallet = null;
   if (payer_keypair !== null) {
     payer_wallet = await loadOrCreateKeypair_wallet(payer_keypair);
-    await swap(side, address, no_of_sol, -1, payer_wallet);
+    await swap(side, address, no_of_sol, -1, payer_wallet, "trade");
   } else {
-    await swap(side, address, no_of_sol, -1, wallet);
+    await swap(side, address, no_of_sol, -1, wallet, "trade");
   }
 }
 

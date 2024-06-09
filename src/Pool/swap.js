@@ -90,17 +90,15 @@ async function swapOnlyAmm(input) {
     },
     poolKeys.version
   );
+  if (input.usage == "volume") return innerTransaction;
   const latestBlockhash = await connection.getLatestBlockhash();
   const messageV0 = new TransactionMessage({
     payerKey: wallet.publicKey,
     recentBlockhash: latestBlockhash.blockhash,
     instructions: [
       ...[
-        ComputeBudgetProgram.setComputeUnitLimit({
-          units: 101337,
-        }),
         ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: 421197,
+          microLamports: 2000,
         }),
       ],
       ...(input.side === "buy"
@@ -124,8 +122,9 @@ async function swapOnlyAmm(input) {
           ]
         : []),
     ],
-  }).compileToV0Message();
-  const transaction = new VersionedTransaction(messageV0);
+  });
+
+  const transaction = new VersionedTransaction(messageV0.compileToV0Message());
   transaction.sign([wallet, ...innerTransaction.signers]);
   let signature = null,
     confirmed = null;
@@ -138,11 +137,79 @@ async function swapOnlyAmm(input) {
     );
     signature = res.signature;
     confirmed = res.confirmed;
+    if (signature == null) {
+      console.log("jito fee transaction failed");
+      console.log("trying to send the transaction again...");
+      return await swapOnlyAmm(input);
+    }
   } catch (e) {
     console.log(e);
     return { txid: e.signature };
   }
+  if (signature == null) {
+    console.log("jito fee transaction failed");
+    console.log("trying to send the transaction again...");
+    return await swapOnlyAmm(input);
+  }
   return { txid: signature };
+}
+
+async function swapForVolume(tokenAddr, sol_per_order) {
+  const buy_instruction = await swap(
+    "buy",
+    tokenAddr,
+    sol_per_order,
+    -1,
+    wallet,
+    "volume"
+  );
+  const sell_instruction = await swap(
+    "sell",
+    tokenAddr,
+    -1,
+    100,
+    wallet,
+    "volume"
+  );
+  const latestBlockhash = await connection.getLatestBlockhash();
+  const messageV0 = new TransactionMessage({
+    payerKey: wallet.publicKey,
+    recentBlockhash: latestBlockhash.blockhash,
+    instructions: [
+      ...[
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: 200000,
+        }),
+        ComputeBudgetProgram.setComputeUnitPrice({
+          microLamports: 2212,
+        }),
+      ],
+      ...buy_instruction.instructions,
+      ...sell_instruction.instructions,
+    ],
+  });
+
+  const transaction = new VersionedTransaction(messageV0.compileToV0Message());
+  transaction.sign([
+    wallet,
+    ...buy_instruction.signers,
+    ...sell_instruction.signers,
+  ]);
+  let signature = null,
+    confirmed = null;
+  try {
+    const res = await simple_executeAndConfirm(
+      transaction,
+      wallet,
+      latestBlockhash
+    );
+    signature = res.signature;
+    confirmed = res.confirmed;
+  } catch (e) {
+    console.log(e);
+    return { confirmed: confirmed, txid: e.signature };
+  }
+  return { confirmed: confirmed, txid: signature };
 }
 
 /**
@@ -191,7 +258,8 @@ async function swap(
   tokenAddr,
   buy_AmountOfSol,
   sell_PercentageOfToken,
-  payer_wallet
+  payer_wallet,
+  usage
 ) {
   const tokenAddress = tokenAddr;
   const tokenAccount = new PublicKey(tokenAddress);
@@ -226,7 +294,7 @@ async function swap(
       new BN(amountOfSol.mul(10 ** inputToken.decimals).toFixed(0))
     );
     const slippage = new Percent(1, 100);
-    swapOnlyAmmHelper({
+    const input = {
       outputToken,
       targetPool,
       inputTokenAmount,
@@ -234,7 +302,12 @@ async function swap(
       ataIn: quoteAta,
       ataOut: mintAta,
       side,
-    });
+      usage,
+    };
+    if (usage == "volume") {
+      return await swapOnlyAmm(input);
+    }
+    swapOnlyAmmHelper(input);
   } else {
     // sell
     const { tokenName, tokenSymbol } = await getTokenMetadata(tokenAddress);
@@ -245,7 +318,6 @@ async function swap(
       tokenSymbol,
       tokenName
     );
-    console.log("inputToken: ", inputToken);
     const outputToken = DEFAULT_TOKEN.WSOL; // SOL
     const targetPool = await getPoolIdByPair(tokenAddress);
     if (targetPool === null) {
@@ -262,13 +334,12 @@ async function swap(
     );
     const percentage = sell_PercentageOfToken / 100;
     const amount = new Decimal(percentage * balnaceOfToken);
-    console.log("amount: ", amount.toFixed(0));
     const slippage = new Percent(1, 1000);
     const inputTokenAmount = new TokenAmount(
       inputToken,
       new BN(amount.mul(10 ** inputToken.decimals).toFixed(0))
     );
-    await swapOnlyAmmHelper({
+    const input = {
       outputToken,
       sell_PercentageOfToken,
       targetPool,
@@ -278,8 +349,13 @@ async function swap(
       ataIn: mintAta,
       ataOut: quoteAta,
       side,
-    });
+      usage,
+    };
+    if (usage == "volume") {
+      return await swapOnlyAmm(input);
+    }
+    swapOnlyAmmHelper(input);
   }
 }
 
-module.exports = { swap };
+module.exports = { swap, swapForVolume };

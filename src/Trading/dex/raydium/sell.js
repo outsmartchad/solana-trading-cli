@@ -43,7 +43,7 @@ program.parse();
  * @returns {Promise<void>} - A promise that resolves when the swap transaction is completed.
  */
 async function sell(side, address, sell_percentage, payer) {
-  await swap(side, address, -1, sell_percentage, payer);
+  await swap(side, address, -1, sell_percentage, payer, "trade");
 }
 async function main() {
   let payer_wallet = null;

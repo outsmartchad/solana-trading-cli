@@ -45,7 +45,7 @@ async function jito_executeAndConfirm(
   console.log("Selected Jito Validator: ", jito_validator_wallet.toBase58());
   try {
     const fee = new CurrencyAmount(Currency.SOL, jitofee, false).raw.toNumber();
-    console.log(`Jito Fee: ${fee} lamports`);
+    console.log(`Jito Fee: ${fee / 10 ** 9} sol`);
     const jitoFee_message = new TransactionMessage({
       payerKey: payer.publicKey,
       recentBlockhash: lastestBlockhash.blockhash,

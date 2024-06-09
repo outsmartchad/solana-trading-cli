@@ -9,6 +9,17 @@ const { swap } = require("../../../Pool/swap.js");
  * @returns {Promise<void>} - A promise that resolves when the sell operation is complete.
  */
 async function sell(side, address, sell_percentage, payer) {
-  await swap(side, address, -1, sell_percentage, payer);
+  await swap(side, address, -1, sell_percentage, payer, "trade");
 }
-module.exports = { sell };
+async function get_sell_transaction(side, tokenAddr, payer_wallet) {
+  const innerTransaction = await swap(
+    side,
+    tokenAddr,
+    -1,
+    100,
+    payer_wallet,
+    "volume"
+  );
+  return innerTransaction;
+}
+module.exports = { sell, get_sell_transaction };
