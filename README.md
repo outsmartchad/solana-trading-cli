@@ -1,6 +1,6 @@
 # SPL token ALL-IN-ONE Command line tool 🚀
 
-[🔗doc](https://manofdiligence.github.io/solana-memecoin-cli/)
+[🔗doc](https://github.com/ManofDiligence/solana-memecoin-cli.git)
 
 - We are only supporting Raydium Dex for now, Orca and Meteora integrations is still in development.
 - A CLI tool for creating and trading Solana **_SPL tokens_**, performing **_On-chain AMM liquidity Pools operation_** of Raydium, Orca and Meteora.
@@ -8,8 +8,8 @@
 
 ## Installation 🛠️
 
-1. `git clone https://github.com/ManofDiligence/Solana-Memecoin-CLI.git`
-2. `cd Solana-Memecoin-CLI`
+1. `git clone https://github.com/ManofDiligence/solana-memecoin-cli.git`
+2. `cd solana-memecoin-cli`
 3. `nvm install v22.2.0`
 4. `nvm use v22.2.0`
 5. `npm install`
