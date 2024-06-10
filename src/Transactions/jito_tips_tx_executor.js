@@ -29,11 +29,23 @@ const endpoints = [
   "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
 ];
 
+/**
+ * Generates a random validator from the list of jito_Validators.
+ * @returns {PublicKey} A new PublicKey representing the random validator.
+ */
 async function getRandomValidator() {
   const res =
     jito_Validators[Math.floor(Math.random() * jito_Validators.length)];
   return new PublicKey(res);
 }
+/**
+ * Executes and confirms a Jito transaction.
+ * @param {Transaction} transaction - The transaction to be executed and confirmed.
+ * @param {Account} payer - The payer account for the transaction.
+ * @param {Blockhash} lastestBlockhash - The latest blockhash.
+ * @param {number} jitofee - The fee for the Jito transaction.
+ * @returns {Promise<{ confirmed: boolean, signature: string | null }>} - A promise that resolves to an object containing the confirmation status and the transaction signature.
+ */
 async function jito_executeAndConfirm(
   transaction,
   payer,
@@ -97,6 +109,12 @@ async function jito_executeAndConfirm(
   }
 }
 
+/**
+ * Confirms a transaction on the Solana blockchain.
+ * @param {string} signature - The signature of the transaction.
+ * @param {object} latestBlockhash - The latest blockhash information.
+ * @returns {object} - An object containing the confirmation status and the transaction signature.
+ */
 async function jito_confirm(signature, latestBlockhash) {
   const confirmation = await connection.confirmTransaction(
     {

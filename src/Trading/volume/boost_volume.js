@@ -48,6 +48,12 @@ program
   });
 program.parse();
 
+/**
+ * Boosts the volume by buying and selling a token in one transaction.
+ * @async
+ * @function boost_volume
+ * @returns {Promise<void>}
+ */
 async function boost_volume() {
   while (true) {
     console.log(
@@ -68,6 +74,12 @@ async function boost_volume() {
   }
 }
 
+/**
+ * Handles error for a transaction.
+ * @param {string} signature - The transaction signature.
+ * @param {boolean} confirmed - Indicates if the transaction is confirmed.
+ * @returns {Promise<void>} - A promise that resolves when the error handling is complete.
+ */
 async function error_handling(signature, confirmed) {
   if (confirmed) {
     console.log(`https://solscan.io/tx/${signature}?cluster=mainnet`);

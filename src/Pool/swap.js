@@ -45,13 +45,7 @@ const {
 const {
   jito_executeAndConfirm,
 } = require("../Transactions/jito_tips_tx_executor.js");
-/**
- * pre-action: get pool info
- * step 1: coumpute amount out
- * step 2: create instructions by SDK function
- * step 3: compose instructions to several transactions
- * step 4: send transactions
- */
+
 /**
  * Performs a swap operation using an Automated Market Maker (AMM) pool in Raydium.
  * @param {Object} input - The input parameters for the swap operation.
@@ -154,6 +148,12 @@ async function swapOnlyAmm(input) {
   return { txid: signature };
 }
 
+/**
+ * Swaps tokens for volume, buying and selling a token in one transaction.
+ * @param {string} tokenAddr - The address of the token to swap.
+ * @param {number} sol_per_order - The price of SOL per order.
+ * @returns {Promise<{confirmed: boolean, txid: string}>} - The confirmation status and transaction ID.
+ */
 async function swapForVolume(tokenAddr, sol_per_order) {
   const buy_instruction = await swap(
     "buy",
@@ -178,10 +178,10 @@ async function swapForVolume(tokenAddr, sol_per_order) {
     instructions: [
       ...[
         ComputeBudgetProgram.setComputeUnitLimit({
-          units: 220000,
+          units: 200000,
         }),
         ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: 42119,
+          microLamports: 9000,
         }),
       ],
       ...buy_instruction.instructions,

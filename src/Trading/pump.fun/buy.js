@@ -32,13 +32,15 @@ const {
   getAssociatedTokenAddress,
 } = require("@solana/spl-token");
 
-// # if using default executor, fee below will be applied
-// COMPUTE_UNIT_LIMIT=101337
-// COMPUTE_UNIT_PRICE=421197
-// # if using warp or jito executor, fee below will be applied
-// CUSTOM_FEE=0.006
-//const fee = new CurrencyAmount(Currency.SOL);
-
+/**
+ * Buys a token using the pump.fun program.
+ * @param {string} tokenAddress - The address of the token to buy.
+ * @param {number} amtOfSolToSpend - The amount of SOL to spend for buying the token.
+ * @param {boolean} tried - Indicates whether the buy function has been tried before.
+ * @param {string} bc - The bonding curve address.
+ * @param {string} abc - The associated bonding curve address.
+ * @returns {Promise<void>} - A promise that resolves when the buy operation is completed.
+ */
 async function buy(tokenAddress, amtOfSolToSpend, tried, bc, abc) {
   // things we need
   const pump_fun_program_id = new PublicKey(PUMP_FUN_PROGRAM_ID);

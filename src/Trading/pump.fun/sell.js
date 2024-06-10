@@ -24,6 +24,12 @@ const { connection, wallet } = require("../../helpers/config");
 const { checkTx, getDecimals } = require("../../helpers/util");
 const { getSPLTokenBalance } = require("../../helpers/check_balance");
 
+/**
+ * Sells a specified percentage of a token using the pump.fun program.
+ * @param {string} tokenAddress - The address of the token to sell.
+ * @param {number} percentageToSell - The percentage of the token to sell.
+ * @returns {Promise<void>} - A promise that resolves once the sell operation is complete.
+ */
 async function sell(tokenAddress, percentageToSell) {
   const pump_fun_program_id = new PublicKey(PUMP_FUN_PROGRAM_ID);
   // owner = wallet, that we already defined in src/helpers/config.js
