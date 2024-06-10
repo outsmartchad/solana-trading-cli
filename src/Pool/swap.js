@@ -178,10 +178,10 @@ async function swapForVolume(tokenAddr, sol_per_order) {
     instructions: [
       ...[
         ComputeBudgetProgram.setComputeUnitLimit({
-          units: 200000,
+          units: 220000,
         }),
         ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: 2212,
+          microLamports: 42119,
         }),
       ],
       ...buy_instruction.instructions,
