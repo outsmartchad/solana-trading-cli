@@ -19,7 +19,7 @@
 ### Prerequisites 🚨
 
 0. we have added a .env.copy file in src/helpers/.env.copy for you to follow and paste your keys to the code (specify the custom jito fee if you need).
-1. Add your mainnet wallet secret key, devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(if you need to add/remove liquidity to liq pool on raydium)
+1. Add your mainnet wallet secret key, devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(must)
 2. change the .env.copy file to .env
 3. in src/helpers/config.js, please copy and fill in your .env path.
 
