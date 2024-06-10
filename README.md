@@ -26,6 +26,7 @@
 ## Features ✅:
 
 - Create a new SPL token and it will automatically mint to your wallet
+- Integrates both **user-defined priority fee and jito tips** that land transactions faster
 - Burn a percentage of a token
 - Revoke mint and freeze authority of a token
 - boost volume of a token by creating buy and sell orders in just **one transaction**
@@ -43,6 +44,7 @@
 - A Website for anyone to do these thing with their browser-based wallet
 - Function to **create a market for your token on raydium**
 - **More dexes support**, (Orca, Meteora, etc.)
+- **Profitable functions** for Memecoin dev and Trading strategies dev
 - **Phantom wallet integration**
 - more features to come...
 
