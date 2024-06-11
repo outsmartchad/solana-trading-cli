@@ -26,6 +26,7 @@ program
   .option("--amount <AMOUNT>", "Specify the amount to transfer")
   .option("--destination <RECEIVE_ADDRESS>", "Specify the destination address")
   .option("--cluster <CLUSTER>", "Specify the cluster")
+  .option("--help, -h", "display help for command")
   .action((options) => {
     if (
       !options.payer ||
