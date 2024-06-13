@@ -52,6 +52,7 @@ async function checkBalanceByAddress(address, connection) {
   console.log(
     `💰 Finished! The balance for the wallet at address ${address} is ${balanceInSOL}!`
   );
+  return balanceInSOL;
 }
 /**
  * Retrieves the balance of an SPL token associated with a given token account.
