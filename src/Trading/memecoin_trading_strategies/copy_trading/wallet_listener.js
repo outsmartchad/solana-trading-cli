@@ -14,7 +14,8 @@ const { currencyEquals } = require("@raydium-io/raydium-sdk");
 const { sol } = require("@metaplex-foundation/js");
 
 let walletsToListen = [];
-var previous_wallet_state = {};
+var previous_trader_wallet_state = {};
+var previous_our_wallet_state = {};
 // [usdc, sol, usdt, wsol]
 const quoteToken = [
   "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
@@ -74,7 +75,7 @@ async function listenToWallets() {
 
         // Compare the current wallet state with the previous state
         // to determine if the trader is buying or selling
-        const prevState = previous_wallet_state || {};
+        const prevState = previous_trader_wallet_state || {};
         const currentState = current_wallet_state;
 
         // Check if there is one token that decreased and one token that increased
@@ -148,7 +149,7 @@ async function listenToWallets() {
         }
 
         // Update the previous wallet state
-        previous_wallet_state = currentState;
+        previous_trader_wallet_state = currentState;
       },
       "confirmed",
       [
@@ -197,8 +198,10 @@ async function retriveWalletState(wallet_address) {
 
     results[mintAddress] = tokenBalance;
     results["SOL"] = solBalance / 10 ** 9;
+
     //Log results
   });
+  console.log(results);
   return results;
 }
 
@@ -211,13 +214,18 @@ async function copy_trade() {
   // wallet object
   let payer_wallet = wallet;
   // 0.1 SOL, fixed order size
-  let solperorder = 0.1;
+  let buyPercentage = 0;
   // depends the account's token balance changes
   // 20 A -> 10 A, (10 - 20) / 20 = -50% == sell 50%
   // (current token balance - previous token balance /  previous token balance) * 100
-  let sellPercentage = 100;
-  let smart_money_address = "smart_money_wallet_address";
-  previous_wallet_state = await retriveWalletState(smart_money_address);
+  let sellPercentage = 0;
+  // smart money wallet address
+  let smart_money_address = "your_smart_money_wallet_address_here";
+  // our wallet address
+  let our_wallet_address = wallet.publicKey.toBase58();
+  previous_trader_wallet_state = await retriveWalletState(smart_money_address);
+  previous_our_wallet_state = await retriveWalletState(our_wallet_address);
+  // subscribe to the smart money wallet
   walletsToListen.push(new PublicKey(smart_money_address));
   await listenToWallets();
 }

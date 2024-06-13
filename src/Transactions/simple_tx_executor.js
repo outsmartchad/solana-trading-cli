@@ -15,7 +15,8 @@ async function simple_executeAndConfirm(transaction, payer, lastestBlockhash) {
 
 async function simple_execute(transaction) {
   return connection.sendRawTransaction(transaction.serialize(), {
-    preflightCommitment: connection.commitment,
+    skipPreflight: true,
+    maxRetries: 0,
   });
 }
 
