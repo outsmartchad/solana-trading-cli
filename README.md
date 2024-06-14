@@ -2,9 +2,13 @@
 
 [🔗doc](https://manofdiligence.github.io/solana-memecoin-cli/)
 
-- We are only supporting Raydium Dex for now, Orca and Meteora integrations is still in development.
 - A CLI tool for creating and trading Solana **_SPL tokens_**, performing **_On-chain AMM liquidity Pools operation_** of Raydium, Orca and Meteora.
-- The code is written in a modular way, so that it can be easily extended to support other Solana-based projects.
+
+- We are developing Profitable memecoin trading strategies for anyone to make money which integrates with the **_Raydium dex Swap SDK_** and **_Jupiter Aggregator Protocol swap API_**, using **_Jito Tips_** and user-defined priority Lamports for faster transaction confirmation!
+
+- **_Pump.fun_** integration for launching, buying, and selling tokens.pump.
+
+- **_Shyft API_** integration for querying the pool information of a given pool address in the raydium dex.
 
 ## Installation 🛠️
 
@@ -25,26 +29,28 @@
 
 ## Features ✅:
 
-- Create a new SPL token and it will automatically mint to your wallet
+- **Developer CLI:**
+- Create a new SPL token (on SOL mainnet/devnet) and it will automatically mint to your wallet
 - Integrates both **user-defined priority fee and jito tips** that land transactions faster
 - Burn a percentage of a token
 - Revoke mint and freeze authority of a token
 - boost volume of a token by creating buy and sell orders in just **one transaction**
-- **Add liquidity** to a pool
-- **Remove liquidity** from a pool
-- Swap tokens in a **raydium dex's AMM pool**
-- Query the most liquid pool in a raydium dex by just providing the token address
-- Buy a token using SOL using raydium
-- Sell a token for SOL using raydium
-- **Buy, Sell, and Create token and market in pump.fun**
+- **Add or Remove liquidity** to a pool
+- Swap tokens in a **raydium dex's AMM pool and JUP Swap API**
+- Buy or sell a token using SOL using raydium and JUP
+- **Buy, Sell, and launch token in pump.fun**
 - Check the balance of a token in your wallet
+
+- **Trader CLI:**
+- Optimized Copy Trading Program with auto-buy&sell
+- detecting-dips Program with auto-buy&sell
 
 ## Features in Development 🚧:
 
+- With user-defined Jito tips and priority Lamports supported for every command
 - A Website for anyone to do these thing with their browser-based wallet
-- Function to **create a market for your token on raydium**
 - **More dexes support**, (Orca, Meteora, etc.)
-- **Profitable functions** for Memecoin dev and Trading strategies dev
+- **More Profitable functions** for Trading dev
 - **Phantom wallet integration**
 - more features to come...
 
@@ -120,6 +126,8 @@ node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percenta
 - src/Trading/dex/raydium/buy.js: buying spl token using SOL in your wallet using raydium dex swap function
 
 - src/Trading/volume/boost_volume.js: boost the volume of a token by creating a buy and sell order in just one transaction in a way to avoid possible MEV
+
+- src/Trading/memecoin_trading_strategies/copy-trading/copy-trade.js: copy trading program to follow a user-defined wallet address to auto-buy&sell
 
 ## Transactions:
 
