@@ -42,11 +42,7 @@ async function getSwapTransaction(quoteResponse, wallet_pubKey) {
       wrapAndUnwrapSol: true,
       dynamicComputeUnitLimit: true, // allow dynamic compute limit instead of max 1,400,000
       // custom priority fee
-      prioritizationFeeLamports: {
-        autoMultiplier: 2,
-      },
-      autoSlippage: true,
-      onlyDirectRoutes: false,
+      prioritizationFeeLamports: 4211970, // you can set your own fee here
     };
     const resp = await fetch("https://quote-api.jup.ag/v6/swap", {
       method: "POST",
@@ -87,7 +83,7 @@ async function finalizeTransaction(swapTransaction) {
     // sign the transaction
     transaction.sign([wallet]);
 
-    const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+    const latestBlockhash = await connection.getLatestBlockhash("processed");
     res = await jito_executeAndConfirm(
       transaction,
       wallet,
