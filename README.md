@@ -72,10 +72,11 @@ node burn --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percent
 node revoke_authority --payer <PATH_TO_SECRET_KEY> --mint_address <ADDRESS_TOKEN> --cluster <CLUSTER> --mint --freeze
 ```
 
-4. Specify the token address, the amount of token you want to transfer, the destination address, and the cluster you want to use.
+4. Specify the token address you want to query and the cluster for boosting the volume of the token.
 
 ```
-node transfer --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --amount <AMOUNT> --destination <RECEIVE_ADDRESS>
+node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> --cluster <CLUSTER> --sol_per_order <SOL_PER_ORDER>
+
 ```
 
 5. Specify the token address, the amount of Sol you want to swap, and the cluster you want to use.
@@ -102,13 +103,6 @@ node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <P
 node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
 ```
 
-9. Specify the token address you want to query and the cluster for boosting the volume of the token.
-
-```
-node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> --cluster <CLUSTER> --sol_per_order <SOL_PER_ORDER>
-
-```
-
 # Code Usage </>
 
 ## Token:
@@ -129,7 +123,7 @@ node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> -
 
 ## Transactions:
 
-- src/Transactions/jito_tips_tx_executor.js: execute the transaction by sending the bundles and request to Jito validators, it will send the transaction to the Solana blockchain.
+- src/Transactions/jito_tips_tx_executor.js: execute the transaction by sending the bundles to Jito validators, they help us to land the transaction to the Solana blockchain faster than just using priority fee.
 
 - src/Transactions/simple_tx_executor.js: execute the transaction by sending the request to the Solana blockchain with a given priority gas fee.
 
