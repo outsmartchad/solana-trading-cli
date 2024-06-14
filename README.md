@@ -4,13 +4,11 @@
 
 - A CLI tool for creating and trading Solana **_SPL tokens_**, performing **_On-chain AMM liquidity Pools operation_** of Raydium, Orca and Meteora.
 
-- We are developing Profitable memecoin trading strategies for anyone to make money which integrates with the **_Raydium dex Swap SDK_** and **_Jupiter Aggregator Protocol swap API_**, using **_Jito Tips_** and user-defined priority Lamports for faster transaction confirmation!
+- Profitable memecoin trading strategies for anyone to make money, which integrates with the **_Raydium dex Swap SDK_** and **_Jupiter Aggregator Protocol swap API_**, using **_Jito Tips_** and user-defined priority Lamports for faster transaction confirmation!
 
 - **_Pump.fun_** integration for launching, buying, and selling tokens.pump.
 
-- **_Shyft API_** integration for querying the pool information of a given pool address in the raydium dex.
-
-## Installation 🛠️
+### Installation 🛠️
 
 1. `git clone https://github.com/ManofDiligence/solana-memecoin-cli.git`
 2. `cd solana-memecoin-cli`
@@ -29,7 +27,7 @@
 
 ## Features ✅:
 
-- **Developer CLI:**
+### Developer CLI:
 - Create a new SPL token (on SOL mainnet/devnet) and it will automatically mint to your wallet
 - Integrates both **user-defined priority fee and jito tips** that land transactions faster
 - Burn a percentage of a token
@@ -41,7 +39,7 @@
 - **Buy, Sell, and launch token in pump.fun**
 - Check the balance of a token in your wallet
 
-- **Trader CLI:**
+### Trader CLI:
 - Optimized Copy Trading Program with auto-buy&sell
 - detecting-dips Program with auto-buy&sell
 
