@@ -10,74 +10,77 @@
 ```
 .solana-memecoin-cli
 ├── data
-|   ├── Image_file
-|   ├── metadata_file
-|   ├── payer_keypair
-|   └── token_keypair
-├── examples
-|   ├── add_liquidity
-|   ├── burn_token
-|   ├── create_token
-|   ├── buy_token
-|   ├── create_token
-|   ├── remove_liquidity
-|   └── sell_token
+|   ├── Image_file                     # to store image file (jpeg, jpg,...)
+|   ├── metadata_file                  # to store .json file about the token metadata
+|   ├── payer_keypair                  # to store wallet keypair .json
+|   └── token_keypair                  # to store token keypair .json
+├── examples                           # all screenshot to show how we use the command line tool
+|   ├── add_liquidity                  # to see how to add liquidity to a pool on Raydium
+|   ├── burn_token                     # to see how to burn a token with WSOL using Raydium swap
+|   ├── create_token                   # to see how to create a SPL token on mainnet or devnet
+|   ├── buy_token                      # to buy a token using raydium with both jito bundles and priority fees
+|   ├── create_token                   # to create a token with 0% extra fees on solana (mainnet or devnet)
+|   ├── remove_liquidity               # to remove some liquidity from a pool on Raydium
+|   └── sell_token                     # to sell the token with a percentage using Raydium swap
 ├── src
 |   ├── helpers
-|   |   ├── .env.copy
-|   |   ├── check_balance
-|   |   ├── config.js
-|   |   └── util.js
-|   ├── Pool
-|   |   ├── add_pool.js
-|   |   ├── create_pool.js
-|   |   ├── check_pool.js
-|   |   ├── formatAmmKeysById.js
-|   |   ├── query_pool.js
-|   |   ├── remove_pool.js
-|   |   └── swap.js
+|   |   ├── .env.copy                  # .env file to store your keys
+|   |   ├── check_balance              
+|   |   ├── config.js                  # get value from .env
+|   |   └── util.js                    # useful functions
+|   ├── Pool                           # Only Supporting Raydium right now
+|   |   ├── add_pool.js                # adding liquidity to AMM pool on Raydium
+|   |   ├── create_pool.js             # create pool/create open book market on Raydium (not done)
+|   |   ├── check_pool.js              # check the pool's info (pool size, burn percentage of LP token...)
+|   |   ├── formatAmmKeysById.js       # get well-informated info of pool
+|   |   ├── query_pool.js              # query the pool's current info (not done)_
+|   |   ├── remove_pool.js             # remove liquidity from AMM pool on Raydium
+|   |   └── swap.js                    # swap on Raydium
 |   ├── Token
-|   |   ├── create.js
-|   |   ├── burn.js
-|   |   ├── query.js
-|   |   └── revoke_authority.js
+|   |   ├── create.js                  # create token with uploading token image and metadata to irys (storage provider)
+|   |   ├── burn.js                    # burn a percentage of token
+|   |   ├── query.js                   # query token's info (creator, price, metadata, holder...) (not done)
+|   |   └── revoke_authority.js        # revoke token's freeze and mint authority
 |   ├── Trading
 |   |   ├── dex
 |   |   |   ├── jupiter
 |   |   |   |   ├── swap
-|   |   |   |   |   ├── buy-helper.js
-|   |   |   |   |   ├── sell-helper.js
-|   |   |   |   |   └── swap-helper.js
-|   |   |   |   ├── dca.js
-|   |   |   |   └── limit_order.js
+|   |   |   |   |   ├── buy-helper.js         # buy token with sol using jup swap api
+|   |   |   |   |   ├── sell-helper.js        # sell token to sol using jup swap api
+|   |   |   |   |   └── swap-helper.js        # swap any to any token using jup swap api
+|   |   |   |   ├── dca.js                    # create a dollar cost average program using jup api
+|   |   |   |   └── limit_order.js            # create a limit order program using jup api
 |   |   |   ├── meteora
 |   |   |   ├── orca
 |   |   |   └── raydium
-|   |   |       ├── buy-helper.js
-|   |   |       ├── buy.js
-|   |   |       ├── sell-helper.js
+|   |   |       ├── buy-helper.js             # buy token with WSOL using src\Pool\swap.js
+|   |   |       ├── buy.js                   
+|   |   |       ├── sell-helper.js            # sell token to WSOL using src\Pool\swap.js
 |   |   |       └── sell.js
 |   |   ├── pump.fun
-|   |   |   ├── buy.js
+|   |   |   ├── buy.js                        # buy any token on pump.fun
 |   |   |   ├── constants.js
-|   |   |   ├── create.js
+|   |   |   ├── create.js                     # launch token on pump.fun
 |   |   |   ├── idl.js
-|   |   |   ├── sell.js
+|   |   |   ├── sell.js                       # sell any pump.fun token
 |   |   |   └── utils.js
 |   |   ├── volume
-|   |   |   └── boost-volume.js
+|   |   |   └── boost-volume.js               # boosting token's volume
+|   |   |                                     # by doing one buy and one sell instruction in one transaction
+|   |   |                                     # [buy(), sell()] (only losing your gas fee)
 |   |   └── memecoin-trading-strategies
 |   |       ├── copy_trading
-|   |       |   ├── copy-buy.js
-|   |       |   ├── copy-sell.js
-|   |       |   └── copy-trade.js
-|   |       ├── Filters
-|   |       ├── take-profit.js
-|   |       └── stop-loss.js
+|   |       |   ├── copy-buy.js               # copy trader's buy tx
+|   |       |   ├── copy-sell.js              # copy trader's sell tx
+|   |       |   └── copy-trade.js             # Use two core to both copy-buy and copy-sell
+|   |       ├── Filters                       
+|   |       ├── take-profit.js                # taking profits by setting a limit order
+|   |       └── stop-loss.js                  # stop loss by setting a limit order
 |   └── Transactions
-|       ├── jito-tips-tx-executor.js
-|       ├── simple-tx-executor.js
-|       └── bloXroute-tips-tx-executor.js
+|       ├── jito-tips-tx-executor.js          # sending bundles(list of instructions) to Jito validators
+|                                             # validators help our tx land faster
+|       ├── simple-tx-executor.js             # submitting ur tx to RPC provider with predefined priority fees
+|       └── bloXroute-tips-tx-executor.js     
 └── help.js
 ```
 ### Installation 🛠️
