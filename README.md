@@ -1,13 +1,85 @@
 # SPL token ALL-IN-ONE Command line tool 🚀
 
 [🔗doc](https://manofdiligence.github.io/solana-memecoin-cli/)
-
 - A CLI tool for creating and trading Solana **_SPL tokens_**, performing **_On-chain AMM liquidity Pools operation_** of Raydium, Orca and Meteora.
-
 - Profitable memecoin trading strategies for anyone to make money, which integrates with the **_Raydium dex Swap SDK_** and **_Jupiter Aggregator Protocol swap API_**, using **_Jito Tips_** and user-defined priority Lamports for faster transaction confirmation!
 
 - **_Pump.fun_** integration for launching, buying, and selling tokens.pump.
 
+## Project Structure
+```
+.solana-memecoin-cli
+├── data
+|   ├── Image_file
+|   ├── metadata_file
+|   ├── payer_keypair
+|   └── token_keypair
+├── examples
+|   ├── add_liquidity
+|   ├── burn_token
+|   ├── create_token
+|   ├── buy_token
+|   ├── create_token
+|   ├── remove_liquidity
+|   └── sell_token
+├── src
+|   ├── helpers
+|   |   ├── .env.copy
+|   |   ├── check_balance
+|   |   ├── config.js
+|   |   └── util.js
+|   ├── Pool
+|   |   ├── add_pool.js
+|   |   ├── create_pool.js
+|   |   ├── check_pool.js
+|   |   ├── formatAmmKeysById.js
+|   |   ├── query_pool.js
+|   |   ├── remove_pool.js
+|   |   └── swap.js
+|   ├── Token
+|   |   ├── create.js
+|   |   ├── burn.js
+|   |   ├── query.js
+|   |   └── revoke_authority.js
+|   ├── Trading
+|   |   ├── dex
+|   |   |   ├── jupiter
+|   |   |   |   ├── swap
+|   |   |   |   |   ├── buy-helper.js
+|   |   |   |   |   ├── sell-helper.js
+|   |   |   |   |   └── swap-helper.js
+|   |   |   |   ├── dca.js
+|   |   |   |   └── limit_order.js
+|   |   |   ├── meteora
+|   |   |   ├── orca
+|   |   |   └── raydium
+|   |   |       ├── buy-helper.js
+|   |   |       ├── buy.js
+|   |   |       ├── sell-helper.js
+|   |   |       └── sell.js
+|   |   ├── pump.fun
+|   |   |   ├── buy.js
+|   |   |   ├── constants.js
+|   |   |   ├── create.js
+|   |   |   ├── idl.js
+|   |   |   ├── sell.js
+|   |   |   └── utils.js
+|   |   ├── volume
+|   |   |   └── boost-volume.js
+|   |   └── memecoin-trading-strategies
+|   |       ├── copy_trading
+|   |       |   ├── copy-buy.js
+|   |       |   ├── copy-sell.js
+|   |       |   └── copy-trade.js
+|   |       ├── Filters
+|   |       ├── take-profit.js
+|   |       └── stop-loss.js
+|   └── Transactions
+|       ├── jito-tips-tx-executor.js
+|       ├── simple-tx-executor.js
+|       └── bloXroute-tips-tx-executor.js
+└── help.js
+```
 ### Installation 🛠️
 
 1. `git clone https://github.com/ManofDiligence/solana-memecoin-cli.git`
