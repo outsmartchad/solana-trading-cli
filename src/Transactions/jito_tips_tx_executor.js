@@ -22,11 +22,7 @@ const jito_Validators = [
   "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
 ];
 const endpoints = [
-  "https://mainnet.block-engine.jito.wtf/api/v1/bundles",
-  "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
-  "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
-  "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
-  "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
+  "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles"
 ];
 
 /**
@@ -92,8 +88,7 @@ async function jito_executeAndConfirm(
     const res = await Promise.all(requests.map((p) => p.catch((e) => e)));
     const success_res = res.filter((r) => !(r instanceof Error));
     if (success_res.length > 0) {
-      console.log(">=1 Jito validators accepted the tx");
-      console.log("Confirming the jito transaction...");
+      console.log("Jito validator accepted the tx");
       return await jito_confirm(jitoTxSignature, lastestBlockhash);
     } else {
       console.log("No Jito validators accepted the tx");
@@ -116,13 +111,14 @@ async function jito_executeAndConfirm(
  * @returns {object} - An object containing the confirmation status and the transaction signature.
  */
 async function jito_confirm(signature, latestBlockhash) {
+  console.log("Confirming the jito transaction...");
   const confirmation = await connection.confirmTransaction(
     {
       signature,
       lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
       blockhash: latestBlockhash.blockhash,
     },
-    connection.commitment
+    "confirmed"
   );
   return { confirmed: !confirmation.value.err, signature };
 }

@@ -24,6 +24,7 @@ const {
   _ENDPOINT,
   wallet,
   jito_fee,
+  second_connection
 } = require("../helpers/config.js");
 const {
   getDecimals,
@@ -90,9 +91,13 @@ async function swapOnlyAmm(input) {
     payerKey: wallet.publicKey,
     recentBlockhash: latestBlockhash.blockhash,
     instructions: [
+      
       ...[
         ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: 2000,
+          microLamports: 3052900,
+        }),
+        ComputeBudgetProgram.setComputeUnitLimit({
+          units: 3127500,
         }),
       ],
       ...(input.side === "buy"
@@ -116,9 +121,9 @@ async function swapOnlyAmm(input) {
           ]
         : []),
     ],
-  });
+  }).compileToV0Message();
 
-  const transaction = new VersionedTransaction(messageV0.compileToV0Message());
+  const transaction = new VersionedTransaction(messageV0);
   transaction.sign([wallet, ...innerTransaction.signers]);
   let signature = null,
     confirmed = null;
@@ -293,7 +298,7 @@ async function swap(
       inputToken,
       new BN(amountOfSol.mul(10 ** inputToken.decimals).toFixed(0))
     );
-    const slippage = new Percent(1, 100);
+    const slippage = new Percent(3, 100);
     const input = {
       outputToken,
       targetPool,
@@ -328,13 +333,13 @@ async function swap(
     }
 
     const balnaceOfToken = await getSPLTokenBalance(
-      connection,
+      second_connection,
       tokenAccount,
       wallet.publicKey
     );
     const percentage = sell_PercentageOfToken / 100;
     const amount = new Decimal(percentage * balnaceOfToken);
-    const slippage = new Percent(1, 1000);
+    const slippage = new Percent(3, 100);
     const inputTokenAmount = new TokenAmount(
       inputToken,
       new BN(amount.mul(10 ** inputToken.decimals).toFixed(0))

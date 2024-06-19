@@ -2,10 +2,39 @@ const { Connection, PublicKey } = require("@solana/web3.js");
 const { OpenOrders } = require("@project-serum/serum");
 const { gql, GraphQLClient } = require("graphql-request");
 const { shyft_api_key } = require("../helpers/config");
-
+const {Liquidity} = require("@raydium-io/raydium-sdk");
+const { token } = require("@metaplex-foundation/js");
+const {getDecimals} = require(
+  "../helpers/util"
+)
 const graphQLEndpoint = `https://programs.shyft.to/v0/graphql/?api_key=${shyft_api_key}`;
 const rpcEndpoint = `https://rpc.shyft.to/?api_key=${shyft_api_key}`;
 
+
+
+async function generateV4PoolInfo(tokenAddress) {
+  // RAY-USDC
+  const poolInfo = Liquidity.getAssociatedPoolKeys({
+    version: 4,
+    marketVersion: 3,
+    baseMint: new PublicKey('So11111111111111111111111111111111111111112'),
+    quoteMint: new PublicKey(tokenAddress),
+    baseDecimals: await getDecimals(new PublicKey(tokenAddress)),
+    quoteDecimals: 9,
+    programId: new PublicKey('675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8'),
+
+    marketId: new PublicKey('DZjbn4XC8qoHKikZqzmhemykVzmossoayV9ffbsUqxVj'),
+    marketProgramId: new PublicKey('srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX'),
+  })
+  console.log(poolInfo)
+  return { poolInfo }
+}
+
+async function howToUse() {
+  generateV4PoolInfo().then(({ poolInfo }) => {
+    console.log('poolInfo: ', poolInfo)
+  })
+}
 const graphQLClient = new GraphQLClient(graphQLEndpoint, {
   method: `POST`,
   jsonSerializer: {
@@ -306,17 +335,25 @@ async function getPoolIdByPair(baseToken) {
     console.log(
       `Cannot find any liquidity pool related to ${baseToken}/${quoteToken}`
     );
+    console.log(`It may be a token launched on pump.fun, we try to find ${quoteToken}/${baseToken}`)
+    const poolIdByPair = await queryLpPair(quoteToken, baseToken);
+    if (poolIdByPair.Raydium_LiquidityPoolv4.length === 0) {
+      console.log(
+        `Cannot find any liquidity pool related to ${quoteToken}/${baseToken}`
+      );
+      throw new Error(`Cannot find any liquidity pool related to ${quoteToken}`);
+      return null;
+    }else{
+      return poolIdByPair.Raydium_LiquidityPoolv4[0].pubkey;
+    }
     return null;
   }
   return poolId.Raydium_LiquidityPoolv4[0].pubkey;
 }
 async function main() {
   // getting the pool address for npch
-  // const poolId = await queryLpPair(
-  //   "TOKEN_ADDRESS",
-  //   "So11111111111111111111111111111111111111112"
-  // );
-  // console.log(poolId);
+  //const poolId = await getPoolIdByPair("token_address")
+  //console.log(poolId)
   // get token supply by token address
   //   const poolInfo: any = await queryLpByAddress('TOKEN_ADDRESS');
   //   await parsePoolInfo(poolInfo.Raydium_LiquidityPoolv4[0]);
@@ -327,8 +364,9 @@ async function main() {
   //   'So11111111111111111111111111111111111111112',
   // );
   // console.log(poolIdByPair);
+  
 }
-// main().catch(console.error);
+//main().catch(console.error);
 module.exports = {
   getPoolIdByPair,
   queryLpByToken,
