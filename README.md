@@ -15,21 +15,21 @@
 ```
 .solana-memecoin-cli
 ├── data
-|   ├── Image_file                     # to store image file (jpeg, jpg,...)
-|   ├── metadata_file                  # to store .json file about the token metadata
-|   ├── payer_keypair                  # to store wallet keypair .json
-|   └── token_keypair                  # to store token keypair .json
-├── examples                           # all screenshot to show how we use the command line tool
-|   ├── add_liquidity                  # to see how to add liquidity to a pool on Raydium
-|   ├── burn_token                     # to see how to burn a token with WSOL using Raydium swap
-|   ├── create_token                   # to see how to create a SPL token on mainnet or devnet
-|   ├── buy_token                      # to buy a token using raydium with both jito bundles and priority fees
-|   ├── create_token                   # to create a token with 0% extra fees on solana (mainnet or devnet)
-|   ├── remove_liquidity               # to remove some liquidity from a pool on Raydium
-|   └── sell_token                     # to sell the token with a percentage using Raydium swap
+|   ├── Image_file                     # store image file (jpeg, jpg,...)
+|   ├── metadata_file                  # store .json file about the token metadata
+|   ├── payer_keypair                  # store wallet keypair .json
+|   └── token_keypair                  # store token keypair .json
+├── examples (Screenshots of Commands) # all screenshot to show how we use the command line tool
+|   ├── add_liquidity                  # see how to add liquidity to a pool on Raydium
+|   ├── burn_token                     # see how to burn a token with WSOL using Raydium swap
+|   ├── create_token                   # see how to create a SPL token on mainnet or devnet
+|   ├── buy_token                      # buy a token using raydium with both jito bundles and priority fees
+|   ├── create_token                   # create a token with 0% extra fees on solana (mainnet or devnet)
+|   ├── remove_liquidity               # remove some liquidity from a pool on Raydium
+|   └── sell_token                     # sell the token with a percentage using Raydium swap
 ├── src
 |   ├── helpers
-|   |   ├── .env.copy                  # .env file to store your keys
+|   |   ├── .env.copy                  # .env file to store your keys, rmb change to .env
 |   |   ├── check_balance              
 |   |   ├── config.js                  # get value from .env
 |   |   └── util.js                    # useful functions
