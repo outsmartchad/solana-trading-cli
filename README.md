@@ -134,8 +134,6 @@
 
 # Commands </> (Please see the command examples in examples/ to get start~)
 
-### cluster options use devnet or mainnet
-
 ### payer options is by default use the private key in .env file, but you can also specify the path to the secret key if you want to use another wallet
 
 1. Specify the token symbol, name, mint keypair(optional, will help u to generate), supply, decimals, path to metadata json file, path to image file, the cluster you want to use, and the file type(png, jpg, jpeg).
@@ -231,10 +229,18 @@ node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percenta
 
 - src/helpers/check_balance.js: check the balance of a given token in your wallet
 
-### if you think this project is useful, please give us a star🌟, it will help us a lot or consider to buy us a coffee 📚🎧☕,
+## Contributing
+- Contributions is wellcome!!!
+- Fork it
+- ``` git checkout -b feature/YourNewFeature ```
+- ``` git commit -m 'bug Fixed/added new feature' ```
+- ``` git push origin feature/YourNewFeature ```
+- And Please open a pull request
 
-### solana address: 8FV2wovZuac8ZFMYMpRJGEG1vpBQGwLYiU31eR86Bp3g
+### If you think this project is useful, please give us a star🌟, it will help us a lot or consider to buy us a coffee 📚🎧☕,
 
-### it is a work in progress, we are still working on it, if you have any suggestions, please let us know.
+### Solana address: 8FV2wovZuac8ZFMYMpRJGEG1vpBQGwLYiU31eR86Bp3g
 
-### **_Other dex integration is still in development, stay tuned for the updates.🤖_**
+### It is a work in progress, if you have any suggestions or any problems, please let us know!
+
+### Stay tuned for the updates.🤖_**
