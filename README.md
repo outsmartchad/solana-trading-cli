@@ -2,9 +2,9 @@
 
 [🔗doc](https://manofdiligence.github.io/solana-memecoin-cli/)
 - A CLI tool for creating and trading Solana **_SPL tokens_**, and performing **_On-chain liquidity Pools operation_** of Raydium, Orca and Meteora.
-  
-- Profitable memecoin trading strategies for anyone to make money, which integrates with the **_Raydium dex Swap SDK_** and **_Jupiter Aggregator Protocol swap API_**, using **_Jito Tips_** and user-defined priority Lamports for faster transaction confirmation!
 
+- Predefined Jito tips and Priority fee for any functions of this project
+  
 - Open-source Volume Booster by bundling buy and sell in one transaction!
 
 - Fastest Copy Trade Program on Solana
