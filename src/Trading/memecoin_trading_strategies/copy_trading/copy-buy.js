@@ -60,27 +60,28 @@ async function listenToWallets(address) {
               console.log("We don't have enough SOL to swap");
               throw new Error("We don't have enough SOL to swap");
             }
-            const decreasedTokenPercentage = (current_trader_wallet_state["SOL"] - previous_trader_wallet_state["SOL"]) / previous_trader_wallet_state["SOL"];
-            const buy_percentage = Math.abs(decreasedTokenPercentage);
+            const buy_percentage = Math.abs((current_trader_wallet_state["SOL"] - previous_trader_wallet_state["SOL"]) / previous_trader_wallet_state["SOL"]);
             const amountOut = current_our_wallet_state[wsol] * buy_percentage;
             console.log("amountOut: ", amountOut);
-            await buy("buy", changedMint, amountOut, wallet)
-            await saveToJson(changedMint);
+            buy("buy", changedMint, amountOut, wallet)
+            saveToJson(changedMint);
             previous_our_wallet_state = await retriveWalletState(wallet.publicKey.toBase58());
             previous_trader_wallet_state = await retriveWalletState(address.toBase58());
             return;
       }
-      else if((!(changedMint in current_trader_wallet_state) || current_trader_wallet_state[changedMint] === 0) && current_trader_wallet_state["SOL"] > previous_trader_wallet_state["SOL"]){
+      else if((!(changedMint in current_trader_wallet_state) || current_trader_wallet_state[changedMint] <= previous_trader_wallet_state[changedMint] ) && current_trader_wallet_state["SOL"] > previous_trader_wallet_state["SOL"]){
             console.log(`selling ${changedMint}...`)
             if (!current_our_wallet_state[wsol]) {
               console.log("We don't have enough SOL to swap");
               throw new Error("We don't have enough SOL to swap");
             }
-            const decreasedTokenPercentage = (current_trader_wallet_state[changedMint] - previous_trader_wallet_state[changedMint]) / previous_trader_wallet_state[changedMint];
-            const sell_percentage = Math.abs(decreasedTokenPercentage);
+            if(!changedMint in current_trader_wallet_state){
+              current_trader_wallet_state[changedMint] = 0;
+            }
+            const sell_percentage = Math.abs((current_trader_wallet_state[changedMint] - previous_trader_wallet_state[changedMint]) / previous_trader_wallet_state[changedMint]);
             const amountOut = current_our_wallet_state[changedMint] * sell_percentage;
             console.log("amountOut: ", amountOut);
-            await sell("sell", changedMint, amountOut*100, wallet);
+            sell("sell", changedMint, amountOut*100, wallet);
             previous_our_wallet_state = await retriveWalletState(wallet.publicKey.toBase58());
             previous_trader_wallet_state = await retriveWalletState(address.toBase58());
             return;
@@ -136,15 +137,15 @@ async function listenToWallets(address) {
             const amountOut =
               current_our_wallet_state[decreasedToken] * buy_percentage;
 
-            await swap(decreasedToken, increasedToken, amountOut, 5);
+            swap(decreasedToken, increasedToken, amountOut, 5);
 
           } else if (current_our_wallet_state[wsol]) {
             // use sol to buy it if we don't have decreased token
             const buy_percentage = Math.abs(decreasedTokenPercentage);
             const amountOut = current_our_wallet_state[wsol] * buy_percentage;
 
-            await buy("buy", increasedToken, amountOut, wallet)
-            await saveToJson(increasedToken);
+            buy("buy", increasedToken, amountOut, wallet)
+            saveToJson(increasedToken);
           }
         }  else {
           // when the trader is swapping usdt to usdc, ignore it

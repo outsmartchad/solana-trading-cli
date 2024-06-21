@@ -25,20 +25,23 @@ function loadKeypairFromFile(filename) {
 const jito_fee = process.env.JITO_FEE; // 0.00009 SOL
 const shyft_api_key = process.env.SHYFT_API_KEY; // your shyft api key
 const wallet = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY)); // your wallet
-const dev_endpoint = process.env.DEVNET_ENDPOINT; // devnet endpoint
+const dev_endpoint = process.env.DEVNET_ENDPOINT; // devnet endpoint, if you use devnet
 const main_endpoint = process.env.MAINNET_ENDPOINT; // mainnet endpoint
-const second_main_endpoint = process.env.SECOND_MAINNET_ENDPOINT; // second mainnet endpoint
-const RPC_Websocket_endpoint = process.env.WS_ENDPOINT;
-const second_RPC_Websocket_endpoint = process.env.SECOND_WS_ENDPOINT;
-const smart_money_wallet = process.env.SMART_MONEY_WALLET; // smart money wallet
-const connection = new Connection(main_endpoint, {
-  wsEndpoint: RPC_Websocket_endpoint,
-  commitment: "confirmed",
-});
-const second_connection = new Connection(second_main_endpoint, {
-  wsEndpoint: second_RPC_Websocket_endpoint,
-  commitment: "confirmed",
-});
+// const second_main_endpoint = process.env.SECOND_MAINNET_ENDPOINT; // if you use copy trade program, second mainnet endpoint
+// const RPC_Websocket_endpoint = process.env.WS_ENDPOINT;
+// const second_RPC_Websocket_endpoint = process.env.SECOND_WS_ENDPOINT; // if you use copy trade program
+// const stop_lost = process.env.STOP_LOST; // percentage of stop lost, if you use copy trade program
+// const take_profit = process.env.TAKE_PROFIT; // percentage of take profit, if you use copy trade program
+// const smart_money_wallet = process.env.SMART_MONEY_WALLET; // if you use copy trade program
+const connection = new Connection(main_endpoint, "confirmed"); // mainnet connection
+//const connection = new Connection(main_endpoint, { // if you use copy trade program
+//  wsEndpoint: RPC_Websocket_endpoint,
+//  commitment: "confirmed",
+//});
+//const second_connection = new Connection(second_main_endpoint, { // if you use copy trade program
+//  wsEndpoint: second_RPC_Websocket_endpoint,
+//  commitment: "confirmed",
+//});
 const dev_connection = new Connection(dev_endpoint, "confirmed"); // devnet connection
 
 const PROGRAMIDS = MAINNET_PROGRAM_ID; // raydium mainnet program address

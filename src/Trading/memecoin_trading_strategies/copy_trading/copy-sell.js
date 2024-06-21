@@ -77,7 +77,7 @@ async function copy_sell(address){
           console.log(`Selling ${token}...`);
           soldTokens.push(token);
           flag = true;
-          await sell("sell", token, 100, wallet);
+          sell("sell", token, 100, wallet);
         }
         }
       
