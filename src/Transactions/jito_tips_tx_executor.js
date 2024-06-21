@@ -21,8 +21,12 @@ const jito_Validators = [
   "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
   "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
 ];
-const endpoints = [
-  "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles"
+const endpoints = [ // TODO: Choose a jito endpoint which is closest to your location, and uncomment others
+  "https://mainnet.block-engine.jito.wtf/api/v1/bundles",
+  "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
+  "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
+  "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
+  "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
 ];
 
 /**
