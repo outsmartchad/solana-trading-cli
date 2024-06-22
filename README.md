@@ -1,9 +1,9 @@
 # SPL token ALL-IN-ONE Command line tool 🚀
 
 [🔗doc](https://outsmartchad.github.io/solana-memecoin-cli/)
-- A CLI tool for creating and trading Solana **_SPL tokens_**, and performing **_On-chain liquidity Pools operation_** of Raydium, Orca and Meteora.
+- Trading & Creating your own Solana **_SPL tokens_**
 
-- **_Got everything needed for any dev to create their own trading bot_**
+- Performing **_On-chain liquidity Pools operation_** On Raydium, Orca and Meteora.
   
 - Predefined Jito tips and Priority fee for any functions of this project
   
@@ -12,6 +12,8 @@
 - Fastest Copy Trade Program on Solana
 
 - **_Pump.fun_** integration for launching, buying, and selling tokens.pump.
+
+- **_Got everything needed for any dev to create their own trading bot_**
 
 ## Project Structure
 ```
