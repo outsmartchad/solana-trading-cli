@@ -241,6 +241,11 @@ node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percenta
 - ``` git push origin feature/YourNewFeature ```
 - And Please open a pull request
 
+## Apply Latest Changes from remote repo
+- ``` git stash -u  # Stash your changes``` 
+- ``` git pull --rebase # Pull the latest changes```
+- ``` git stash pop # Apply Your stashed changes```
+
 ### If you think this project is useful, please give us a star🌟, it will help us a lot or consider to buy us a coffee 📚🎧☕,
 
 ### Solana address: 8FV2wovZuac8ZFMYMpRJGEG1vpBQGwLYiU31eR86Bp3g
