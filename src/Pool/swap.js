@@ -46,6 +46,8 @@ const {
 const {
   jito_executeAndConfirm,
 } = require("../Transactions/jito_tips_tx_executor.js");
+const {getCurrentPriceRaydium, readBoughtTokens, writeBoughtTokens, logExitPrice} = require("../Trading/memecoin_trading_strategies/utils.js")
+
 
 /**
  * Performs a swap operation using an Automated Market Maker (AMM) pool in Raydium.
@@ -86,7 +88,7 @@ async function swapOnlyAmm(input) {
     poolKeys.version
   );
   if (input.usage == "volume") return innerTransaction;
-  const latestBlockhash = await connection.getLatestBlockhash();
+  let latestBlockhash = await connection.getLatestBlockhash();
   const messageV0 = new TransactionMessage({
     payerKey: wallet.publicKey,
     recentBlockhash: latestBlockhash.blockhash,
@@ -111,46 +113,38 @@ async function swapOnlyAmm(input) {
           ]
         : []),
       ...innerTransaction.instructions,
-      ...(input.side === "sell" && input.sell_PercentageOfToken === 100
-        ? [
-            createCloseAccountInstruction(
-              input.ataIn,
-              wallet.publicKey,
-              wallet.publicKey
-            ),
-          ]
-        : []),
     ],
   }).compileToV0Message();
 
   const transaction = new VersionedTransaction(messageV0);
   transaction.sign([wallet, ...innerTransaction.signers]);
-  let signature = null,
-    confirmed = null;
-  try {
-    const res = await jito_executeAndConfirm(
-      transaction,
-      wallet,
-      latestBlockhash,
-      jito_fee
-    );
-    signature = res.signature;
-    confirmed = res.confirmed;
-    if (signature == null) {
-      console.log("jito fee transaction failed");
-      console.log("trying to send the transaction again...");
-      return await swapOnlyAmm(input);
-    }
-  } catch (e) {
-    console.log(e);
-    return { txid: e.signature };
+  let attempts = 0;
+  const maxAttempts = 3;
+
+  while (attempts < maxAttempts) {
+      attempts++;
+      try {
+          const res = await jito_executeAndConfirm(transaction, wallet, latestBlockhash, jito_fee);
+          const signature = res.signature;
+          const confirmed = res.confirmed;
+
+          if (signature) {
+              return { txid: signature };
+          } else {
+              console.log("jito fee transaction failed");
+              console.log(`Retry attempt ${attempts}`);
+          }
+      } catch (e) {
+          console.log(e);
+          if (e.signature) {
+              return { txid: e.signature };
+          }
+      }
+      latestBlockhash = await connection.getLatestBlockhash();
   }
-  if (signature == null) {
-    console.log("jito fee transaction failed");
-    console.log("trying to send the transaction again...");
-    return await swapOnlyAmm(input);
-  }
-  return { txid: signature };
+
+  console.log("Transaction failed after maximum retry attempts");
+  return { txid: null };
 }
 
 /**
@@ -232,6 +226,10 @@ async function swapOnlyAmmHelper(input) {
   console.log("txids:", txid);
   const response = await checkTx(txid);
   if (response) {
+    if(input.side==="sell") {
+      const currentPrice = await getCurrentPriceRaydium(input.tokenAddress);
+      await logExitPrice(input.tokenAddress, currentPrice);
+    }
     if (input.side === "buy") {
       console.log(
         `https://dexscreener.com/solana/${input.targetPool}?maker=${wallet.publicKey}`
@@ -244,8 +242,7 @@ async function swapOnlyAmmHelper(input) {
     console.log(`https://solscan.io/tx/${txid}?cluster=mainnet`);
   } else {
     console.log("Transaction failed");
-    console.log("trying to send the transaction again");
-    swapOnlyAmmHelper(input);
+
   }
 }
 /**
@@ -298,7 +295,7 @@ async function swap(
       inputToken,
       new BN(amountOfSol.mul(10 ** inputToken.decimals).toFixed(0))
     );
-    const slippage = new Percent(3, 100);
+    const slippage = new Percent(6, 100);
     const input = {
       outputToken,
       targetPool,
@@ -339,7 +336,7 @@ async function swap(
     );
     const percentage = sell_PercentageOfToken / 100;
     const amount = new Decimal(percentage * balnaceOfToken);
-    const slippage = new Percent(3, 100);
+    const slippage = new Percent(6, 100);
     const inputTokenAmount = new TokenAmount(
       inputToken,
       new BN(amount.mul(10 ** inputToken.decimals).toFixed(0))
@@ -355,6 +352,7 @@ async function swap(
       ataOut: quoteAta,
       side,
       usage,
+      tokenAddress: tokenAddress
     };
     if (usage == "volume") {
       return await swapOnlyAmm(input);
