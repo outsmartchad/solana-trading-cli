@@ -86,7 +86,4 @@ module.exports = {
   _ENDPOINT,
   shyft_api_key,
   jito_fee,
-  second_main_endpoint,
-  second_connection,
-  smart_money_wallet,
 };

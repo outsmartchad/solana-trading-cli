@@ -23,8 +23,7 @@ const {
   RAYDIUM_MAINNET_API,
   _ENDPOINT,
   wallet,
-  jito_fee,
-  second_connection
+  jito_fee
 } = require("../helpers/config.js");
 const {
   getDecimals,
@@ -46,7 +45,6 @@ const {
 const {
   jito_executeAndConfirm,
 } = require("../Transactions/jito_tips_tx_executor.js");
-const {getCurrentPriceRaydium, readBoughtTokens, writeBoughtTokens, logExitPrice} = require("../Trading/memecoin_trading_strategies/utils.js")
 
 
 /**
@@ -226,10 +224,6 @@ async function swapOnlyAmmHelper(input) {
   console.log("txids:", txid);
   const response = await checkTx(txid);
   if (response) {
-    if(input.side==="sell") {
-      const currentPrice = await getCurrentPriceRaydium(input.tokenAddress);
-      await logExitPrice(input.tokenAddress, currentPrice);
-    }
     if (input.side === "buy") {
       console.log(
         `https://dexscreener.com/solana/${input.targetPool}?maker=${wallet.publicKey}`
@@ -295,7 +289,7 @@ async function swap(
       inputToken,
       new BN(amountOfSol.mul(10 ** inputToken.decimals).toFixed(0))
     );
-    const slippage = new Percent(6, 100);
+    const slippage = new Percent(3, 100);
     const input = {
       outputToken,
       targetPool,
@@ -330,13 +324,13 @@ async function swap(
     }
 
     const balnaceOfToken = await getSPLTokenBalance(
-      second_connection,
+      connection,
       tokenAccount,
       wallet.publicKey
     );
     const percentage = sell_PercentageOfToken / 100;
     const amount = new Decimal(percentage * balnaceOfToken);
-    const slippage = new Percent(6, 100);
+    const slippage = new Percent(3, 100);
     const inputTokenAmount = new TokenAmount(
       inputToken,
       new BN(amount.mul(10 ** inputToken.decimals).toFixed(0))
