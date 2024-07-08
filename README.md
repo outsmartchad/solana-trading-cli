@@ -188,7 +188,25 @@ node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <P
 ```
 node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
 ```
+### Pump.fun commands
 
+9. Specify the path to your mint keypair, the amount of Sol you want to buy, the name of the token, the symbol of the token, the description of the token, the telegram link, the twitter link, the website link, and the image file path.
+
+```
+node createAndBuy --pathToMintKeypair <PATH_TO_MINT_KEYPAIR> --sol <NUMBER_OF_SOL> --name <TOKEN_NAME> --symbol <TOKEN_SYMBOL> --description <TOKEN_DESCRIPTION> --telegram <TELEGRAM_LINK> --twitter <TWITTER_LINK> --website <WEBSITE_LINK> --file <IMAGE_FILE_PATH>
+```
+
+10. Specify the token address, the sol you want to buy
+
+```
+node buy --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>
+```
+
+11. Specify the token address, the percentage of the token you want to sell
+
+```
+node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
+```
 # Code Usage </>
 
 ## Token:
