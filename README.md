@@ -1,6 +1,7 @@
 # SPL token ALL-IN-ONE Command line tool 🚀
 
 [🔗doc](https://outsmartchad.github.io/solana-memecoin-cli/)
+## Main Features
 - Trading & Creating your own Solana **_SPL tokens_**
 
 - Performing **_On-chain liquidity Pools operation_** On Raydium, Orca and Meteora.
@@ -14,6 +15,12 @@
 - **_Pump.fun_** integration for launching, buying, and selling tokens.pump.
 
 - **_Got everything needed for any dev to create their own trading bot_**
+
+## Credits
+- https://github.com/outsmartchad/raydium-sdk-V1-demo
+- https://github.com/rckprtr/pumpdotfun-sdk
+- https://github.com/Al366io/solana-transactions-wrapper
+
 
 ## Project Structure
 ```
