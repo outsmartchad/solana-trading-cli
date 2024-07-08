@@ -159,26 +159,12 @@ async function run() {
   const pathToSnipersPrivateKey =
     "/Users/chiwangso/Desktop/beta-memecoin-cli/src/pump.fun/pumpdotfun-sdk/src/WalletKeypairs/privateKeys.json";
   const pathToMintKeypair =
-    "/Users/chiwangso/Desktop/beta-memecoin-cli/src/pump.fun/pump-keypair/aMSwb4GdCdD7Bo2XbpTiCqHL3NHzqPBVRGj423PQY83.json";
+    "/Users/chiwangso/Desktop/beta-memecoin-cli/src/pump.fun/pump-keypair/token_address.json";
   const tokenAddress = new PublicKey(
-    "aMSwb4GdCdD7Bo2XbpTiCqHL3NHzqPBVRGj423PQY83"
+    "token_address"
   );
 
   //console.log(wallet.publicKey.toBase58());
-
-  let tokenMetadata = {
-    name: "Juice Wrld",
-    symbol: "JW",
-    description: "YES, how?",
-    telegram: "",
-    twitter: "",
-    website: "",
-    file: await fs.openAsBlob(
-      "/Users/chiwangso/Desktop/beta-memecoin-cli/src/pumpfunsdk-js/pumpdotfun-sdk/images/999.jpg" // change your own path
-    ),
-  };
-
-
     // buy token with 0.01 SOL
    // await buy(tokenAddress, 0.01);
     // sell token with 100% of the balance
