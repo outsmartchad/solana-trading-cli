@@ -1,5 +1,5 @@
 {
-  "name": "memecoin-solana-cli",
+  "name": "solana-memecoin-cli",
   "version": "1.0.0",
   "description": "",
   "main": "help.js",
@@ -8,8 +8,8 @@
   },
   "keywords": [],
   "author": "vincentso",
-  "url": "https://github.com/ManofDiligence/Solana-Memecoin-CLI/issues",
-  "homepage": "https://github.com/ManofDiligence/Solana-Memecoin-CLI/blob/main/README.md",
+  "url": "https://github.com/outsmartchad/solana-memecoin-cli/issues",
+  "homepage": "https://github.com/outsmartchad/solana-memecoin-cli",
   "license": "ISC",
   "dependencies": {
     "@bonfida/spl-name-service": "^2.5.2",
