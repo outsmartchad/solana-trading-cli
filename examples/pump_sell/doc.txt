@@ -1,0 +1,7 @@
+# if you already fill in your private key to src/helpers/.env.copy, 
+# change it to .env and fill in your .env path in src/helpers/config.js
+
+- support only mainnet right now
+
+example 1: (already set up ur secret key)
+node /Users/chiwangso/Desktop/solana-memecoin-cli/src/pumpfunsdk-js/pumpdotfun-sdk/src/sell.js --token_address wdyfVw7jshftRVsevhPzsNCT2jZJ6p3mFgDsv6Zpump --percentage 100

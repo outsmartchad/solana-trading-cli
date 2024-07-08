@@ -1,0 +1,7 @@
+# if you already fill in your private key to src/helpers/.env.copy, 
+# change it to .env and fill in your .env path in src/helpers/config.js
+
+- support only mainnet right now
+
+example 1: (already set up ur secret key)
+node /Users/chiwangso/Desktop/solana-memecoin-cli/src/pumpfunsdk-js/pumpdotfun-sdk/src/createAndBuy.js --pathToMintKeypair /Users/chiwangso/Desktop/solana-memecoin-cli/src/pumpfunsdk-js/pump-keypair/aNJh1sNPsX1TAPxiqhZxYBkzseuRJZxPpBEcjDBpYnL.json --sol 0.01 --name juiceWrld --symbol JW --description iWillChangeTheWorld --file /Users/chiwangso/Desktop/solana-memecoin-cli/src/pumpfunsdk-js/pumpdotfun-sdk/images/999.jpg

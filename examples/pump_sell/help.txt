@@ -1,0 +1,2 @@
+run
+node /Users/chiwangso/Desktop/solana-memecoin-cli/src/pumpfunsdk-js/pumpdotfun-sdk/src/sell.js -h
