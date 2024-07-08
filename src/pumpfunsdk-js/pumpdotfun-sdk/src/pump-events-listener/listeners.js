@@ -1,4 +1,4 @@
-const {connection} = require("../../../helpers/config");
+const {connection} = require("../../../../helpers/config");
 const { Keypair, Connection } =  require("@solana/web3.js");
 const {PumpFunSDK} =require ("pumpdotfun-sdk");
 const { AnchorProvider } = require ("@coral-xyz/anchor");
