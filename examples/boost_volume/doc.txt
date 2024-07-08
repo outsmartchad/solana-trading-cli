@@ -1,0 +1,7 @@
+# if you already fill in your private key to src/helpers/.env.copy, 
+# change it to .env and fill in your .env path in src/helpers/config.js
+
+- support only mainnet right now
+
+example 1: (already set up ur secret key)
+node boost_volume --token_address <YOUR_TOKEN_ADDRESS> --cluster mainnet --sol_per_order 0.01
