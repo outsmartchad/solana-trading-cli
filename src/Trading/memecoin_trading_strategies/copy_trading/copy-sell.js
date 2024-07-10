@@ -6,10 +6,12 @@ const {
     AccountLayout,
   } = require("@solana/spl-token");
   const fs = require('fs');
+  const path = require('path');
   const { wallet, second_connection, smart_money_wallet } = require("../../../helpers/config");
   //const { buy } = require("../../dex/jupiter/swap/buy-helper");
   //const { sell } = require("../../dex/jupiter/swap/sell-helper");
   const {sell} = require("../../dex/raydium/sell_helper")
+
   //const {swap} = require("../../../Pool/swap") 
   var current_trader_wallet_state = {};
   var current_our_wallet_state = {};
@@ -21,10 +23,11 @@ const {
     "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
     wsol,
   ];
-  let boughtTokens = JSON.parse(fs.readFileSync('C:\\Users\\User\\Desktop\\solana-memecoin-cli\\src\\Trading\\memecoin_trading_strategies\\copy_trading\\bought-tokens.json', 'utf8'));
+  const boughtTokensPath = path.join(__dirname, 'bought-tokens.json');
+  let boughtTokens = JSON.parse(fs.readFileSync(boughtTokensPath, 'utf8'));
 console.log(boughtTokens);
 function saveToJson() {
-    fs.writeFileSync('C:\\Users\\User\\Desktop\\solana-memecoin-cli\\src\\Trading\\memecoin_trading_strategies\\copy_trading\\bought-tokens.json', JSON.stringify(boughtTokens, null, 2));
+    fs.writeFileSync(boughtTokensPath, JSON.stringify(boughtTokens, null, 2));
   }
 /**
  * Retrieves the state of a wallet by querying the Solana blockchain.
@@ -99,7 +102,8 @@ async function copy_sell(address){
 }
 async function main(){
   while(true){
-    boughtTokens = JSON.parse(fs.readFileSync('C:\\Users\\User\\Desktop\\solana-memecoin-cli\\src\\Trading\\memecoin_trading_strategies\\copy_trading\\bought-tokens.json', 'utf8'));
+    boughtTokens = JSON.parse(fs.readFileSync(boughtTokensPath, 'utf8'));
+    console.log(boughtTokens);
     await copy_sell(smart_money_wallet);
     
     await new Promise((resolve) => setTimeout(resolve, 2500));

@@ -3,12 +3,14 @@
 // 1. copy_sell
 // 2. copy_buy
 const { fork } = require('child_process');
-
+const path = require('path');
+const copySellPath = path.join(__dirname, 'copy_sell.js');
+const copyBuyPath = path.join(__dirname, 'copy_buy.js');
 // Run copy_sell in a separate process
-const copySellingProcess = fork('C:\\Users\\User\\Desktop\\solana-memecoin-cli\\src\\Trading\\memecoin_trading_strategies\\copy_trading\\copy-sell.js');
+const copySellingProcess = fork(copySellPath);
 
 // Run copy_buy in a separate process
-const copyBuyingProcess = fork('C:\\Users\\User\\Desktop\\solana-memecoin-cli\\src\\Trading\\memecoin_trading_strategies\\copy_trading\\copy-buy.js');
+const copyBuyingProcess = fork(copyBuyPath);
 
 copyBuyingProcess.on('exit', (code) => {
     console.log('copy_buy process exited with code:', code);

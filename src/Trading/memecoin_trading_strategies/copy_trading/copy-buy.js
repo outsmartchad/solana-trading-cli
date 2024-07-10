@@ -8,10 +8,12 @@ const {
 const { connection, wallet, smart_money_wallet } = require("../../../helpers/config");
 //const { buy } = require("../../dex/jupiter/swap/buy-helper");
 //const { sell } = require("../../dex/jupiter/swap/sell-helper");
+const path = require('path');
 const { swap } = require("../../dex/jupiter/swap/swap-helper");
 const {buy} = require("../../dex/raydium/buy_helper")
 const {sell} = require("../../dex/raydium/sell_helper")
 const fs = require('fs');
+const boughtTokensPath = path.join(__dirname, 'bought-tokens.json');
 //const {swap} = require("../../../Pool/swap") 
 let walletsToListen = [];
 var previous_trader_wallet_state = {};
@@ -24,11 +26,11 @@ const quoteToken = [
   "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
   wsol,
 ];
-let boughtTokens = JSON.parse(fs.readFileSync('C:\\Users\\User\\Desktop\\solana-memecoin-cli\\src\\Trading\\memecoin_trading_strategies\\copy_trading\\bought-tokens.json', 'utf8'));
+let boughtTokens = JSON.parse(fs.readFileSync(boughtTokensPath, 'utf8'));
 
 async function saveToJson(token) {
   boughtTokens.push(token);
-  fs.writeFileSync('C:\\Users\\User\\Desktop\\solana-memecoin-cli\\src\\Trading\\memecoin_trading_strategies\\copy_trading\\bought-tokens.json', JSON.stringify(boughtTokens, null, 2));
+  fs.writeFileSync(boughtTokensPath, JSON.stringify(boughtTokens, null, 2));
 }
 
 
