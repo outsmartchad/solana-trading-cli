@@ -12,6 +12,7 @@ const {
   TransactionMessage,
   ComputeBudgetProgram,
   VersionedTransaction,
+  LAMPORTS_PER_SOL
 } = require("@solana/web3.js");
 const { Decimal } = require("decimal.js");
 const { BN } = require("@project-serum/anchor");
@@ -46,6 +47,9 @@ const {
   jito_executeAndConfirm,
 } = require("../Transactions/jito_tips_tx_executor.js");
 
+let tokenToPoolIdMap = {
+
+};
 
 /**
  * Performs a swap operation using an Automated Market Maker (AMM) pool in Raydium.
@@ -175,14 +179,14 @@ async function swapForVolume(tokenAddr, sol_per_order) {
     instructions: [
       ...[
         ComputeBudgetProgram.setComputeUnitLimit({
-          units: 200000,
+          units: 90000,
         }),
         ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: 9000,
+          microLamports: 90000,
         }),
       ],
-      ...buy_instruction.instructions,
       ...sell_instruction.instructions,
+      ...buy_instruction.instructions,
     ],
   });
 
@@ -195,7 +199,7 @@ async function swapForVolume(tokenAddr, sol_per_order) {
   let signature = null,
     confirmed = null;
   try {
-    const res = await simple_executeAndConfirm(
+    const res = simple_executeAndConfirm(
       transaction,
       wallet,
       latestBlockhash
@@ -277,7 +281,12 @@ async function swap(
       await getDecimals(tokenAccount)
     );
     const inputToken = DEFAULT_TOKEN.WSOL; // SOL
-    const targetPool = await getPoolIdByPair(tokenAddress);
+    let targetPool = null;
+    if(!(tokenAddress in tokenToPoolIdMap)){ 
+      targetPool = await getPoolIdByPair(tokenAddress);
+      tokenToPoolIdMap[tokenAddress] = targetPool;
+    }else targetPool = tokenToPoolIdMap[tokenAddress];
+
     if (targetPool === null) {
       console.log(
         "Pool not found or raydium is not supported for this token. Exiting..."
