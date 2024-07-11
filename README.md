@@ -54,6 +54,22 @@
 |   |   ├── query_pool.js              # query the pool's current info (not done)_
 |   |   ├── remove_pool.js             # remove liquidity from AMM pool on Raydium
 |   |   └── swap.js                    # swap on Raydium
+|   ├── pumpfunsdk
+|   |   ├── pump-keypair                      # store your new generated token keypair
+|   |   ├── pumpdotfun-sdk
+|   |   |   ├── example
+|   |   |   ├── images                        # store your token image
+|   |   |   ├── src
+|   |   |   |   ├── IDL
+|   |   |   |   ├── pump-events-listener
+|   |   |   |   |   ├── listener.js           # listen to the create, trade, and complete bonding curve event
+|   |   |   |   ├── amm.js 
+|   |   |   |   ├── createAndBuy.js           # create token and initial buy it in pump.fun
+|   |   |   |   ├── buy.js                    # buy token in pump.fun
+|   |   |   |   ├── sell.js                   # sell token in pump.fun
+|   |   |   |   ├── pumpfun.js                # the implementation of pump.fun sdk
+|   |   |   |   ├── util.js                   # useful functions
+|   |   |   |   └── tools.js                  # interact with pump.fun sdk
 |   ├── Token
 |   |   ├── create.js                  # create token with uploading token image and metadata to irys (storage provider)
 |   |   ├── burn.js                    # burn a percentage of token
@@ -75,13 +91,6 @@
 |   |   |       ├── buy.js                   
 |   |   |       ├── sell-helper.js            # sell token to WSOL using src\Pool\swap.js
 |   |   |       └── sell.js
-|   |   ├── pump.fun
-|   |   |   ├── buy.js                        # buy any token on pump.fun
-|   |   |   ├── constants.js
-|   |   |   ├── create.js                     # launch token on pump.fun
-|   |   |   ├── idl.js
-|   |   |   ├── sell.js                       # sell any pump.fun token
-|   |   |   └── utils.js
 |   |   ├── volume
 |   |   |   └── boost-volume.js               # boosting token's volume
 |   |   |                                     # by doing one buy and one sell instruction in one transaction
