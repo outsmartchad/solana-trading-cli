@@ -39,6 +39,10 @@
 |   ├── buy_token                      # buy a token using raydium with both jito bundles and priority fees
 |   ├── create_token                   # create a token with 0% extra fees on solana (mainnet or devnet)
 |   ├── remove_liquidity               # remove some liquidity from a pool on Raydium
+|   ├── boost_volume                   # boost the volume of a token on raydium
+|   ├── pump_createAndInitialBuy       # create and initial buy token on pump.fun
+|   ├── pump_buy                       # buy token on pump.fun
+|   ├── pump_sell                      # sell token on pump.fun
 |   └── sell_token                     # sell the token with a percentage using Raydium swap
 ├── src
 |   ├── helpers
