@@ -2,17 +2,19 @@
 
 [🔗doc](https://outsmartchad.github.io/solana-memecoin-cli/)
 ## Main Features
-- Trading & Creating your own Solana **_SPL tokens_**
+- Trading any token using Jupiter API & Raydium swap function
 
-- Performing **_On-chain liquidity Pools operation_** On Raydium, Orca and Meteora.
+- Creating your own Solana **_SPL tokens_** on mainnet | Pump.fun.
   
-- Predefined Jito tips and Priority fee for any functions of this project
+- Performing **_LP transactions_** On Raydium, Orca and Meteora.
   
-- Open-source Volume Booster by bundling buy and sell in one transaction!
+- Predefined Jito tips and Priority fee
+  
+- Volume Booster by bundling buy and sell in one transaction!
 
-- Fastest Copy Trade Program on Solana
+- Fastest Copy Trade Program
 
-- **_Pump.fun_** integration for launching, buying, and selling pump.fun tokens, and real-time monitor to create, trade, complete bonding curve events
+- **_Pump.fun sdk_** Integration
 
 - **_Got everything needed for any dev to create their own trading bot_**
 
@@ -114,7 +116,6 @@
 0. we have added a .env.copy file in src/helpers/.env.copy for you to follow and paste your keys to the code (specify the custom jito fee if you need).
 1. Add your mainnet wallet secret key, devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(must)
 2. change the .env.copy file to .env
-3. in src/helpers/config.js, please copy and fill in your .env path.
 
 ## Features ✅:
 
@@ -129,7 +130,8 @@
 - Buy or sell a token using SOL using raydium and JUP
 - **Buy, Sell, and launch token in pump.fun**
 - Check the balance of a token in your wallet
-
+- monitor real-time pump-fun's create, trade, and complete bonding curve events
+  
 ### Trader CLI:
 - Optimized Copy Trading Program with auto-buy&sell
 - detecting-dips Program with auto-buy&sell
