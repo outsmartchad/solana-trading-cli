@@ -12,7 +12,7 @@
 
 - Fastest Copy Trade Program on Solana
 
-- **_Pump.fun_** integration for launching, buying, and selling tokens.pump.
+- **_Pump.fun_** integration for launching, buying, and selling pump.fun tokens, and real-time monitor to create, trade, complete bonding curve events
 
 - **_Got everything needed for any dev to create their own trading bot_**
 
