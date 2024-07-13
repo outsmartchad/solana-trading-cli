@@ -1,5 +1,5 @@
 # if you already fill in your private key to src/helpers/.env.copy, 
-# change it to .env and fill in your .env path in src/helpers/config.js
+# rename it to .env
 
 - support only mainnet right now
 - make sure you are at src/Pool
