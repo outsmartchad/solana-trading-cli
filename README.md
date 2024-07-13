@@ -4,9 +4,11 @@
 ## Main Features
 - Trading any token using Jupiter API & Raydium swap function
 
-- Creating your own Solana **_SPL tokens_** on mainnet | Pump.fun.
+- Create your own Solana **_SPL tokens_** on mainnet | Pump.fun
+
+- Create your own zk-compressed token in your own zk-testnet
   
-- Performing **_LP transactions_** On Raydium, Orca and Meteora.
+- Performing **_LP transactions_** On Raydium, Orca and Meteora
   
 - Predefined Jito tips and Priority fee
   
