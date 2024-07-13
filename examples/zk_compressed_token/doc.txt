@@ -1,0 +1,7 @@
+make sure you already install
+1. npm install -g @lightprotocol/zk-compression-cli
+2. cargo install photon-indexer --version 0.30.0 --locked
+
+And simply run 
+1. light test-validator
+2. node /Users/{your_user_name}/Desktop/solana-memecoin-cli/src/zk-compression/compressed-token/createAndMint.js
