@@ -179,7 +179,7 @@ async function swapForVolume(tokenAddr, sol_per_order) {
     instructions: [
       ...[
         ComputeBudgetProgram.setComputeUnitLimit({
-          units: 90000,
+          units: 70000,
         }),
         ComputeBudgetProgram.setComputeUnitPrice({
           microLamports: 90000,
@@ -324,7 +324,12 @@ async function swap(
       tokenName
     );
     const outputToken = DEFAULT_TOKEN.WSOL; // SOL
-    const targetPool = await getPoolIdByPair(tokenAddress);
+    let targetPool = null;
+    if(!(tokenAddress in tokenToPoolIdMap)){ 
+      targetPool = await getPoolIdByPair(tokenAddress);
+      tokenToPoolIdMap[tokenAddress] = targetPool;
+    }else targetPool = tokenToPoolIdMap[tokenAddress];
+
     if (targetPool === null) {
       console.log(
         "Pool not found or raydium is not supported for this token. Exiting..."
