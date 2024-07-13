@@ -39,6 +39,13 @@ const path = require("path");
 const { get } = require("http");
 const SLIPPAGE_BASIS_POINTS = 100n;
 
+/**
+ * Creates and buys a token using the provided parameters.
+ * @param {string} pathToMintKeypair - The path to the mint keypair JSON file.
+ * @param {object} tokenMetadata - The metadata of the token.
+ * @param {number} initialBuySolAmount - The initial amount of SOL to buy the token with.
+ * @returns {Promise<void>} - A promise that resolves when the token creation and purchase is complete.
+ */
 async function createAndBuy(pathToMintKeypair, tokenMetadata, initialBuySolAmount) {
   const provider = new AnchorProvider(connection, wallet, {
     commitment: "finalized",
@@ -87,6 +94,12 @@ async function createAndBuy(pathToMintKeypair, tokenMetadata, initialBuySolAmoun
   }
 }
 
+/**
+ * Sells a specified percentage of tokens.
+ * @param {string} mintPubKey - The public key of the token mint.
+ * @param {number} sellPercentage - The percentage of tokens to sell.
+ * @returns {Promise<void>} - A promise that resolves when the sell operation is complete.
+ */
 async function sell(mintPubKey, sellPercentage) {
   const provider = new AnchorProvider(connection, wallet, {
     commitment: "finalized",
@@ -124,6 +137,12 @@ async function sell(mintPubKey, sellPercentage) {
   }
 }
 
+/**
+ * Buys tokens from the bonding curve.
+ * @param {string} mintPubKey - The public key of the token mint.
+ * @param {number} solPerOrder - The amount of SOL to spend per order.
+ * @returns {Promise<void>} - A promise that resolves when the buy operation is complete.
+ */
 async function buy(mintPubKey, solPerOrder) {
   const provider = new AnchorProvider(connection, wallet, {
     commitment: "finalized",

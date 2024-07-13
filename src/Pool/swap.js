@@ -51,10 +51,19 @@ let tokenToPoolIdMap = {
 
 };
 
+
 /**
- * Performs a swap operation using an Automated Market Maker (AMM) pool in Raydium.
- * @param {Object} input - The input parameters for the swap operation.
- * @returns {Object} - The transaction IDs of the executed swap operation.
+ * Performs a swap transaction using an Automated Market Maker (AMM) pool.
+ * @param {Object} input - The input parameters for the swap transaction.
+ * @param {string} input.targetPool - The target pool address.
+ * @param {string} input.inputTokenAmount - The amount of input token to swap.
+ * @param {string} input.outputToken - The output token to receive.
+ * @param {number} input.slippage - The slippage tolerance percentage.
+ * @param {string} input.ataIn - The associated token account for the input token.
+ * @param {string} input.ataOut - The associated token account for the output token.
+ * @param {string} input.usage - The usage type of the transaction (e.g., "volume").
+ * @param {string} input.side - The side of the swap transaction (e.g., "buy").
+ * @returns {Object} - The transaction ID if successful, otherwise null.
  */
 async function swapOnlyAmm(input) {
   // -------- pre-action: get pool info --------\
@@ -149,11 +158,12 @@ async function swapOnlyAmm(input) {
   return { txid: null };
 }
 
+
 /**
- * Swaps tokens for volume, buying and selling a token in one transaction.
+ * Swaps tokens for a specified volume.
  * @param {string} tokenAddr - The address of the token to swap.
  * @param {number} sol_per_order - The price of SOL per order.
- * @returns {Promise<{confirmed: boolean, txid: string}>} - The confirmation status and transaction ID.
+ * @returns {Promise<{ confirmed: boolean, txid: string }>} The confirmation status and transaction ID.
  */
 async function swapForVolume(tokenAddr, sol_per_order) {
   const buy_instruction = await swap(
@@ -213,16 +223,13 @@ async function swapForVolume(tokenAddr, sol_per_order) {
   return { confirmed: confirmed, txid: signature };
 }
 
-/**
- * Performs a swap operation that retries the transaction if it fails.
- *
- * @param {string} side - The side of the swap operation ("buy" or "sell").
- * @param {string} tokenAddr - The address of the token.
- * @param {number} buy_AmountOfSol - The amount of SOL to buy (only applicable for "buy" side).
- * @param {number} sell_PercentageOfToken - The percentage of token to sell (only applicable for "sell" side).
- * @returns {Promise<void>} - A promise that resolves when the swap operation is completed.
- */
 
+
+/**
+ * Helper function for swapping tokens using the AMM protocol.
+ * @param {Object} input - The input object containing the necessary parameters for the swap.
+ * @returns {Promise<void>} - A promise that resolves when the swap is completed.
+ */
 async function swapOnlyAmmHelper(input) {
   const { txid } = await swapOnlyAmm(input);
   console.log("txids:", txid);
