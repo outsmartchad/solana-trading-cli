@@ -130,12 +130,12 @@
 
 0. we have added a .env.copy file in src/helpers/.env.copy for you to follow and paste your keys to the code (specify the custom jito fee if you need).
 1. Add your mainnet wallet secret key, devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(must)
-2. change the .env.copy file to .env
+2. rename the .env.copy file to .env
 
 ## Features ✅:
 
 ### Developer CLI:
-- Create a new SPL token (on SOL mainnet/devnet) and it will automatically mint to your wallet
+- Create a new SPL token or zk-compressed token (on SOL mainnet/devnet/zk-devnet) and it will automatically mint to your wallet
 - Integrates both **user-defined priority fee and jito tips** that land transactions faster
 - Burn a percentage of a token
 - Revoke mint and freeze authority of a token
