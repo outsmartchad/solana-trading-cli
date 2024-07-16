@@ -288,9 +288,7 @@ node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
 - ``` git pull --rebase # Pull the latest changes```
 - ``` git stash pop # Apply Your stashed changes```
 
-### If you think this project is useful, please give us a star🌟, it will help us a lot or consider to buy us a coffee 📚🎧☕,
-
-### Solana address: 8FV2wovZuac8ZFMYMpRJGEG1vpBQGwLYiU31eR86Bp3g
+### If you think this project is useful, please give us a star🌟, it will help us a lot.
 
 ### Discord channel: https://discord.gg/hFhQeBCqWX
 ### It is a work in progress, if you have any suggestions or any problems, please let us know!
