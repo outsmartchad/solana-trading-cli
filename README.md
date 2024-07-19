@@ -18,7 +18,7 @@
 
 - **_Pump.fun sdk_** Integration
 
-- **_Got everything needed for any dev to create their own trading bot_**
+- **_Got everything needed for any developer to create their own trading bot_**
 
 ## Credits
 - https://github.com/outsmartchad/raydium-sdk-V1-demo
