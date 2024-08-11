@@ -149,7 +149,6 @@
   
 ### Trader CLI:
 - Optimized Copy Trading Program with auto-buy&sell
-- detecting-dips Program with auto-buy&sell
 
 ## Features in Development 🚧:
 
