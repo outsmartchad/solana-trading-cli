@@ -10,7 +10,7 @@ const {
   const { wallet, second_connection, smart_money_wallet } = require("../../../helpers/config");
   //const { buy } = require("../../dex/jupiter/swap/buy-helper");
   //const { sell } = require("../../dex/jupiter/swap/sell-helper");
-  const {sell} = require("../../dex/raydium/sell_helper")
+  const {sell} = require("../../../raydium/sell_helper")
 
   //const {swap} = require("../../../Pool/swap") 
   var current_trader_wallet_state = {};
