@@ -16,7 +16,7 @@ const {
 } = require("@solana/web3.js");
 const { Decimal } = require("decimal.js");
 const { BN } = require("@project-serum/anchor");
-const { getSPLTokenBalance } = require("../helpers/check_balance.js");
+const { getSPLTokenBalance } = require("../../helpers/check_balance.js");
 const {
   connection,
   DEFAULT_TOKEN,
@@ -25,13 +25,14 @@ const {
   _ENDPOINT,
   wallet,
   jito_fee
-} = require("../helpers/config.js");
+} = require("../../helpers/config.js");
 const {
   getDecimals,
   getTokenMetadata,
   checkTx,
-} = require("../helpers/util.js");
-const { getPoolId, getPoolIdByPair } = require("./query_pool.js");
+} = require("../../helpers/util.js");
+//const { getPoolId, getPoolIdByPair } = require("./query_pool.js");
+const {fetchAMMPoolId} = require("./fetch_pool.js")
 const {
   getAssociatedTokenAddress,
   getAssociatedTokenAddressSync,
@@ -42,10 +43,10 @@ const { mint } = require("@metaplex-foundation/mpl-candy-machine");
 const { formatAmmKeysById_swap } = require("./formatAmmKeysById.js");
 const {
   simple_executeAndConfirm,
-} = require("../Transactions/simple_tx_executor.js");
+} = require("../../Transactions/simple_tx_executor.js");
 const {
   jito_executeAndConfirm,
-} = require("../Transactions/jito_tips_tx_executor.js");
+} = require("../../Transactions/jito_tips_tx_executor.js");
 
 let tokenToPoolIdMap = {
 
@@ -290,7 +291,7 @@ async function swap(
     const inputToken = DEFAULT_TOKEN.WSOL; // SOL
     let targetPool = null;
     if(!(tokenAddress in tokenToPoolIdMap)){ 
-      targetPool = await getPoolIdByPair(tokenAddress);
+      targetPool = await fetchAMMPoolId(tokenAddress);
       tokenToPoolIdMap[tokenAddress] = targetPool;
     }else targetPool = tokenToPoolIdMap[tokenAddress];
 
@@ -333,7 +334,7 @@ async function swap(
     const outputToken = DEFAULT_TOKEN.WSOL; // SOL
     let targetPool = null;
     if(!(tokenAddress in tokenToPoolIdMap)){ 
-      targetPool = await getPoolIdByPair(tokenAddress);
+      targetPool = await fetchAMMPoolId(tokenAddress);
       tokenToPoolIdMap[tokenAddress] = targetPool;
     }else targetPool = tokenToPoolIdMap[tokenAddress];
 

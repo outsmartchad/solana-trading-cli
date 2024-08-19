@@ -1,7 +1,7 @@
-const { swap } = require("../../../Pool/swap.js");
+const { swap } = require("./Pool/swap.js");
 const { program } = require("commander");
-const { loadOrCreateKeypair_wallet } = require("../../../helpers/util.js");
-const { wallet } = require("../../../helpers/config.js");
+const { loadOrCreateKeypair_wallet } = require("../helpers/util.js");
+const { wallet } = require("../helpers/config.js");
 
 let payer_keypair = null,
   token_address = null,

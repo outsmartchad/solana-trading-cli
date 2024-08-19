@@ -1,4 +1,4 @@
-const { swap } = require("../../../Pool/swap.js");
+const { swap } = require("./Pool/swap");
 
 /**
  * Sells a specified percentage of a token.
