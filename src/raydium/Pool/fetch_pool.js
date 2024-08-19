@@ -1,4 +1,4 @@
-const { initSdk } = require("../raydium_config");
+const { initSdk } = require("../raydium_config.js");
 const { wsol } = require("../constants.js");
 let sdkCache = { sdk: null, expiry: 0 };
 async function fetchAMMPoolId(tokenAddress) {
@@ -48,22 +48,28 @@ async function fetchAMMPoolIdByMintPair(mint1, mint2) {
   console.log("No AMM pool ID found for the given mint pair");
   return ""; // return empty string if no AMM pool ID is found
 }
-async function fetchLPToken(tokenAddress){
-    try{
-        const poolId = await fetchAMMPoolId(tokenAddress);
-        let response = await( await fetch(`https://api-v3.raydium.io/pools/info/ids?ids=${poolId}`)).json();
-        let lpToken = "";
-        response.success = false;
-        console.log(response.data);
-        while(!response.success){
-            console.log("The response was not successful when getting LP token, trying again")
-            response = await( await fetch(`https://api-v3.raydium.io/pools/info/ids?ids=${poolId}`)).json();
-            if(response.success) lpToken = response.data[0].lpMint.address
-        }
-        return lpToken;
-    }catch(e){
-        console.log("Error getting LP token: ", e)
+async function fetchLPToken(tokenAddress) {
+  try {
+    const poolId = await fetchAMMPoolId(tokenAddress);
+    let response = await (
+      await fetch(`https://api-v3.raydium.io/pools/info/ids?ids=${poolId}`)
+    ).json();
+    let lpToken = "";
+    response.success = false;
+    console.log(response.data);
+    while (!response.success) {
+      console.log(
+        "The response was not successful when getting LP token, trying again"
+      );
+      response = await (
+        await fetch(`https://api-v3.raydium.io/pools/info/ids?ids=${poolId}`)
+      ).json();
+      if (response.success) lpToken = response.data[0].lpMint.address;
     }
+    return lpToken;
+  } catch (e) {
+    console.log("Error getting LP token: ", e);
+  }
 }
 //fetchLPToken("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP");
 
