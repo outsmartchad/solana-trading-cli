@@ -1,7 +1,7 @@
 const swap_helper = require("./swap-helper");
 const { PublicKey } = require("@solana/web3.js");
-const { wallet } = require("../../../../helpers/config");
-const { getDecimals } = require("../../../../helpers/util");
+const { wallet } = require("../../helpers/config");
+const { getDecimals } = require("../../helpers/util");
 const wsol = "So11111111111111111111111111111111111111112";
 
 /**

@@ -1,7 +1,7 @@
 const swap_helper = require("./swap-helper");
 const { PublicKey } = require("@solana/web3.js");
-const { wallet } = require("../../../../helpers/config");
-const { getDecimals } = require("../../../../helpers/util");
+const { wallet } = require("../../helpers/config");
+const { getDecimals } = require("../../helpers/util");
 const wsol = "So11111111111111111111111111111111111111112";
 
 /**
@@ -31,9 +31,8 @@ async function buy(tokenToBuy, amountTokenOut, slippage) {
       quoteResponse,
       wallet_PubKey
     );
-    const { confirmed, signature } = await swap_helper.finalizeTransaction(
-      swapTransaction
-    );
+    const { confirmed, signature } =
+      await swap_helper.finalizeTransaction(swapTransaction);
     if (confirmed) {
       console.log("http://solscan.io/tx/" + signature);
     } else {

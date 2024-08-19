@@ -1,20 +1,18 @@
 const { connection, wallet } = require("../../helpers/config.js");
 const {
   simple_executeAndConfirm,
-} = require("../../Transactions/simple_tx_executor");
+} = require("../../Transactions/simple_tx_executor.js");
 const {
   jito_executeAndConfirm,
-} = require("../../Transactions/jito_tips_tx_executor");
-const { buy, get_buy_transaction } = require("../dex/raydium/buy_helper");
-const { sell, get_sell_transaction } = require("../dex/raydium/sell_helper");
+} = require("../../Transactions/jito_tips_tx_executor.js");
 const { program } = require("commander");
-const { loadOrCreateKeypair_wallet, checkTx } = require("../../helpers/util");
+const { loadOrCreateKeypair_wallet, checkTx } = require("../../helpers/util.js");
 const {
   ComputeBudgetProgram,
   TransactionMessage,
   VersionedTransaction,
 } = require("@solana/web3.js");
-const { swapForVolume } = require("../../Pool/swap.js");
+const { swapForVolume } = require("../../raydium/Pool/swap.js");
 let slippage = null,
   tokenAddress = null,
   payer = null,

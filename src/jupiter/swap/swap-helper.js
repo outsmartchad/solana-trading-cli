@@ -1,10 +1,10 @@
 const { VersionedTransaction, PublicKey } = require("@solana/web3.js");
 const fetch = require("cross-fetch");
-const { connection, wallet, jito_fee } = require("../../../../helpers/config");
+const { connection, wallet, jito_fee } = require("../../helpers/config");
 const {
   jito_executeAndConfirm,
-} = require("../../../../Transactions/jito_tips_tx_executor");
-const { getDecimals } = require("../../../../helpers/util");
+} = require("../../Transactions/jito_tips_tx_executor");
+const { getDecimals } = require("../../helpers/util");
 /**
  * Retrieves a quote for swapping tokens.
  *
