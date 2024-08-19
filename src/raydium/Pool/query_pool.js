@@ -1,11 +1,11 @@
 const { Connection, PublicKey } = require("@solana/web3.js");
 const { OpenOrders } = require("@project-serum/serum");
 const { gql, GraphQLClient } = require("graphql-request");
-const { shyft_api_key } = require("../helpers/config");
+const { shyft_api_key } = require("../../helpers/config");
 const {Liquidity} = require("@raydium-io/raydium-sdk");
 const { token } = require("@metaplex-foundation/js");
 const {getDecimals} = require(
-  "../helpers/util"
+  "../../helpers/util"
 )
 const graphQLEndpoint = `https://programs.shyft.to/v0/graphql/?api_key=${shyft_api_key}`;
 const rpcEndpoint = `https://rpc.shyft.to/?api_key=${shyft_api_key}`;

@@ -15,7 +15,7 @@ const MINIMAL_MARKET_STATE_LAYOUT_V3 = struct([
   publicKey("bids"),
   publicKey("asks"),
 ]);
-const { connection } = require("../helpers/config.js");
+const { connection } = require("../../helpers/config");
 
 // Promise<ApiPoolInfoV4>
 /**

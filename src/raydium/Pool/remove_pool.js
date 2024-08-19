@@ -17,7 +17,7 @@ const {
   makeTxVersion,
   wallet,
   dev_connection,
-} = require("../helpers/config.js");
+} = require("../../helpers/config.js");
 const {
   formatAmmKeysById_pool,
   formatAmmKeysById_swap,
@@ -27,13 +27,14 @@ const {
   getWalletTokenAccount,
   loadOrCreateKeypair_wallet,
   checkTx,
-} = require("../helpers/util.js");
-const {
-  getPoolId,
-  getPoolIdByPair,
-  queryLpByToken,
-  queryLpPair,
-} = require("./query_pool.js");
+} = require("../../helpers/util.js");
+// const {
+//   getPoolId,
+//   getPoolIdByPair,
+//   queryLpByToken,
+//   queryLpPair,
+// } = require("./query_pool.js");
+const { fetchAMMPoolId, fetchLPToken} = require("./fetch_pool.js")
 const { getSPLTokenBalance } = require("../helpers/check_balance.js");
 const { getDecimals, getTokenMetadata } = require("../helpers/util.js");
 const { BN } = require("@project-serum/anchor");
@@ -130,7 +131,7 @@ async function ammRemoveLiquidity(input) {
  * @returns {string} - The LP token address.
  */
 async function findLPTokenAddress(tokenAddress) {
-  const response = await queryLpByToken(tokenAddress);
+  const response = await fetchLPToken(tokenAddress);
   console.log(response);
   console.log(response.Raydium_LiquidityPoolv4[0].lpMint);
   return response.Raydium_LiquidityPoolv4[0].lpMint;
@@ -191,7 +192,7 @@ async function main() {
     lpToken,
     new BN(inputTokenAmount.mul(10 ** lpToken.decimals).toFixed(0))
   );
-  const targetPool = await getPoolIdByPair(tokenAddress);
+  const targetPool = await fetchAMMPoolId(tokenAddress);
   if (targetPool === null) {
     console.log(
       "Pool not found or raydium is not supported for this token. Exiting..."

@@ -8,7 +8,8 @@ const {
   Percent,
 } = require("@raydium-io/raydium-sdk");
 const { PublicKey, Keypair } = require("@solana/web3.js");
-const { getPoolId, getPoolIdByPair } = require("./query_pool.js");
+//const { getPoolId, getPoolIdByPair } = require("./query_pool.js");
+const {fetchAMMPoolId} = require("./fetch_pool.js")
 const Decimal = require("decimal.js");
 
 const {
@@ -188,7 +189,7 @@ async function main() {
   let targetPool = null;
   if (pool_id != null) {
     targetPool = pool_id;
-  } else targetPool = await getPoolIdByPair(quoteToken.mint.toBase58());
+  } else targetPool = await fetchAMMPoolId(quoteToken.mint.toBase58());
   if (targetPool === null) {
     console.log(
       "Pool not found or raydium is not supported for this token. Exiting..."
