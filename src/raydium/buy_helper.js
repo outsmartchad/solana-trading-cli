@@ -1,5 +1,5 @@
 const { Keypair } = require("@solana/web3.js");
-const { swap } = require("../../../Pool/swap.js");
+const { swap } = require("../Pool/swap.js");
 /**
  * Buys a specified amount of a token using a amount of sol.
  *
