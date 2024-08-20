@@ -7,7 +7,7 @@ const {
 } = require("@solana/spl-token");
 const fs = require('fs');
 const path = require('path');
-const { wallet, second_connection, smart_money_wallet } = require("../../../helpers/config");
+const { wallet, connection, smart_money_wallet } = require("../../../helpers/config");
 //const { buy } = require("../../dex/jupiter/swap/buy-helper");
 //const { sell } = require("../../dex/jupiter/swap/sell-helper");
 const {sell} = require("../../../raydium/sell_helper")
@@ -46,12 +46,12 @@ async function retriveWalletState(wallet_address) {
       },
     },
   ];
-  const accounts = await second_connection.getParsedProgramAccounts(
+  const accounts = await connection.getParsedProgramAccounts(
     TOKEN_PROGRAM_ID, //new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
     { filters: filters }
   );
   let results = {};
-  const solBalance = await second_connection.getBalance(new PublicKey(wallet_address));
+  const solBalance = await connection.getBalance(new PublicKey(wallet_address));
   accounts.forEach((account, i) => {
     //Parse the account data
     const parsedAccountInfo = account.account.data;

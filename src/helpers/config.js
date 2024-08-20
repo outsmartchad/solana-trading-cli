@@ -33,7 +33,7 @@ const main_endpoint = process.env.MAINNET_ENDPOINT; // mainnet endpoint
 // const second_RPC_Websocket_endpoint = process.env.SECOND_WS_ENDPOINT; // if you use copy trade program
 // const stop_lost = process.env.STOP_LOST; // percentage of stop lost, if you use copy trade program
 // const take_profit = process.env.TAKE_PROFIT; // percentage of take profit, if you use copy trade program
-// const smart_money_wallet = process.env.SMART_MONEY_WALLET; // if you use copy trade program
+const smart_money_wallet = process.env.SMART_MONEY_WALLET; // if you use copy trade program
 const connection = new Connection(main_endpoint, "confirmed"); // mainnet connection
 //const connection = new Connection(main_endpoint, { // if you use copy trade program
 //  wsEndpoint: RPC_Websocket_endpoint,
@@ -87,4 +87,5 @@ module.exports = {
   _ENDPOINT,
   shyft_api_key,
   jito_fee,
+  smart_money_wallet
 };
