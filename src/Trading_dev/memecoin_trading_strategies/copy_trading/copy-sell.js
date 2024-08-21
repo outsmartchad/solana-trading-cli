@@ -25,7 +25,6 @@ const quoteToken = [
 ];
 const boughtTokensPath = path.join(__dirname, 'bought-tokens.json');
 let boughtTokens = JSON.parse(fs.readFileSync(boughtTokensPath, 'utf8'));
-console.log(boughtTokens);
 function saveToJson() {
   fs.writeFileSync(boughtTokensPath, JSON.stringify(boughtTokens, null, 2));
 }
@@ -103,7 +102,6 @@ async function copy_sell(address){
 async function main(){
 while(true){
   boughtTokens = JSON.parse(fs.readFileSync(boughtTokensPath, 'utf8'));
-  console.log(boughtTokens);
   await copy_sell(smart_money_wallet);
   
   await new Promise((resolve) => setTimeout(resolve, 2500));

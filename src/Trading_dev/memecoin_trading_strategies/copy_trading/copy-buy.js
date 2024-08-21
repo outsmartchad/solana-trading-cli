@@ -71,7 +71,7 @@ async function listenToWallets(address) {
               previous_trader_wallet_state["SOL"]
           );
           const amountOut = current_our_wallet_state[wsol] * buy_percentage;
-          console.log("amountOut: ", amountOut);
+          console.log(`Using ${amountOut} SOL to buy ${changedMint}`);
           buy("buy", changedMint, amountOut, wallet);
           saveToJson(changedMint);
           previous_our_wallet_state = await retriveWalletState(
@@ -172,7 +172,7 @@ async function listenToWallets(address) {
               // use sol to buy it if we don't have decreased token
               const buy_percentage = Math.abs(decreasedTokenPercentage);
               const amountOut = current_our_wallet_state[wsol] * buy_percentage;
-
+              console.log(`Using ${amountOut} SOL to buy ${increasedToken}`);
               buy("buy", increasedToken, amountOut, wallet);
               saveToJson(increasedToken);
             }
@@ -264,6 +264,7 @@ async function copy_buy() {
   previous_trader_wallet_state = await retriveWalletState(smart_money_address);
   previous_our_wallet_state = await retriveWalletState(our_wallet_address);
   console.log("Our wallet state: ", previous_our_wallet_state);
+  console.log("Trader wallet state: ", previous_trader_wallet_state);
   // subscribe to the smart money wallet
   // walletsToListen.push(new PublicKey(smart_money_address));
   await listenToWallets(new PublicKey(smart_money_address));
