@@ -64,7 +64,6 @@ async function checkBalanceByAddress(address, connection) {
  */
 async function getSPLTokenBalance(connection, tokenAccount, payerPubKey) {
   const address = getAssociatedTokenAddressSync(tokenAccount, payerPubKey);
-  console.log("Associated token address: ", address.toBase58());
   const info = await connection.getTokenAccountBalance(address);
   if (info.value.uiAmount == null) throw new Error("No balance found");
   return info.value.uiAmount;
