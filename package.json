@@ -12,6 +12,7 @@
   "homepage": "https://github.com/outsmartchad/solana-memecoin-cli",
   "license": "ISC",
   "dependencies": {
+    "@bloxroute/solana-trader-client-ts": "^2.1.6",
     "@bonfida/spl-name-service": "^2.5.2",
     "@coral-xyz/anchor": "^0.30.1",
     "@irys/sdk": "^0.2.1",
