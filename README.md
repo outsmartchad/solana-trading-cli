@@ -146,10 +146,10 @@
 ## Features in Development 🚧:
 
 - With user-defined Jito tips and priority Lamports supported for every command
-- A Website for anyone to do these thing with their browser-based wallet
-- **More dexes support**, (Orca, Meteora, etc.)
-- **More Profitable functions** for Trading dev
-- **Phantom wallet integration**
+- tp/sl modules for Trading dev
+- sniping tools on pump.fun&raydium using yellowstone geyser grpc
+- copy trade program using yellowstone geyser grpc
+- **More Profitable Strategies** for Trading dev
 - more features to come...
 
 # Commands </> (Please see the command examples in examples/ to get start~)
