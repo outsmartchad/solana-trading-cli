@@ -19,7 +19,7 @@
 - **_Got everything needed for any developer to create their own trading bot_**
 
 ## Credits
-- https://github.com/outsmartchad/raydium-sdk-V1-demo
+- https://github.com/raydium-io/raydium-sdk-V2
 - https://github.com/rckprtr/pumpdotfun-sdk
 - https://github.com/Al366io/solana-transactions-wrapper
 
