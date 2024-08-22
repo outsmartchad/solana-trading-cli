@@ -25,6 +25,7 @@
     "@metaplex-foundation/mpl-token-metadata": "^3.2.1",
     "@metaplex-foundation/umi": "^0.9.1",
     "@metaplex-foundation/umi-bundle-defaults": "^0.9.1",
+    "@meteora-ag/dlmm": "^1.0.54",
     "@orca-so/common-sdk": "^0.6.0-alpha.3",
     "@orca-so/whirlpools-sdk": "^0.11.8",
     "@project-serum/anchor": "^0.26.0",
