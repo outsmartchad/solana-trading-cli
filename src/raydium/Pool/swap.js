@@ -368,8 +368,8 @@ async function swap(
     if (usage == "volume") {
       return await swapOnlyAmm(input);
     }
-    //swapOnlyAmmHelper(input); // using jito
-    swapOnlyAmmUsingBloXRoute(input); // using bloXroute
+    swapOnlyAmmHelper(input); // using jito
+    //swapOnlyAmmUsingBloXRoute(input); // using bloXroute
   } else {
     // sell
     const { tokenName, tokenSymbol } = await getTokenMetadata(tokenAddress);
@@ -422,8 +422,8 @@ async function swap(
     if (usage == "volume") {
       return await swapOnlyAmm(input);
     }
-    //swapOnlyAmmHelper(input); // using Jito
-    swapOnlyAmmUsingBloXRoute(input); // using bloXroute
+    swapOnlyAmmHelper(input); // using Jito
+    //swapOnlyAmmUsingBloXRoute(input); // using bloXroute
   }
 }
 
