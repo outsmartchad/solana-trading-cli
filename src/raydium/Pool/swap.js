@@ -12,7 +12,8 @@ const {
   TransactionMessage,
   ComputeBudgetProgram,
   VersionedTransaction,
-  LAMPORTS_PER_SOL
+  LAMPORTS_PER_SOL,
+  Transaction,
 } = require("@solana/web3.js");
 const { Decimal } = require("decimal.js");
 const { BN } = require("@project-serum/anchor");
@@ -24,7 +25,7 @@ const {
   RAYDIUM_MAINNET_API,
   _ENDPOINT,
   wallet,
-  jito_fee
+  jito_fee,
 } = require("../../helpers/config.js");
 const {
   getDecimals,
@@ -32,7 +33,7 @@ const {
   checkTx,
 } = require("../../helpers/util.js");
 //const { getPoolId, getPoolIdByPair } = require("./query_pool.js");
-const {fetchAMMPoolId} = require("./fetch_pool.js")
+const { fetchAMMPoolId } = require("./fetch_pool.js");
 const {
   getAssociatedTokenAddress,
   getAssociatedTokenAddressSync,
@@ -47,11 +48,8 @@ const {
 const {
   jito_executeAndConfirm,
 } = require("../../Transactions/jito_tips_tx_executor.js");
-
-let tokenToPoolIdMap = {
-
-};
-
+const {bloXroute_executeAndConfirm} = require("../../Transactions/bloXroute_tips_tx_executor.js")
+let tokenToPoolIdMap = {};
 
 /**
  * Performs a swap transaction using an Automated Market Maker (AMM) pool.
@@ -105,13 +103,12 @@ async function swapOnlyAmm(input) {
     payerKey: wallet.publicKey,
     recentBlockhash: latestBlockhash.blockhash,
     instructions: [
-      
       ...[
         ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: 3052900,
+          microLamports: 305290,
         }),
         ComputeBudgetProgram.setComputeUnitLimit({
-          units: 3127500,
+          units: 312750,
         }),
       ],
       ...(input.side === "buy"
@@ -134,32 +131,90 @@ async function swapOnlyAmm(input) {
   const maxAttempts = 3;
 
   while (attempts < maxAttempts) {
-      attempts++;
-      try {
-          const res = await jito_executeAndConfirm(transaction, wallet, latestBlockhash, jito_fee);
-          const signature = res.signature;
-          const confirmed = res.confirmed;
+    attempts++;
+    try {
+      const res = await jito_executeAndConfirm(
+        transaction,
+        wallet,
+        latestBlockhash,
+        jito_fee
+      );
+      const signature = res.signature;
+      const confirmed = res.confirmed;
 
-          if (signature) {
-              return { txid: signature };
-          } else {
-              console.log("jito fee transaction failed");
-              console.log(`Retry attempt ${attempts}`);
-          }
-      } catch (e) {
-          console.log(e);
-          if (e.signature) {
-              return { txid: e.signature };
-          }
+      if (signature) {
+        return { txid: signature };
+      } else {
+        console.log("jito fee transaction failed");
+        console.log(`Retry attempt ${attempts}`);
       }
-      latestBlockhash = await connection.getLatestBlockhash();
+    } catch (e) {
+      console.log(e);
+      if (e.signature) {
+        return { txid: e.signature };
+      }
+    }
+    latestBlockhash = await connection.getLatestBlockhash();
   }
 
   console.log("Transaction failed after maximum retry attempts");
   return { txid: null };
 }
-
-
+async function swapOnlyAmmUsingBloXRoute(input) {
+  const poolKeys = await formatAmmKeysById_swap(
+    new PublicKey(input.targetPool)
+  );
+  assert(poolKeys, "cannot find the target pool");
+  const poolInfo = await Liquidity.fetchInfo({
+    connection: connection,
+    poolKeys: poolKeys,
+  });
+  // -------- step 1: coumpute amount out --------
+  const { amountOut, minAmountOut } = Liquidity.computeAmountOut({
+    poolKeys: poolKeys,
+    poolInfo: poolInfo,
+    amountIn: input.inputTokenAmount,
+    currencyOut: input.outputToken,
+    slippage: input.slippage,
+  });
+  // -------- step 2: create instructions by SDK function --------
+  const { innerTransaction } = await Liquidity.makeSwapFixedInInstruction(
+    {
+      poolKeys: poolKeys,
+      userKeys: {
+        tokenAccountIn: input.ataIn,
+        tokenAccountOut: input.ataOut,
+        owner: wallet.publicKey,
+      },
+      amountIn: input.inputTokenAmount.raw,
+      minAmountOut: minAmountOut.raw,
+    },
+    poolKeys.version
+  );
+  if (input.usage == "volume") return innerTransaction;
+  const latestBlockhash = await connection.getLatestBlockhash();
+  let tx = new Transaction();
+  tx.add(        
+    ComputeBudgetProgram.setComputeUnitPrice({
+    microLamports: 305290,
+    }),
+    ComputeBudgetProgram.setComputeUnitLimit({
+    units: 312750,
+    }),
+    ...(input.side === "buy"
+    ? [
+        createAssociatedTokenAccountIdempotentInstruction(
+          wallet.publicKey,
+          input.ataOut,
+          wallet.publicKey,
+          input.outputToken.mint
+        ),
+      ]
+    : []),
+  ...innerTransaction.instructions,
+  )
+  await bloXroute_executeAndConfirm(tx, [wallet]);
+}
 /**
  * Swaps tokens for a specified volume.
  * @param {string} tokenAddr - The address of the token to swap.
@@ -210,11 +265,7 @@ async function swapForVolume(tokenAddr, sol_per_order) {
   let signature = null,
     confirmed = null;
   try {
-    const res = simple_executeAndConfirm(
-      transaction,
-      wallet,
-      latestBlockhash
-    );
+    const res = simple_executeAndConfirm(transaction, wallet, latestBlockhash);
     signature = res.signature;
     confirmed = res.confirmed;
   } catch (e) {
@@ -223,8 +274,6 @@ async function swapForVolume(tokenAddr, sol_per_order) {
   }
   return { confirmed: confirmed, txid: signature };
 }
-
-
 
 /**
  * Helper function for swapping tokens using the AMM protocol.
@@ -248,7 +297,6 @@ async function swapOnlyAmmHelper(input) {
     console.log(`https://solscan.io/tx/${txid}?cluster=mainnet`);
   } else {
     console.log("Transaction failed");
-
   }
 }
 /**
@@ -290,10 +338,10 @@ async function swap(
     );
     const inputToken = DEFAULT_TOKEN.WSOL; // SOL
     let targetPool = null;
-    if(!(tokenAddress in tokenToPoolIdMap)){ 
+    if (!(tokenAddress in tokenToPoolIdMap)) {
       targetPool = await fetchAMMPoolId(tokenAddress);
       tokenToPoolIdMap[tokenAddress] = targetPool;
-    }else targetPool = tokenToPoolIdMap[tokenAddress];
+    } else targetPool = tokenToPoolIdMap[tokenAddress];
 
     if (targetPool === null) {
       console.log(
@@ -320,7 +368,8 @@ async function swap(
     if (usage == "volume") {
       return await swapOnlyAmm(input);
     }
-    swapOnlyAmmHelper(input);
+    //swapOnlyAmmHelper(input); // using jito
+    swapOnlyAmmUsingBloXRoute(input); // using bloXroute
   } else {
     // sell
     const { tokenName, tokenSymbol } = await getTokenMetadata(tokenAddress);
@@ -333,10 +382,10 @@ async function swap(
     );
     const outputToken = DEFAULT_TOKEN.WSOL; // SOL
     let targetPool = null;
-    if(!(tokenAddress in tokenToPoolIdMap)){ 
+    if (!(tokenAddress in tokenToPoolIdMap)) {
       targetPool = await fetchAMMPoolId(tokenAddress);
       tokenToPoolIdMap[tokenAddress] = targetPool;
-    }else targetPool = tokenToPoolIdMap[tokenAddress];
+    } else targetPool = tokenToPoolIdMap[tokenAddress];
 
     if (targetPool === null) {
       console.log(
@@ -368,12 +417,13 @@ async function swap(
       ataOut: quoteAta,
       side,
       usage,
-      tokenAddress: tokenAddress
+      tokenAddress: tokenAddress,
     };
     if (usage == "volume") {
       return await swapOnlyAmm(input);
     }
-    swapOnlyAmmHelper(input);
+    //swapOnlyAmmHelper(input); // using Jito
+    swapOnlyAmmUsingBloXRoute(input); // using bloXroute
   }
 }
 
