@@ -28,6 +28,7 @@ const shyft_api_key = process.env.SHYFT_API_KEY; // your shyft api key
 const wallet = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY)); // your wallet
 const dev_endpoint = process.env.DEVNET_ENDPOINT; // devnet endpoint, if you use devnet
 const main_endpoint = process.env.MAINNET_ENDPOINT; // mainnet endpoint
+const bloXRoute_auth_header = process.env.BLOXROUTE_AUTH_HEADER;
 // const second_main_endpoint = process.env.SECOND_MAINNET_ENDPOINT; // if you use copy trade program, second mainnet endpoint
 // const RPC_Websocket_endpoint = process.env.WS_ENDPOINT;
 // const second_RPC_Websocket_endpoint = process.env.SECOND_WS_ENDPOINT; // if you use copy trade program
@@ -87,5 +88,6 @@ module.exports = {
   _ENDPOINT,
   shyft_api_key,
   jito_fee,
-  smart_money_wallet
+  smart_money_wallet,
+  bloXRoute_auth_header
 };
