@@ -88,10 +88,10 @@ async function getCurrentPriceInUSD(tokenAddress){
 
 
 async function main(){
-    console.log(await getCurrentPriceInSOL("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP"));
-    console.log(await getCurrentSolPrice());
-    console.log(await getCurrentPriceInUSD("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP"));
+    // console.log(await getCurrentPriceInSOL("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP"));
+    // console.log(await getCurrentSolPrice());
+    console.log(await getCurrentPriceInUSD("4MBEqrtgabZ9G5EmKm7XTrcknZ1nWg3TrvFHZMrENgrd"));
 }
-//main();
+main();
 
 module.exports = {getCurrentPriceInSOL, getCurrentSolPrice, getCurrentPriceInUSD};

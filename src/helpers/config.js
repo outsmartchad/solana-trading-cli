@@ -30,6 +30,7 @@ const private_key = process.env.PRIVATE_KEY; // your private key
 const dev_endpoint = process.env.DEVNET_ENDPOINT; // devnet endpoint, if you use devnet
 const main_endpoint = process.env.MAINNET_ENDPOINT; // mainnet endpoint
 const bloXRoute_auth_header = process.env.BLOXROUTE_AUTH_HEADER;
+const bloXroute_fee = process.env.BLOXROUTE_FEE; // 0.001 SOL
 // const second_main_endpoint = process.env.SECOND_MAINNET_ENDPOINT; // if you use copy trade program, second mainnet endpoint
 // const RPC_Websocket_endpoint = process.env.WS_ENDPOINT;
 // const second_RPC_Websocket_endpoint = process.env.SECOND_WS_ENDPOINT; // if you use copy trade program
@@ -91,5 +92,6 @@ module.exports = {
   jito_fee,
   smart_money_wallet,
   bloXRoute_auth_header,
-  private_key
+  private_key,
+  bloXroute_fee,
 };

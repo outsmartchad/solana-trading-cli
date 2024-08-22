@@ -2,8 +2,9 @@ const {
   createTraderAPIMemoInstruction,
   HttpProvider,
   MAINNET_API_UK_HTTP,
+  MAINNET_API_NY_HTTP,
 } = require("@bloxroute/solana-trader-client-ts");
-const { private_key, bloXRoute_auth_header } = require("../helpers/config");
+const { private_key, bloXRoute_auth_header, bloXroute_fee } = require("../helpers/config");
 const {
   Connection,
   LAMPORTS_PER_SOL,
@@ -17,7 +18,7 @@ const TRADER_API_TIP_WALLET = "HWEoBxYs7ssKuudEjzjmpfJVX7Dvi7wescFsVx2L5yoY";
 const provider = new HttpProvider(
   bloXRoute_auth_header,
   private_key,
-  MAINNET_API_UK_HTTP
+  MAINNET_API_UK_HTTP // or MAINNET_API_NY_HTTP
 );
 async function CreateTraderAPITipTransaction(
   senderAddress,
@@ -33,7 +34,9 @@ async function CreateTraderAPITipTransaction(
   );
 }
 async function bloXroute_executeAndConfirm(transaction, signers) {
-  const memo = createTraderAPIMemoInstruction("");
+  const memo = createTraderAPIMemoInstruction(
+    "Powered by bloXroute Trader Api"
+  ); // why not use empty string? see https://docs.bloxroute.com/solana/trader-api-v2/achieve-best-performance-for-landing-a-transaction
   const wallet = Keypair.fromSecretKey(base58.decode(private_key));
   const recentBlockhash = await provider.getRecentBlockHash({});
   let tx = new Transaction({
@@ -42,16 +45,32 @@ async function bloXroute_executeAndConfirm(transaction, signers) {
   });
   tx.add(transaction);
   tx.add(memo);
-  tx.add(await CreateTraderAPITipTransaction(wallet.publicKey, 0.001 * LAMPORTS_PER_SOL));
+  tx.add(
+    await CreateTraderAPITipTransaction(
+      wallet.publicKey,
+      bloXroute_fee * LAMPORTS_PER_SOL
+    )
+  ); // why 0.001 SOL?
   tx.sign(wallet);
   const serializeTxBytes = tx.serialize();
   const buffTx = Buffer.from(serializeTxBytes);
   const encodedTx = buffTx.toString("base64");
   console.log("Submitting transaction to bloXroute...");
+
   const response = await provider.postSubmit({
     transaction: { content: encodedTx, isCleanup: false },
-    skipPreFlight: false,
+    frontRunningProtection: false,
+    useStakedRPCs: true, // comment this line if you don't want to directly send txn to current blockleader
   });
+  /**
+   * For better performance,
+   * you could include a high enough tip and set useStakedRPCs to True
+   * await provider.postSubmit({
+   * transaction: { content: encodedTxn, isCleanup: false },
+   * frontRunningProtection: false,
+   * useStakedRPCs: true,
+   * });
+   */
 
   if (response.signature) {
     console.log(
