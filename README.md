@@ -1,6 +1,4 @@
-# SPL token ALL-IN-ONE Command line tool 🚀
-
-[🔗doc](https://outsmartchad.github.io/solana-memecoin-cli/)
+[🔗doc](https://outsmartchad.github.io/solana-trading-cli/)
 ## Main Features
 - Trading any token using Jupiter API & Raydium swap function
 
@@ -135,6 +133,7 @@
 ## Features ✅:
 
 ### Developer CLI:
+- wrap/unwrap solana
 - Create a new SPL token or zk-compressed token (on SOL mainnet/devnet/zk-devnet) and it will automatically mint to your wallet
 - Integrates both **user-defined priority fee and jito tips** that land transactions faster
 - Burn a percentage of a token
@@ -211,6 +210,17 @@ node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <P
 ```
 node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
 ```
+9. wrap your sol to wsol.
+    
+```
+node wrap_sol.js --size <size>
+```
+
+10. unwrap your wsol to sol.
+```
+node unwrap_sol.js
+```
+
 ### Pump.fun commands
 
 9. Specify the path to your mint keypair, the amount of Sol you want to buy, the name of the token, the symbol of the token, the description of the token, the telegram link, the twitter link, the website link, and the image file path.
