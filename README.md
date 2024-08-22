@@ -3,18 +3,12 @@
 - Trading any token using Jupiter API & Raydium swap function
 
 - Create your own Solana **_SPL tokens_** on mainnet | Pump.fun
-
-- Create your own zk-compressed token in your own zk-testnet
   
-- Performing **_LP transactions_** On Raydium, Orca and Meteora
+- Swap tokens on top of Raydium, Orca, Meteora, and pump.fun
   
 - Predefined Jito tips and Priority fee
-  
-- Volume Booster by bundling buy and sell in one transaction!
 
 - Fastest Copy Trade Program
-
-- **_Pump.fun sdk_** Integration
 
 - **_Got everything needed for any developer to create their own trading bot_**
 
@@ -111,12 +105,12 @@
 |       ├── jito-tips-tx-executor.js          # sending bundles(list of instructions) to Jito validators
 |                                             # validators help our tx land faster
 |       ├── simple-tx-executor.js             # submitting ur tx to RPC provider with predefined priority fees
-|       └── bloXroute-tips-tx-executor.js     
+|       └── bloXroute-tips-tx-executor.js     # submitting ur tx to bloXroute staked rpc and their server will send ur tx to current blockleader
 └── help.js
 ```
 ### Installation 🛠️
 
-1. `git clone https://github.com/ManofDiligence/solana-memecoin-cli.git`
+1. `git clone https://github.com/outsmartchad/solana-trading-cli.git`
 2. `cd solana-memecoin-cli`
 3. `nvm install v22.2.0`
 4. `nvm use v22.2.0`
