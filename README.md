@@ -127,7 +127,7 @@
 ### Prerequisites 🚨
 
 0. we have added a .env.copy file in src/helpers/.env.copy for you to follow and paste your keys to the code (specify the custom jito fee if you need).
-1. Add your mainnet wallet secret key, devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(must)
+1. Add your mainnet wallet secret key(must), devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(optional)
 2. rename the .env.copy file to .env
 
 ## Features ✅:
