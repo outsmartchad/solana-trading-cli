@@ -67,6 +67,7 @@ export async function getCurrentMarketCap(tokenAddress:string) {
     const mc =
       priceInUSD *
       supply.value.uiAmount;
+    console.log(`Current market cap of ${tokenAddress} is: ${mc}`);
     return mc;
   } catch (e) {
     console.log(`Error when getting current market cap of ${tokenAddress} `, e);

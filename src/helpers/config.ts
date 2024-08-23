@@ -73,25 +73,3 @@ export const DEFAULT_TOKEN = {
     "USDC"
   ),
 };
-
-// module.exports = {
-//   wallet,
-//   dev_connection,
-//   dev_endpoint,
-//   main_endpoint,
-//   connection,
-//   TOKEN_PROGRAM_ID,
-//   RAYDIUM_MAINNET,
-//   RAYDIUM_MAINNET_API,
-//   PROGRAMIDS,
-//   makeTxVersion,
-//   DEFAULT_TOKEN,
-//   addLookupTableInfo,
-//   _ENDPOINT,
-//   shyft_api_key,
-//   jito_fee,
-//   smart_money_wallet,
-//   bloXRoute_auth_header,
-//   private_key,
-//   bloXroute_fee,
-// };

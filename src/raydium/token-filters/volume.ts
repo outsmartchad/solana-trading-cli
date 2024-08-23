@@ -11,6 +11,7 @@ export async function getDayVolume(tokenAddress:string){
             response = await( await fetch(`https://api-v3.raydium.io/pools/info/ids?ids=${poolId}`)).json();
             if(response.success) dayVolume = response.data[0].day.volume
         }
+        console.log(dayVolume)
         if(dayVolume !== 0) return dayVolume;
         else{
             dayVolume = response.data[0].day.volume
@@ -61,4 +62,4 @@ export async function getMonthVolume(tokenAddress:string){
     }
 }
 
-//getDayVolume("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP");
+getDayVolume("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP");
