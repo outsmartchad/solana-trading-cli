@@ -9,7 +9,7 @@ import {
   connection,
   makeTxVersion,
   wallet,
-} from "./config.js";
+} from "./config";
 import { Metaplex } from "@metaplex-foundation/js";
 import fs from "fs";
 import {

@@ -337,11 +337,12 @@ export async function swap(
     );
     const inputToken = DEFAULT_TOKEN.WSOL; // SOL
     let targetPool = null;
+    console.log("Fetching pool id...");
     if (!(tokenAddress in tokenToPoolIdMap)) {
       targetPool = await fetchAMMPoolId(tokenAddress);
       tokenToPoolIdMap[tokenAddress] = targetPool;
     } else targetPool = tokenToPoolIdMap[tokenAddress];
-
+    console.log("Pool id fetched.");
     if (targetPool === null) {
       console.log(
         "Pool not found or raydium is not supported for this token. Exiting..."

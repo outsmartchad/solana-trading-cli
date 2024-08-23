@@ -49,6 +49,7 @@ async function buy(side:string, address:string, no_of_sol:number, payer:Keypair)
     payer_wallet = await loadOrCreateKeypair_wallet(payer_keypair);
     await swap(side, address, no_of_sol, -1, payer_wallet, "trade");
   } else {
+    console.log("here")
     await swap(side, address, no_of_sol, -1, wallet, "trade");
   }
 }

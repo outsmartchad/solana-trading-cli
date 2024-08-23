@@ -5,7 +5,7 @@ import {
   Transaction,
   VersionedTransaction,
 } from "@solana/web3.js";
-import { connection } from "../helpers/config.js";
+import { connection } from "../helpers/config";
 
 /**
  * Executes a transaction and confirms it on the Solana blockchain.
