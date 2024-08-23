@@ -351,7 +351,7 @@ async function getOtherTradersWallet(mintPubKey) {
 
   while (true) {
     const response = await fetch(
-      "https://mainnet.helius-rpc.com/?api-key=448fa184-4e3c-419b-a456-e9fd6889b659",
+      "YOUR_RPC_URL",
       {
         method: "POST",
         headers: {
