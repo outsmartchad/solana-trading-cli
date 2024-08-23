@@ -1,12 +1,12 @@
-const {sell} = require('./tools');
-const { PublicKey } = require("@solana/web3.js");
-const { program } = require("commander");
-let token_address = null, sellPercentage = null;
+import {sell} from './tools';
+import { PublicKey } from "@solana/web3.js";
+import { program } from "commander";
+let token_address:any = null, sellPercentage:any = null;
 program
   .option("--token_address <ADDRESS_TOKEN>", "Specify the token address")
   .option("--percentage <SELL_PERCENTAGE>", "Specify the percentage of token to sell")
   .option("-h, --help", "display help for command")
-  .action((options) => {
+  .action((options:any) => {
     if (options.help) {
       console.log(
         "node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>"

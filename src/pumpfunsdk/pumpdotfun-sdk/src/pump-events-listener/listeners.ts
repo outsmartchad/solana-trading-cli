@@ -1,30 +1,30 @@
-const {connection} = require("../../../../helpers/config");
-const { Keypair, Connection } =  require("@solana/web3.js");
-const {PumpFunSDK} =require ("pumpdotfun-sdk");
-const { AnchorProvider } = require ("@coral-xyz/anchor");
+import {connection} from "../../../../helpers/config";
+import { Keypair, Connection } from "@solana/web3.js";
+import {PumpFunSDK} from  "pumpdotfun-sdk";
+import { AnchorProvider } from "@coral-xyz/anchor";
 
-function getProvider(){
-    const wallet = Keypair.generate();
+export function getProvider(){
+    const wallet:any = Keypair.generate();
     const provider = new AnchorProvider(connection, wallet, {
         commitment: "finalized",
     });
     return provider;
 }
 
-async function subscribeToCompleteBondingCurveEvent(sdk){
+export async function subscribeToCompleteBondingCurveEvent(sdk: PumpFunSDK){
     const completeEventId = sdk.addEventListener("completeEvent", (event, slot, signature) => {
         console.log("completeEvent", event, slot, signature);
     });
     console.log("Subscribed to completeEvent with ID:", completeEventId);
 }
-async function subscribeToCreatePumpTokenEvent(sdk){
+export async function subscribeToCreatePumpTokenEvent(sdk: PumpFunSDK){
     const createEventId = sdk.addEventListener("createEvent", (event, slot, signature) => {
         console.log("createEvent", event, slot, signature);
         console.log("mint pubkey", event.mint.toBase58())
     });
     console.log("Subscribed to createEvent with ID:", createEventId);
 }
-async function subscribeToTradeEvent(sdk){
+export async function subscribeToTradeEvent(sdk: PumpFunSDK){
     const tradeEventId = sdk.addEventListener("tradeEvent", (event, slot, signature) => {
         console.log("tradeEvent", event, slot, signature);
     });
@@ -42,5 +42,3 @@ async function main(){
     }
 }
 main();
-
-module.exports = {subscribeToCompleteBondingCurveEvent, subscribeToCreatePumpTokenEvent, subscribeToTradeEvent, getProvider};

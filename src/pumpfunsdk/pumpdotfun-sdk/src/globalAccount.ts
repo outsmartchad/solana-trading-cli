@@ -1,19 +1,27 @@
-const { PublicKey } =require( "@solana/web3.js");
-const { struct, bool, u64, publicKey, Layout } =require( "@coral-xyz/borsh");
+import { PublicKey } from "@solana/web3.js";
+import { struct, bool, u64, publicKey, Layout } from "@coral-xyz/borsh";
 
-class GlobalAccount {
-
+export class GlobalAccount {
+  public discriminator: bigint;
+  public initialized: boolean = false;
+  public authority: PublicKey;
+  public feeRecipient: PublicKey;
+  public initialVirtualTokenReserves: bigint;
+  public initialVirtualSolReserves: bigint;
+  public initialRealTokenReserves: bigint;
+  public tokenTotalSupply: bigint;
+  public feeBasisPoints: bigint;
 
   constructor(
-    discriminator,
-    initialized,
-    authority,
-    feeRecipient,
-    initialVirtualTokenReserves,
-    initialVirtualSolReserves,
-    initialRealTokenReserves,
-    tokenTotalSupply,
-    feeBasisPoints
+    discriminator: bigint,
+    initialized: boolean,
+    authority: PublicKey,
+    feeRecipient: PublicKey,
+    initialVirtualTokenReserves: bigint,
+    initialVirtualSolReserves: bigint,
+    initialRealTokenReserves: bigint,
+    tokenTotalSupply: bigint,
+    feeBasisPoints: bigint
   ) {
     this.discriminator = discriminator;
     this.initialized = initialized;
@@ -26,7 +34,7 @@ class GlobalAccount {
     this.feeBasisPoints = feeBasisPoints;
   }
 
-  getInitialBuyPrice(amount) {
+  getInitialBuyPrice(amount: bigint): bigint {
     if (amount <= 0n) {
       return 0n;
     }
@@ -40,8 +48,8 @@ class GlobalAccount {
       : this.initialRealTokenReserves;
   }
 
-   static fromBuffer(buffer){
-    const structure = struct([
+  public static fromBuffer(buffer: Buffer): GlobalAccount {
+    const structure: Layout<GlobalAccount> = struct([
       u64("discriminator"),
       bool("initialized"),
       publicKey("authority"),
@@ -67,5 +75,3 @@ class GlobalAccount {
     );
   }
 }
-
-module.exports = {GlobalAccount};

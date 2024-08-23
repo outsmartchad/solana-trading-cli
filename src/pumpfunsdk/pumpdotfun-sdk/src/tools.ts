@@ -1,44 +1,28 @@
-const { AnchorProvider } = require("@coral-xyz/anchor");
-const { PumpFunSDK, DEFAULT_DECIMALS } = require("./pumpfun.js");
-const {
-  sendTxToJito,
-  DEFAULT_COMMITMENT,
-  generateWalletsAndDropSOL,
-  solCollector,
-} = require("./util.js");
-const { wallet, connection } = require("../../../helpers/config.js"); 
-const {
+import { AnchorProvider } from "@coral-xyz/anchor";
+import { PumpFunSDK, DEFAULT_DECIMALS } from "./pumpfun.js";
+import { wallet, connection } from "../../../helpers/config"; 
+import {
   getOrCreateKeypair,
   getSPLBalance,
   printSOLBalance,
   printSPLBalance,
-  getKeypairByJsonPath,
-} = require("../example/util.js");
-const fs = require("fs");
-const { promises } = require("dns");
-const {
+  getKeypairByJsonPath
+} from "../example/util";
+import fs from "fs";
+import { promises } from "dns";
+import {
   Keypair,
   PublicKey,
   SystemProgram,
   Transaction,
   LAMPORTS_PER_SOL,
-} = require("@solana/web3.js");
-const { bs58 } = require("@coral-xyz/anchor/dist/cjs/utils/bytes");
-const {
-  calculateWithSlippageBuy,
-  sendTx,
-  getOurWallet,
-  getOtherTradersWallet,
-  readCSVFile,
-  extractPrivateKeyAndSolana,
-} = require("./util.js");
-const {
-  jito_executeAndConfirm,
-} = require("./transactions/jito-tx-executor.js");
-const path = require("path");
-const { get } = require("http");
+} from "@solana/web3.js";
+import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
+import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
+import path from "path";
 const SLIPPAGE_BASIS_POINTS = 100n;
 
+const Wallet = new NodeWallet(wallet);
 /**
  * Creates and buys a token using the provided parameters.
  * @param {string} pathToMintKeypair - The path to the mint keypair JSON file.
@@ -46,13 +30,14 @@ const SLIPPAGE_BASIS_POINTS = 100n;
  * @param {number} initialBuySolAmount - The initial amount of SOL to buy the token with.
  * @returns {Promise<void>} - A promise that resolves when the token creation and purchase is complete.
  */
-async function createAndBuy(pathToMintKeypair, tokenMetadata, initialBuySolAmount) {
-  const provider = new AnchorProvider(connection, wallet, {
+export async function createAndBuy(pathToMintKeypair:any, tokenMetadata:any, initialBuySolAmount:any) {
+  const Wallet = new NodeWallet(wallet);
+  const provider = new AnchorProvider(connection, Wallet, {
     commitment: "finalized",
   });
 
   const sdk = new PumpFunSDK(provider);
-  const mintKeypair = getKeypairByJsonPath(pathToMintKeypair);
+  const mintKeypair:any = getKeypairByJsonPath(pathToMintKeypair);
   console.log(mintKeypair.publicKey);
   await printSOLBalance(connection, wallet.publicKey, "Master wallet keypair");
   let globalAccount = await sdk.getGlobalAccount();
@@ -100,8 +85,8 @@ async function createAndBuy(pathToMintKeypair, tokenMetadata, initialBuySolAmoun
  * @param {number} sellPercentage - The percentage of tokens to sell.
  * @returns {Promise<void>} - A promise that resolves when the sell operation is complete.
  */
-async function sell(mintPubKey, sellPercentage) {
-  const provider = new AnchorProvider(connection, wallet, {
+export async function sell(mintPubKey:any, sellPercentage:any) {
+  const provider = new AnchorProvider(connection, Wallet, {
     commitment: "finalized",
   });
 
@@ -143,8 +128,8 @@ async function sell(mintPubKey, sellPercentage) {
  * @param {number} solPerOrder - The amount of SOL to spend per order.
  * @returns {Promise<void>} - A promise that resolves when the buy operation is complete.
  */
-async function buy(mintPubKey, solPerOrder) {
-  const provider = new AnchorProvider(connection, wallet, {
+export async function buy(mintPubKey:any, solPerOrder:any) {
+  const provider = new AnchorProvider(connection, Wallet, {
     commitment: "finalized",
   });
 
@@ -211,5 +196,3 @@ async function run() {
 }
 
 //run();
-
-module.exports = {buy, sell, createAndBuy}

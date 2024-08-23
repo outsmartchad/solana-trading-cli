@@ -1,16 +1,22 @@
-const { struct, bool, u64, Layout } =require ("@coral-xyz/borsh");
+import { struct, bool, u64, Layout } from "@coral-xyz/borsh";
 
-class BondingCurveAccount {
-
+export class BondingCurveAccount {
+  public discriminator: bigint;
+  public virtualTokenReserves: bigint;
+  public virtualSolReserves: bigint;
+  public realTokenReserves: bigint;
+  public realSolReserves: bigint;
+  public tokenTotalSupply: bigint;
+  public complete: boolean;
 
   constructor(
-    discriminator,
-    virtualTokenReserves,
-    virtualSolReserves,
-    realTokenReserves,
-    realSolReserves,
-    tokenTotalSupply,
-    complete
+    discriminator: bigint,
+    virtualTokenReserves: bigint,
+    virtualSolReserves: bigint,
+    realTokenReserves: bigint,
+    realSolReserves: bigint,
+    tokenTotalSupply: bigint,
+    complete: boolean
   ) {
     this.discriminator = discriminator;
     this.virtualTokenReserves = virtualTokenReserves;
@@ -21,7 +27,7 @@ class BondingCurveAccount {
     this.complete = complete;
   }
 
-  getBuyPrice(amount) {
+  getBuyPrice(amount: bigint): bigint {
     if (this.complete) {
       throw new Error("Curve is complete");
     }
@@ -46,7 +52,7 @@ class BondingCurveAccount {
     return s < this.realTokenReserves ? s : this.realTokenReserves;
   }
 
-  getSellPrice(amount , feeBasisPoints ) {
+  getSellPrice(amount: bigint, feeBasisPoints: bigint): bigint {
     if (this.complete) {
       throw new Error("Curve is complete");
     }
@@ -66,7 +72,7 @@ class BondingCurveAccount {
     return n - a;
   }
 
-  getMarketCapSOL() {
+  getMarketCapSOL(): bigint {
     if (this.virtualTokenReserves === 0n) {
       return 0n;
     }
@@ -77,7 +83,7 @@ class BondingCurveAccount {
     );
   }
 
-  getFinalMarketCapSOL(feeBasisPoints){
+  getFinalMarketCapSOL(feeBasisPoints: bigint): bigint {
     let totalSellValue = this.getBuyOutPrice(
       this.realTokenReserves,
       feeBasisPoints
@@ -92,7 +98,7 @@ class BondingCurveAccount {
     return (this.tokenTotalSupply * totalVirtualValue) / totalVirtualTokens;
   }
 
-  getBuyOutPrice(amount, feeBasisPoints)  {
+  getBuyOutPrice(amount: bigint, feeBasisPoints: bigint): bigint {
     let solTokens =
       amount < this.realSolReserves ? this.realSolReserves : amount;
     let totalSellValue =
@@ -103,8 +109,8 @@ class BondingCurveAccount {
     return totalSellValue + fee;
   }
 
-  static fromBuffer(buffer) {
-    const structure = struct([
+  public static fromBuffer(buffer: Buffer): BondingCurveAccount {
+    const structure: Layout<BondingCurveAccount> = struct([
       u64("discriminator"),
       u64("virtualTokenReserves"),
       u64("virtualSolReserves"),
@@ -126,5 +132,3 @@ class BondingCurveAccount {
     );
   }
 }
-
-module.exports = {BondingCurveAccount};

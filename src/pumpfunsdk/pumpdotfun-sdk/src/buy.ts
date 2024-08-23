@@ -1,7 +1,7 @@
-const { PublicKey } = require("@solana/web3.js");
-const {buy} = require("./tools");
-const { program } = require("commander");
-let token_address = null, sol = null;
+import { PublicKey } from "@solana/web3.js";
+import {buy} from "./tools";
+import { program } from "commander";
+let token_address:any = null, sol = null;
 program
   .option("--token_address <ADDRESS_TOKEN>", "Specify the token address")
   .option("--sol <NUMBER_OF_SOL>", "Specify the number of SOL")

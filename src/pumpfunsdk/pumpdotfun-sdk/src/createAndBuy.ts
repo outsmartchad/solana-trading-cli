@@ -1,9 +1,10 @@
-const {createAndBuy} = require("./tools");
+import {createAndBuy} from "./tools";
 // command line tool
-const {program} = require("commander");
-const fs = require("fs");
+import {program} from "commander";
+import fs from "fs";
 
-let sol = null, mintKeypair = null, name = null, symbol = null, description = null, telegram = null, twitter = null, website = null, file = null;
+let sol:any = null, mintKeypair:any = null, name:any = null, symbol:any = null, 
+description:any = null, telegram:any = null, twitter:any = null, website:any = null, file:any = null;
 program.option("--pathToMintKeypair <PATH_TO_MINT_KEYPAIR>", "Specify the path to your own mint keypair")
   .option("--sol <NUMBER_OF_SOL>", "Specify the number of SOL you want to buy")
   .option("--name <TOKEN_NAME>", "Specify the token name")

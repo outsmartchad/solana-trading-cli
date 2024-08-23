@@ -1,121 +1,122 @@
-const {
+import {
   Commitment,
   Connection,
   Finality,
   Keypair,
   PublicKey,
   Transaction,
-} =require ("@solana/web3.js");
-const { Program, Provider } =require ("@coral-xyz/anchor");
-const { GlobalAccount } =require ("./globalAccount.js");
-const {
+} from "@solana/web3.js";
+import { Program, Provider } from "@coral-xyz/anchor";
+import { GlobalAccount } from "./globalAccount";
+import {
   toCompleteEvent,
   toCreateEvent,
   toSetParamsEvent,
   toTradeEvent,
-} =require ("./events.js");
-const {
+} from "./events";
+import {
   createAssociatedTokenAccountInstruction,
   getAccount,
   getAssociatedTokenAddress,
   getOrCreateAssociatedTokenAccount,
-} =require ("@solana/spl-token");
-const { BondingCurveAccount } =require ("./bondingCurveAccount.js");
-const { BN } =require ("bn.js");
-const {
+} from "@solana/spl-token";
+import { BondingCurveAccount } from "./bondingCurveAccount";
+const {BN} = require("bn.js");
+import {
   DEFAULT_COMMITMENT,
   DEFAULT_FINALITY,
   calculateWithSlippageBuy,
   calculateWithSlippageSell,
   sendTx,
   sendTxToJito,
-} =require ("./util.js");
-const { PumpFun, IDL } =require ("./IDL/index.js");
-const {wallet} = require("../../../helpers/config.js")
-const PROGRAM_ID = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
-const MPL_TOKEN_METADATA_PROGRAM_ID =
+} from "./util";
+import { PumpFun, IDL } from "./IDL/index";
+import { wallet } from "../../../helpers/config";
+export const PROGRAM_ID = "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P";
+export const MPL_TOKEN_METADATA_PROGRAM_ID =
   "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s";
 
- const GLOBAL_ACCOUNT_SEED = "global";
- const MINT_AUTHORITY_SEED = "mint-authority";
- const BONDING_CURVE_SEED = "bonding-curve";
- const METADATA_SEED = "metadata";
+export const GLOBAL_ACCOUNT_SEED = "global";
+export const MINT_AUTHORITY_SEED = "mint-authority";
+export const BONDING_CURVE_SEED = "bonding-curve";
+export const METADATA_SEED = "metadata";
 
- const DEFAULT_DECIMALS = 6;
+export const DEFAULT_DECIMALS = 6;
 
- class PumpFunSDK {
-
-  constructor(provider) {
-    this.program = new Program(IDL, provider);
+export class PumpFunSDK {
+  public program: Program<PumpFun>;
+  public connection: Connection;
+  constructor(provider?: Provider) {
+    this.program = new Program<PumpFun>(IDL as PumpFun, provider);
     this.connection = this.program.provider.connection;
   }
-  async bundleBuys(    creator,
-    mint,
-    createTokenMetadata,
-    buyAmountSol,
-    buyersWallets,
+  async bundleBuys(
+    creator: any,
+    mint: any,
+    createTokenMetadata: any,
+    buyAmountSol: any,
+    buyersWallets: any,
     slippageBasisPoints = 500n,
-    priorityFees,
-    commitment = DEFAULT_COMMITMENT,
-    finality = DEFAULT_FINALITY,
-    ){
-      let tokenMetadata = await this.createTokenMetadata(createTokenMetadata);
-      let createTx = await this.getCreateInstructions(
-        creator.publicKey,
-        createTokenMetadata.name,
-        createTokenMetadata.symbol,
-        tokenMetadata.metadataUri,
-        mint
-      );
-      let final_tx = new Transaction().add(createTx);
-      const globalAccount = await this.getGlobalAccount(commitment);
-      const buyAmount = globalAccount.getInitialBuyPrice(buyAmountSol);
-      const buyAmountWithSlippage = calculateWithSlippageBuy(
-        buyAmountSol,
-        slippageBasisPoints
-      );
-      final_tx.add(
-        await this.getBuyInstructions(
-          creator.publicKey,
-          mint.publicKey,
-          globalAccount.feeRecipient,
-          buyAmount,
-          buyAmountWithSlippage
-        )
-      );
-
-      for(let i=0; i<buyersWallets.length; i++){
-        let buyTx = await this.getBuyInstructions(
-          buyersWallets[i].publicKey,
-          mint.publicKey,
-          globalAccount.feeRecipient,
-          buyAmount,
-          buyAmountWithSlippage
-        );
-        final_tx.add(buyTx);
-      }
-      let createResults = await sendTx(
-        this.connection,
-        final_tx,
-        creator.publicKey,
-        [creator, mint,...buyersWallets],
-        priorityFees,
-        commitment,
-        finality
-      );
-      return createResults;
-
-    }
-  async createAndBuy(
-    creator,
-    mint,
-    createTokenMetadata,
-    buyAmountSol,
-    slippageBasisPoints = 500n,
-    priorityFees,
+    priorityFees: any,
     commitment = DEFAULT_COMMITMENT,
     finality = DEFAULT_FINALITY
-  ){
+  ) {
+    let tokenMetadata = await this.createTokenMetadata(createTokenMetadata);
+    let createTx = await this.getCreateInstructions(
+      creator.publicKey,
+      createTokenMetadata.name,
+      createTokenMetadata.symbol,
+      tokenMetadata.metadataUri,
+      mint
+    );
+    let final_tx = new Transaction().add(createTx);
+    const globalAccount = await this.getGlobalAccount(commitment);
+    const buyAmount = globalAccount.getInitialBuyPrice(buyAmountSol);
+    const buyAmountWithSlippage = calculateWithSlippageBuy(
+      buyAmountSol,
+      slippageBasisPoints
+    );
+    final_tx.add(
+      await this.getBuyInstructions(
+        creator.publicKey,
+        mint.publicKey,
+        globalAccount.feeRecipient,
+        buyAmount,
+        buyAmountWithSlippage
+      )
+    );
+
+    for (let i = 0; i < buyersWallets.length; i++) {
+      let buyTx = await this.getBuyInstructions(
+        buyersWallets[i].publicKey,
+        mint.publicKey,
+        globalAccount.feeRecipient,
+        buyAmount,
+        buyAmountWithSlippage
+      );
+      final_tx.add(buyTx);
+    }
+    let createResults = await sendTx(
+      this.connection,
+      final_tx,
+      creator.publicKey,
+      [creator, mint, ...buyersWallets],
+      priorityFees,
+      commitment || "",
+      finality
+    );
+    return createResults;
+  }
+  async createAndBuy(
+    creator: Keypair,
+    mint: Keypair,
+    createTokenMetadata: any,
+    buyAmountSol: bigint,
+    slippageBasisPoints: bigint = 500n,
+    priorityFees?: any,
+    commitment: Commitment = DEFAULT_COMMITMENT,
+    finality: Finality = DEFAULT_FINALITY
+  ) {
     let tokenMetadata = await this.createTokenMetadata(createTokenMetadata);
 
     let createTx = await this.getCreateInstructions(
@@ -169,11 +170,11 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
   }
 
   async buy(
-    buyer,
-    mint,
-    buyAmountSol,
+    buyer: any,
+    mint: any,
+    buyAmountSol: any,
     slippageBasisPoints = 500n,
-    priorityFees,
+    priorityFees: any,
     commitment = DEFAULT_COMMITMENT,
     finality = DEFAULT_FINALITY
   ) {
@@ -200,16 +201,16 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
       buyer,
       [buyer],
       0.00001
-    )
+    );
     return buyResults;
   }
 
   async sell(
-    seller,
-    mint,
-    sellTokenAmount,
+    seller: any,
+    mint: any,
+    sellTokenAmount: any,
     slippageBasisPoints = 500n,
-    priorityFees,
+    priorityFees: any,
     commitment = DEFAULT_COMMITMENT,
     finality = DEFAULT_FINALITY
   ) {
@@ -236,17 +237,17 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
       seller,
       [seller],
       0.00001
-    )
+    );
     return sellResults;
   }
 
   //create token instructions
   async getCreateInstructions(
-    creator,
-    name,
-    symbol,
-    uri,
-    mint
+    creator: any,
+    name: any,
+    symbol: any,
+    uri: any,
+    mint: any
   ) {
     const mplTokenMetadata = new PublicKey(MPL_TOKEN_METADATA_PROGRAM_ID);
 
@@ -264,7 +265,7 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
       this.getBondingCurvePDA(mint.publicKey),
       true
     );
-    
+
     return this.program.methods
       .create(name, symbol, uri)
       .accounts({
@@ -278,9 +279,9 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
   }
 
   async getBuyInstructionsBySolAmount(
-    buyer,
-    mint,
-    buyAmountSol,
+    buyer: any,
+    mint: any,
+    buyAmountSol: any,
     slippageBasisPoints = 500n,
     commitment = DEFAULT_COMMITMENT
   ) {
@@ -308,24 +309,22 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
       buyAmountWithSlippage
     );
   }
-  async getAssoBondingCurve(
-    mint,
-  ){
-      const associatedBondingCurve = await getAssociatedTokenAddress(
-        mint,
-        this.getBondingCurvePDA(mint),
-        true
-      );
-      console.log(associatedBondingCurve)
-      return associatedBondingCurve;
-    }
+  async getAssoBondingCurve(mint: any) {
+    const associatedBondingCurve = await getAssociatedTokenAddress(
+      mint,
+      this.getBondingCurvePDA(mint),
+      true
+    );
+    console.log(associatedBondingCurve);
+    return associatedBondingCurve;
+  }
   //buy
   async getBuyInstructions(
-    buyer,
-    mint,
-    feeRecipient,
-    amount,
-    solAmount,
+    buyer: any,
+    mint: any,
+    feeRecipient: any,
+    amount: any,
+    solAmount: any,
     commitment = DEFAULT_COMMITMENT
   ) {
     const associatedBondingCurve = await getAssociatedTokenAddress(
@@ -340,7 +339,7 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
     let transaction = new Transaction();
 
     try {
-      await getAccount(this.connection, associatedUser, commitment);
+      await getAccount(this.connection, associatedUser);
     } catch (e) {
       transaction.add(
         createAssociatedTokenAccountInstruction(
@@ -370,9 +369,9 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
 
   //sell
   async getSellInstructionsByTokenAmount(
-    seller,
-    mint,
-    sellTokenAmount,
+    seller: any,
+    mint: any,
+    sellTokenAmount: any,
     slippageBasisPoints = 500n,
     commitment = DEFAULT_COMMITMENT
   ) {
@@ -406,11 +405,11 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
   }
 
   async getSellInstructions(
-    seller,
-    mint,
-    feeRecipient,
-    amount,
-    minSolOutput
+    seller: any,
+    mint: any,
+    feeRecipient: any,
+    amount: any,
+    minSolOutput: any
   ) {
     const associatedBondingCurve = await getAssociatedTokenAddress(
       mint,
@@ -438,13 +437,9 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
     return transaction;
   }
 
-  async getBondingCurveAccount(
-    mint,
-    commitment = DEFAULT_COMMITMENT
-  ) {
+  async getBondingCurveAccount(mint: any, commitment = DEFAULT_COMMITMENT) {
     const tokenAccount = await this.connection.getAccountInfo(
-      this.getBondingCurvePDA(mint),
-      commitment
+      this.getBondingCurvePDA(mint)
     );
     if (!tokenAccount) {
       return null;
@@ -458,22 +453,19 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
       new PublicKey(PROGRAM_ID)
     );
 
-    const tokenAccount = await this.connection.getAccountInfo(
-      globalAccountPDA,
-      commitment
-    );
+    const tokenAccount:any = await this.connection.getAccountInfo(globalAccountPDA);
 
     return GlobalAccount.fromBuffer(tokenAccount.data);
   }
 
-  getBondingCurvePDA(mint) {
+  getBondingCurvePDA(mint:any) {
     return PublicKey.findProgramAddressSync(
       [Buffer.from(BONDING_CURVE_SEED), mint.toBuffer()],
       this.program.programId
     )[0];
   }
 
-  async createTokenMetadata(create) {
+  async createTokenMetadata(create:any) {
     let formData = new FormData();
     formData.append("file", create.file),
       formData.append("name", create.name),
@@ -490,10 +482,7 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
     return request.json();
   }
   //EVENTS
-  addEventListener(
-    eventType,
-    callback
-  ) {
+  addEventListener(eventType:any, callback:any) {
     return this.program.addEventListener(
       eventType,
       (event, slot, signature) => {
@@ -501,36 +490,20 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
         switch (eventType) {
           case "createEvent":
             processedEvent = toCreateEvent(event);
-            callback(
-              processedEvent,
-              slot,
-              signature
-            );
+            callback(processedEvent, slot, signature);
             break;
           case "tradeEvent":
             processedEvent = toTradeEvent(event);
-            callback(
-              processedEvent,
-              slot,
-              signature
-            );
+            callback(processedEvent, slot, signature);
             break;
           case "completeEvent":
             processedEvent = toCompleteEvent(event);
-            callback(
-              processedEvent ,
-              slot,
-              signature
-            );
+            callback(processedEvent, slot, signature);
             console.log("completeEvent", event, slot, signature);
             break;
           case "setParamsEvent":
-            processedEvent = toSetParamsEvent(event );
-            callback(
-              processedEvent,
-              slot,
-              signature
-            );
+            processedEvent = toSetParamsEvent(event);
+            callback(processedEvent, slot, signature);
             break;
           default:
             console.error("Unhandled event type:", eventType);
@@ -539,9 +512,8 @@ const MPL_TOKEN_METADATA_PROGRAM_ID =
     );
   }
 
-  removeEventListener(eventId) {
+  removeEventListener(eventId:any) {
     this.program.removeEventListener(eventId);
   }
 }
 
-module.exports = { PumpFunSDK, PROGRAM_ID, GLOBAL_ACCOUNT_SEED, MINT_AUTHORITY_SEED, BONDING_CURVE_SEED, METADATA_SEED, DEFAULT_DECIMALS };

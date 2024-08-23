@@ -1,6 +1,12 @@
-const { PublicKey } =require ("@solana/web3.js");
+import { PublicKey } from "@solana/web3.js";
+import {
+  CompleteEvent,
+  CreateEvent,
+  SetParamsEvent,
+  TradeEvent,
+} from "./types";
 
- function toCreateEvent(event) {
+export function toCreateEvent(event: CreateEvent): CreateEvent {
   return {
     name: event.name,
     symbol: event.symbol,
@@ -11,7 +17,7 @@ const { PublicKey } =require ("@solana/web3.js");
   };
 }
 
- function toCompleteEvent(event) {
+export function toCompleteEvent(event: CompleteEvent): CompleteEvent {
   return {
     user: new PublicKey(event.user),
     mint: new PublicKey(event.mint),
@@ -20,7 +26,7 @@ const { PublicKey } =require ("@solana/web3.js");
   };
 }
 
- function toTradeEvent(event) {
+export function toTradeEvent(event: TradeEvent): TradeEvent {
   return {
     mint: new PublicKey(event.mint),
     solAmount: BigInt(event.solAmount),
@@ -35,7 +41,7 @@ const { PublicKey } =require ("@solana/web3.js");
   };
 }
 
- function toSetParamsEvent(event) {
+export function toSetParamsEvent(event: SetParamsEvent): SetParamsEvent {
   return {
     feeRecipient: new PublicKey(event.feeRecipient),
     initialVirtualTokenReserves: BigInt(event.initialVirtualTokenReserves),
