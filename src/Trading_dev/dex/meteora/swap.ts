@@ -1,18 +1,18 @@
-const DLMM = require('@meteora-ag/dlmm');
-const { PublicKey, Keypair } = require("@solana/web3.js");
-const BN = require("bn.js");
-const { Wallet, AnchorProvider, Program } = require("@project-serum/anchor");
-const { connection, wallet } = require("../../../helpers/config.js");
-const {PROGRAM_ID} = require("./constants.js")
-const {fetchDLMMPoolId} = require("./fetch-pool.js")
+import 'rpc-websockets/dist/lib/client';
+import { PublicKey, Keypair } from "@solana/web3.js";
+import DLMM from '@meteora-ag/dlmm';
+//const BN =require("bn.js");
+import { Wallet, AnchorProvider, Program } from "@project-serum/anchor";
+import { connection, wallet } from "../../../helpers/config";
+import {PROGRAM_ID} from "./constants";
+import {fetchDLMMPoolId} from "./fetch-pool";
 
-console.log("PROGRAM_ID", PROGRAM_ID);
 const ourWallet = new Wallet(wallet);
-const provider = new AnchorProvider(connection, Wallet, {
+const provider = new AnchorProvider(connection, ourWallet, {
   commitment: "confirmed",
 });
 
-async function swap(tokenAddress){
+async function swap(tokenAddress:string){
     const poolId = await fetchDLMMPoolId(tokenAddress);
     const dlmmPool = await DLMM.create(connection, new PublicKey(poolId));
     console.log(dlmmPool);

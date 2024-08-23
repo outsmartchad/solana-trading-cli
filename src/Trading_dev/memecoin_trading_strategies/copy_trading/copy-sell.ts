@@ -1,20 +1,20 @@
-const {
+import {
   PublicKey,
-} = require("@solana/web3.js");
-const {
+} from "@solana/web3.js";
+import {
   TOKEN_PROGRAM_ID,
   AccountLayout,
-} = require("@solana/spl-token");
-const fs = require('fs');
-const path = require('path');
-const { wallet, connection, smart_money_wallet } = require("../../../helpers/config");
-//const { buy } = require("../../dex/jupiter/swap/buy-helper");
-//const { sell } = require("../../dex/jupiter/swap/sell-helper");
-const {sell} = require("../../../raydium/sell_helper")
+} from "@solana/spl-token";
+import fs from 'fs';
+import path from 'path';
+import { wallet, connection, smart_money_wallet } from "../../../helpers/config";
+//import { buy } from("../../dex/jupiter/swap/buy-helper");
+//import { sell } from("../../dex/jupiter/swap/sell-helper");
+import {sell} from "../../../raydium/sell_helper";
 
-//const {swap} = require("../../../Pool/swap") 
-var current_trader_wallet_state = {};
-var current_our_wallet_state = {};
+//const {swap} from("../../../Pool/swap") 
+var current_trader_wallet_state:any = {};
+var current_our_wallet_state:any = {};
 // [usdc, sol, usdt, wsol]
 const wsol = "So11111111111111111111111111111111111111112"
 const quoteToken = [
@@ -33,7 +33,7 @@ function saveToJson() {
 * @param {string} wallet_address - The address of the wallet to retrieve the state for.
 * @returns {Object} - An object containing the token balances of the wallet and the SOL balance.
 */
-async function retriveWalletState(wallet_address) {
+async function retriveWalletState(wallet_address:string) {
   const filters = [
     {
       dataSize: 165, //size of account (bytes)
@@ -49,11 +49,11 @@ async function retriveWalletState(wallet_address) {
     TOKEN_PROGRAM_ID, //new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
     { filters: filters }
   );
-  let results = {};
+  let results:any = {};
   const solBalance = await connection.getBalance(new PublicKey(wallet_address));
   accounts.forEach((account, i) => {
     //Parse the account data
-    const parsedAccountInfo = account.account.data;
+    const parsedAccountInfo:any = account.account.data;
     const mintAddress = parsedAccountInfo["parsed"]["info"]["mint"];
     const tokenBalance =
       parsedAccountInfo["parsed"]["info"]["tokenAmount"]["uiAmount"];
@@ -63,11 +63,11 @@ async function retriveWalletState(wallet_address) {
   });
   return results;
 }
-async function copy_sell(address){
+export async function copy_sell(address:string){
   // 400 ms to check the wallet state
   // if token we have but trader doesn't have, sell it
   // that's it
-  let soldTokens = [];
+  let soldTokens:string[] = [];
   let flag = false;
   let possible_cant_sell_token = null
   try{
@@ -92,7 +92,7 @@ async function copy_sell(address){
   }
   if(flag){
     // Update the list with the remaining unsold tokens
-    boughtTokens = boughtTokens.filter((token) => !soldTokens.includes(token));
+    boughtTokens = boughtTokens.filter((token:any) => !soldTokens.includes(token));
     // Save the updated list back to the JSON file
     saveToJson();
     
@@ -102,10 +102,9 @@ async function copy_sell(address){
 async function main(){
 while(true){
   boughtTokens = JSON.parse(fs.readFileSync(boughtTokensPath, 'utf8'));
-  await copy_sell(smart_money_wallet);
+  await copy_sell(smart_money_wallet||"");
   
   await new Promise((resolve) => setTimeout(resolve, 2500));
 }
 }
 main();
-module.exports = {copy_sell}

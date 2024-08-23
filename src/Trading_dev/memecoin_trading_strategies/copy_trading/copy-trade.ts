@@ -2,8 +2,8 @@
 // use two cores to run the two functions
 // 1. copy_sell
 // 2. copy_buy
-const { fork } = require('child_process');
-const path = require('path');
+import { fork } from 'child_process';
+import path from 'path';
 const copySellPath = path.join(__dirname, 'copy-sell.js');
 const copyBuyPath = path.join(__dirname, 'copy-buy.js');
 // Run copy_sell in a separate process

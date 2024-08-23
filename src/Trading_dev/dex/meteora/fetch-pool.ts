@@ -1,4 +1,4 @@
-async function fetchDLMMPoolId(tokenAddress) {
+export async function fetchDLMMPoolId(tokenAddress:string) {
   const url = `https://dlmm-api.meteora.ag/pair/all_by_groups?sort_key=tvl&order_by=desc&search_term=${tokenAddress}&include_unknown=false`;
   const response = await (await fetch(url)).json();
   // check if the string start with "SOL" or end with "SOL"
@@ -21,5 +21,3 @@ async function main() {
 }
 
 //main();
-
-module.exports = { fetchDLMMPoolId };

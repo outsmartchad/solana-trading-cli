@@ -1,21 +1,21 @@
-const { fetchDLMMPoolId } = require("./fetch-pool");
-const {usdc} = require("./constants");
+import { fetchDLMMPoolId } from "./fetch-pool";
+import {usdc} from "./constants";
 
-async function getCurrentPriceInSOL(tokenAddress) {
+export async function getCurrentPriceInSOL(tokenAddress:string) {
   const poolId = await fetchDLMMPoolId(tokenAddress);
   const response = await (
     await fetch(`https://dlmm-api.meteora.ag/pair/${poolId}`)
   ).json();
   return response.current_price;
 }
-async function getCurrentSolPrice() {
+export async function getCurrentSolPrice() {
     const poolId = await fetchDLMMPoolId(usdc);
     const response = await (
       await fetch(`https://dlmm-api.meteora.ag/pair/${poolId}`)
     ).json();
     return response.current_price;
 }
-async function getCurrentPriceInUSD(tokenAddress) {
+export async function getCurrentPriceInUSD(tokenAddress:string) {
     const poolId = await fetchDLMMPoolId(tokenAddress);
     const response = await (
         await fetch(`https://dlmm-api.meteora.ag/pair/${poolId}`)
@@ -29,5 +29,3 @@ async function main(){
 }
 
 //main();
-
-module.exports = { getCurrentPriceInUSD, getCurrentPriceInSOL, getCurrentSolPrice };
