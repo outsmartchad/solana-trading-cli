@@ -29,3 +29,5 @@ async function main(){
 }
 
 //main();
+
+module.exports = { getCurrentPriceInUSD, getCurrentPriceInSOL, getCurrentSolPrice };
