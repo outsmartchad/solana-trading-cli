@@ -1,10 +1,10 @@
-const { VersionedTransaction, PublicKey } = require("@solana/web3.js");
-const fetch = require("cross-fetch");
-const { connection, wallet, jito_fee } = require("../../helpers/config");
-const {
+import { VersionedTransaction, PublicKey } from "@solana/web3.js";
+import fetch from "cross-fetch";
+import { connection, wallet, jito_fee } from "../../helpers/config";
+import {
   jito_executeAndConfirm,
-} = require("../../Transactions/jito_tips_tx_executor");
-const { getDecimals } = require("../../helpers/util");
+} from "../../Transactions/jito_tips_tx_executor";
+import { getDecimals } from "../../helpers/util";
 /**
  * Retrieves a quote for swapping tokens.
  *
@@ -14,11 +14,11 @@ const { getDecimals } = require("../../helpers/util");
  * @param {number} slippage - The allowed slippage in basis points.
  * @returns {Promise<object>} - The quote object containing swap details.
  */
-async function getQuote(
-  tokenToSell,
-  tokenToBuy,
-  convertedAmountOfTokenOut,
-  slippage
+export async function getQuote(
+  tokenToSell:string,
+  tokenToBuy:string,
+  convertedAmountOfTokenOut:number,
+  slippage:any
 ) {
   const url = `https://quote-api.jup.ag/v6/quote?inputMint=${tokenToSell}&outputMint=${tokenToBuy}&amount=${convertedAmountOfTokenOut}&slippageBps=${slippage}`;
   const response = await fetch(url);
@@ -33,7 +33,7 @@ async function getQuote(
  * @returns {Promise<string>} - The swap transaction.
  * @throws {Error} - If an error occurs during the process.
  */
-async function getSwapTransaction(quoteResponse, wallet_pubKey) {
+export async function getSwapTransaction(quoteResponse:any, wallet_pubKey:string) {
   try {
     let body = null;
     body = {
@@ -42,9 +42,6 @@ async function getSwapTransaction(quoteResponse, wallet_pubKey) {
       wrapAndUnwrapSol: true,
       dynamicComputeUnitLimit: true, // allow dynamic compute limit instead of max 1,400,000
       prioritizationFeeLamports: 4211970, // prioritization fee
-      prioritizationFeeLamports: {
-        autoMultiplier: 2,
-      },
     };
     const resp = await fetch("https://quote-api.jup.ag/v6/swap", {
       method: "POST",
@@ -55,7 +52,7 @@ async function getSwapTransaction(quoteResponse, wallet_pubKey) {
     });
     const swapResponse = await resp.json();
     return swapResponse.swapTransaction;
-  } catch (error) {
+  } catch (error:any) {
     throw new Error(error);
   }
 }
@@ -65,7 +62,7 @@ async function getSwapTransaction(quoteResponse, wallet_pubKey) {
  * @param {number} decimals - The number of decimal places.
  * @returns {Promise<number>} The converted integer value.
  */
-async function convertToInteger(amount, decimals) {
+export async function convertToInteger(amount:number, decimals:number) {
   return Math.floor(amount * 10 ** decimals);
 }
 
@@ -75,7 +72,7 @@ async function convertToInteger(amount, decimals) {
  * @returns {Promise<{ confirmed: boolean, signature: string }>} - A promise that resolves to an object containing the confirmation status and transaction signature.
  * @throws {Error} - If an error occurs during the transaction finalization process.
  */
-async function finalizeTransaction(swapTransaction) {
+export async function finalizeTransaction(swapTransaction:any) {
   try {
     let confirmed = null,
       signature = null;
@@ -86,7 +83,7 @@ async function finalizeTransaction(swapTransaction) {
     transaction.sign([wallet]);
 
     const latestBlockhash = await connection.getLatestBlockhash("processed");
-    res = await jito_executeAndConfirm(
+    const res = await jito_executeAndConfirm(
       transaction,
       wallet,
       latestBlockhash,
@@ -95,7 +92,7 @@ async function finalizeTransaction(swapTransaction) {
     confirmed = res.confirmed;
     signature = res.signature;
     return { confirmed, signature };
-  } catch (error) {
+  } catch (error:any) {
     throw new Error(error);
   }
   return { confirmed: false, signature: null };
@@ -109,7 +106,7 @@ async function finalizeTransaction(swapTransaction) {
  * @param {number} slippage - The allowed slippage percentage.
  * @returns {Promise<void>} - A promise that resolves when the swap transaction is completed.
  */
-async function swap(tokenToSell, tokenToBuy, amountTokenOut, slippage) {
+export async function swap(tokenToSell:string, tokenToBuy:string, amountTokenOut:number, slippage:any) {
   try {
     const decimals = await getDecimals(new PublicKey(tokenToSell));
     const convertedAmountOfTokenOut = await convertToInteger(
@@ -139,10 +136,3 @@ async function swap(tokenToSell, tokenToBuy, amountTokenOut, slippage) {
     console.error(error);
   }
 }
-module.exports = {
-  getQuote,
-  getSwapTransaction,
-  finalizeTransaction,
-  convertToInteger,
-  swap,
-};

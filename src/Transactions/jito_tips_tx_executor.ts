@@ -1,4 +1,4 @@
-const {
+import {
   BlockhashWithExpiryBlockHeight,
   Keypair,
   PublicKey,
@@ -6,11 +6,11 @@ const {
   Connection,
   TransactionMessage,
   VersionedTransaction,
-} = require("@solana/web3.js");
-const axios = require("axios");
-const bs58 = require("bs58");
-const { Currency, CurrencyAmount } = require("@raydium-io/raydium-sdk");
-const { connection } = require("../helpers/config");
+} from "@solana/web3.js";
+import axios from "axios";
+import bs58 from "bs58";
+import { Currency, CurrencyAmount } from "@raydium-io/raydium-sdk";
+import { connection } from "../helpers/config";
 const jito_Validators = [
   "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh",
   "ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt",
@@ -21,7 +21,8 @@ const jito_Validators = [
   "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
   "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
 ];
-const endpoints = [ // TODO: Choose a jito endpoint which is closest to your location, and uncomment others
+const endpoints = [
+  // TODO: Choose a jito endpoint which is closest to your location, and uncomment others
   "https://mainnet.block-engine.jito.wtf/api/v1/bundles",
   "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
   "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
@@ -33,7 +34,7 @@ const endpoints = [ // TODO: Choose a jito endpoint which is closest to your loc
  * Generates a random validator from the list of jito_Validators.
  * @returns {PublicKey} A new PublicKey representing the random validator.
  */
-async function getRandomValidator() {
+export async function getRandomValidator() {
   const res =
     jito_Validators[Math.floor(Math.random() * jito_Validators.length)];
   return new PublicKey(res);
@@ -46,11 +47,11 @@ async function getRandomValidator() {
  * @param {number} jitofee - The fee for the Jito transaction.
  * @returns {Promise<{ confirmed: boolean, signature: string | null }>} - A promise that resolves to an object containing the confirmation status and the transaction signature.
  */
-async function jito_executeAndConfirm(
-  transaction,
-  payer,
-  lastestBlockhash,
-  jitofee
+export async function jito_executeAndConfirm(
+  transaction: any,
+  payer: Keypair,
+  lastestBlockhash: any,
+  jitofee: any
 ) {
   console.log("Executing transaction (jito)...");
   const jito_validator_wallet = await getRandomValidator();
@@ -114,7 +115,7 @@ async function jito_executeAndConfirm(
  * @param {object} latestBlockhash - The latest blockhash information.
  * @returns {object} - An object containing the confirmation status and the transaction signature.
  */
-async function jito_confirm(signature, latestBlockhash) {
+export async function jito_confirm(signature: any, latestBlockhash: any) {
   console.log("Confirming the jito transaction...");
   const confirmation = await connection.confirmTransaction(
     {
@@ -127,4 +128,3 @@ async function jito_confirm(signature, latestBlockhash) {
   return { confirmed: !confirmation.value.err, signature };
 }
 
-module.exports = { jito_executeAndConfirm };

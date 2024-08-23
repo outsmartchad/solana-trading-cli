@@ -1,7 +1,7 @@
-const swap_helper = require("./swap-helper");
-const { PublicKey } = require("@solana/web3.js");
-const { wallet } = require("../../helpers/config");
-const { getDecimals } = require("../../helpers/util");
+import {getQuote, getSwapTransaction, convertToInteger, finalizeTransaction} from "./swap-helper";
+import { PublicKey } from "@solana/web3.js";
+import { wallet } from "../../helpers/config";
+import { getDecimals } from "../../helpers/util";
 const wsol = "So11111111111111111111111111111111111111112";
 
 /**
@@ -13,13 +13,13 @@ const wsol = "So11111111111111111111111111111111111111112";
  * @returns {Promise<void>} - A promise that resolves when the buy operation is completed.
  * @throws {Error} - If an error occurs during the buy operation.
  */
-async function buy(tokenToBuy, amountTokenOut, slippage) {
+export async function buy(tokenToBuy:string, amountTokenOut:number, slippage:any) {
   try {
-    const convertedAmountOfTokenOut = await swap_helper.convertToInteger(
+    const convertedAmountOfTokenOut = await convertToInteger(
       amountTokenOut,
       9
     );
-    const quoteResponse = await swap_helper.getQuote(
+    const quoteResponse = await getQuote(
       wsol,
       tokenToBuy,
       convertedAmountOfTokenOut,
@@ -27,12 +27,12 @@ async function buy(tokenToBuy, amountTokenOut, slippage) {
     );
     console.log(quoteResponse);
     const wallet_PubKey = wallet.publicKey.toBase58();
-    const swapTransaction = await swap_helper.getSwapTransaction(
+    const swapTransaction = await getSwapTransaction(
       quoteResponse,
       wallet_PubKey
     );
     const { confirmed, signature } =
-      await swap_helper.finalizeTransaction(swapTransaction);
+      await finalizeTransaction(swapTransaction);
     if (confirmed) {
       console.log("http://solscan.io/tx/" + signature);
     } else {
@@ -45,4 +45,3 @@ async function buy(tokenToBuy, amountTokenOut, slippage) {
   }
 }
 
-module.exports = { buy };

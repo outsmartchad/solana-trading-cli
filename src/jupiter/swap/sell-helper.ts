@@ -1,7 +1,7 @@
-const swap_helper = require("./swap-helper");
-const { PublicKey } = require("@solana/web3.js");
-const { wallet } = require("../../helpers/config");
-const { getDecimals } = require("../../helpers/util");
+import {convertToInteger, getQuote, getSwapTransaction, finalizeTransaction} from "./swap-helper";
+import { PublicKey } from "@solana/web3.js";
+import { wallet } from "../../helpers/config";
+import { getDecimals } from "../../helpers/util";
 const wsol = "So11111111111111111111111111111111111111112";
 
 /**
@@ -11,27 +11,27 @@ const wsol = "So11111111111111111111111111111111111111112";
  * @param {number} slippage - The slippage tolerance percentage.
  * @returns {Promise<void>} - A promise that resolves when the sell operation is completed.
  */
-async function sell(tokenToSell, amountOfTokenToSell, slippage) {
+export async function sell(tokenToSell:string, amountOfTokenToSell:number, slippage:any) {
   try {
     const decimals = await getDecimals(new PublicKey(tokenToSell));
     console.log(decimals);
-    const convertedAmountOfTokenOut = await swap_helper.convertToInteger(
+    const convertedAmountOfTokenOut = await convertToInteger(
       amountOfTokenToSell,
       decimals
     );
     console.log(convertedAmountOfTokenOut);
-    const quoteResponse = await swap_helper.getQuote(
+    const quoteResponse = await getQuote(
       tokenToSell,
       wsol,
       convertedAmountOfTokenOut,
       slippage
     );
     const wallet_PubKey = wallet.publicKey.toBase58();
-    const swapTransaction = await swap_helper.getSwapTransaction(
+    const swapTransaction = await getSwapTransaction(
       quoteResponse,
       wallet_PubKey
     );
-    const { confirmed, signature } = await swap_helper.finalizeTransaction(
+    const { confirmed, signature } = await finalizeTransaction(
       swapTransaction
     );
     if (confirmed) {
@@ -46,4 +46,3 @@ async function sell(tokenToSell, amountOfTokenToSell, slippage) {
   }
 }
 
-module.exports = { sell };
