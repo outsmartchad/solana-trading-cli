@@ -1,8 +1,8 @@
-const { initSdk } = require("../raydium_config.js");
-const { wsol } = require("../constants.js");
+import { initSdk } from "../raydium_config";
+import { wsol } from "../constants";
 let sdkCache = { sdk: null, expiry: 0 };
-async function fetchAMMPoolId(tokenAddress) {
-  let raydium = null;
+export async function fetchAMMPoolId(tokenAddress:string) {
+  let raydium:any = null;
   if (sdkCache.sdk) {
     raydium = sdkCache.sdk;
   } else {
@@ -25,8 +25,8 @@ async function fetchAMMPoolId(tokenAddress) {
   return ""; // return empty string if no AMM pool ID is found
 }
 
-async function fetchAMMPoolIdByMintPair(mint1, mint2) {
-  let raydium = null;
+export async function fetchAMMPoolIdByMintPair(mint1:string, mint2:string) {
+  let raydium:any = null;
   if (sdkCache.sdk) {
     raydium = sdkCache.sdk;
   } else {
@@ -48,7 +48,7 @@ async function fetchAMMPoolIdByMintPair(mint1, mint2) {
   console.log("No AMM pool ID found for the given mint pair");
   return ""; // return empty string if no AMM pool ID is found
 }
-async function fetchLPToken(tokenAddress) {
+export async function fetchLPToken(tokenAddress:string) {
   try {
     const poolId = await fetchAMMPoolId(tokenAddress);
     let response = await (
@@ -73,4 +73,3 @@ async function fetchLPToken(tokenAddress) {
 }
 //fetchLPToken("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP");
 
-module.exports = { fetchAMMPoolId, fetchAMMPoolIdByMintPair, fetchLPToken };

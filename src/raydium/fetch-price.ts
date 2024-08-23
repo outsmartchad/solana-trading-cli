@@ -1,14 +1,14 @@
-const { initSdk } = require("./raydium_config");
-const {fetchAMMPoolId} = require("./Pool/fetch_pool");
-const Decimal = require("decimal.js");
-const {wsol} = require("./constants");
+import { initSdk } from "./raydium_config";
+import {fetchAMMPoolId} from "./Pool/fetch_pool";
+import Decimal from "decimal.js";
+import {wsol} from "./constants";
 let sdkCache = { sdk: null, expiry: 0 };
-async function getCurrentPriceInSOL(
-  tokenAddress
+export async function getCurrentPriceInSOL(
+  tokenAddress:string
 ) {
   try {
     // Check if poolId is already set
-    let raydium = null;
+    let raydium:any = null;
     if (sdkCache.sdk) {
       raydium = sdkCache.sdk;
     } else {
@@ -56,9 +56,9 @@ async function getCurrentPriceInSOL(
     console.log(`Error when getting current price of ${tokenAddress} `, e);
   }
 }
-async function getCurrentSolPrice(){
+export async function getCurrentSolPrice(){
     try{
-        let raydium = null
+        let raydium:any = null
         if(sdkCache.sdk){
             raydium = sdkCache.sdk;
         }
@@ -80,7 +80,7 @@ async function getCurrentSolPrice(){
 
 }
 
-async function getCurrentPriceInUSD(tokenAddress){
+export async function getCurrentPriceInUSD(tokenAddress:string){
     const priceInSOL = await getCurrentPriceInSOL(tokenAddress);
     const solPrice = await getCurrentSolPrice();
     return priceInSOL * solPrice;
@@ -92,6 +92,4 @@ async function main(){
     // console.log(await getCurrentSolPrice());
     console.log(await getCurrentPriceInUSD("4MBEqrtgabZ9G5EmKm7XTrcknZ1nWg3TrvFHZMrENgrd"));
 }
-main();
-
-module.exports = {getCurrentPriceInSOL, getCurrentSolPrice, getCurrentPriceInUSD};
+//main();

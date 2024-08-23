@@ -1,12 +1,12 @@
-const { initSdk } = require("../raydium_config");
-const Decimal = require("decimal.js");
-const { fetchAMMPoolId } = require("../Pool/fetch_pool");
-const { wsol } = require("../constants");
+import { initSdk } from "../raydium_config";
+import Decimal from "decimal.js";
+import { fetchAMMPoolId } from "../Pool/fetch_pool";
+import { wsol } from "../constants";
 
 let sdkCache = { sdk: null, expiry: 0 };
-async function getCurrentSolInPool(tokenAddress) {
+export async function getCurrentSolInPool(tokenAddress:string) {
   try {
-    let raydium = null;
+    let raydium:any = null;
     if (sdkCache.sdk) {
       raydium = sdkCache.sdk;
     } else {
@@ -48,5 +48,4 @@ async function getCurrentSolInPool(tokenAddress) {
   }
 }
 
-//getCurrentSolInPool("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP")
-module.exports = { getCurrentSolInPool };
+//getCurrentSolInPool("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP");

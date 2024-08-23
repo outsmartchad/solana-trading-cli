@@ -1,40 +1,40 @@
-const assert = require("assert");
-const {
+import assert from "assert";
+import {
   jsonInfo2PoolKeys,
   Liquidity,
   Token,
   TOKEN_PROGRAM_ID,
   TokenAmount,
   Percent,
-} = require("@raydium-io/raydium-sdk");
-const { PublicKey, Keypair } = require("@solana/web3.js");
-//const { getPoolId, getPoolIdByPair } = require("./query_pool.js");
-const {fetchAMMPoolId} = require("./fetch_pool.js")
-const Decimal = require("decimal.js");
+} from "@raydium-io/raydium-sdk";
+import { PublicKey, Keypair } from "@solana/web3.js";
+//import { getPoolId, getPoolIdByPair } from("./query_pool.js");
+import {fetchAMMPoolId} from "./fetch_pool";
+import Decimal from "decimal.js";
 
-const {
+import {
   connection,
   DEFAULT_TOKEN,
   makeTxVersion,
   dev_connection,
   wallet,
-} = require("../helpers/config.js");
-const { formatAmmKeysById_pool } = require("./formatAmmKeysById.js");
-const {
+} from "../../helpers/config";
+import { formatAmmKeysById_pool } from "./formatAmmKeysById";
+import {
   buildAndSendTx,
   getWalletTokenAccount,
   loadOrCreateKeypair_wallet,
   getDecimals,
   getTokenMetadata,
   checkTx,
-} = require("../helpers/util.js");
+} from "../../helpers/util";
 const BN = require("bn.js");
-const { program } = require("commander");
+import { program } from "commander";
 
-let payer_keypair = null,
-  token_address = null,
-  pool_id = null,
-  sol = null,
+let payer_keypair:any = null,
+  token_address:any = null,
+  pool_id:any = null,
+  sol:any = null,
   cluster = null,
   priority_fee = null,
   connection_sol = connection;
@@ -84,14 +84,14 @@ program.parse();
  * @param {string} input.walletTokenAccounts - The token accounts of the wallet.
  * @returns {Object} - The transaction IDs and the amount of another currency.
  */
-async function ammAddLiquidity(input) {
+export async function ammAddLiquidity(input:any) {
   try {
     const targetPoolInfo = await formatAmmKeysById_pool(input.targetPool);
     assert(targetPoolInfo, "cannot find the target pool");
 
     // -------- step 1: compute another amount --------
 
-    const poolKeys = jsonInfo2PoolKeys(targetPoolInfo);
+    const poolKeys:any = jsonInfo2PoolKeys(targetPoolInfo);
     const extraPoolInfo = await Liquidity.fetchInfo({
       connection,
       poolKeys,
@@ -113,7 +113,7 @@ async function ammAddLiquidity(input) {
     });
 
     // -------- step 2: make instructions --------
-    const addLiquidityInstructionResponse =
+    const addLiquidityInstructionResponse:any =
       await Liquidity.makeAddLiquidityInstructionSimple({
         connection,
         poolKeys,
@@ -134,18 +134,13 @@ async function ammAddLiquidity(input) {
 
     return {
       txids: await buildAndSendTx(
-        addLiquidityInstructionResponse.innerTransactions
+        addLiquidityInstructionResponse.innerTransactions,
+        null
       ),
       anotherAmount,
     };
   } catch (e) {
     console.log(e);
-    return {
-      txids: await buildAndSendTx(
-        addLiquidityInstructionResponse.innerTransactions
-      ),
-      anotherAmount,
-    };
   }
 }
 /**
@@ -153,12 +148,12 @@ async function ammAddLiquidity(input) {
  * @param {Object} input - The input parameters for adding liquidity.
  * @returns {Promise<void>} - A promise that resolves when the liquidity is added.
  */
-async function ammAddLiquidityHelper(input) {
-  const { txids, amount } = await ammAddLiquidity(input);
-  console.log("txids:", txids);
-  const response = await checkTx(txids[0]);
+export async function ammAddLiquidityHelper(input:any) {
+  const res:any = await ammAddLiquidity(input);
+  console.log("txids:", res?.txids);
+  const response = await checkTx(res?.txids[0]);
   if (response) {
-    console.log(`https://explorer.solana.com/tx/${txids}?cluster=mainnet`);
+    console.log(`https://explorer.solana.com/tx/${res?.txids}?cluster=mainnet`);
   } else {
     console.log("Transaction failed");
     console.log("trying to send the transaction again");

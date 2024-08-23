@@ -1,5 +1,5 @@
-const { Keypair } = require("@solana/web3.js");
-const { swap } = require("./Pool/swap");
+import { Keypair } from "@solana/web3.js";
+import { swap } from "./Pool/swap";
 /**
  * Buys a specified amount of a token using a amount of sol.
  *
@@ -9,15 +9,15 @@ const { swap } = require("./Pool/swap");
  * @param {Keypair} payer - The payer of the transaction.
  * @returns {Promise<void>} - A promise that resolves when the trade is completed.
  */
-async function buy(side, address, no_of_sol, payer) {
+export async function buy(side:string, address:string, no_of_sol:number, payer:Keypair) {
   await swap(side, address, no_of_sol, -1, payer, "trade");
 }
 
-async function get_buy_transaction(
-  side,
-  tokenAddr,
-  buy_AmountOfSol,
-  payer_wallet
+export async function get_buy_transaction(
+  side:string,
+  tokenAddr:string,
+  buy_AmountOfSol:number,
+  payer_wallet:Keypair
 ) {
   const innerTransaction = await swap(
     side,
@@ -29,5 +29,3 @@ async function get_buy_transaction(
   );
   return innerTransaction;
 }
-
-module.exports = { buy, get_buy_transaction };

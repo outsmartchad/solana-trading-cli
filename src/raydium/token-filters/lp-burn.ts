@@ -1,14 +1,13 @@
-const { initSdk } = require("../raydium_config");
-const Decimal = require("decimal.js");
-const { wsol } = require("../constants");
-const { connection } = require("../../helpers/config");
-const { PublicKey } = require("@solana/web3.js");
-const { fetchAMMPoolId } = require("../Pool/fetch_pool");
-const { getDecimals } = require("../../helpers/util");
+import { initSdk } from "../raydium_config";
+import Decimal from "decimal.js";
+import { connection } from "../../helpers/config";
+import { PublicKey } from "@solana/web3.js";
+import { fetchAMMPoolId } from "../Pool/fetch_pool";
+import { getDecimals } from "../../helpers/util";
 let sdkCache = { sdk: null, expiry: 0 };
-async function getLPBurnPercentage(tokenAddress) {
+export async function getLPBurnPercentage(tokenAddress:string) {
   try {
-    let raydium = null;
+    let raydium:any = null;
     if (sdkCache.sdk) {
       raydium = sdkCache.sdk;
     } else {
@@ -20,10 +19,10 @@ async function getLPBurnPercentage(tokenAddress) {
     const poolInfo = res[poolId];
     const lpDecimals = await getDecimals(poolInfo.lpMint);
     const lpMint = poolInfo.lpMint.toString();
-    const lpReserve = new Decimal(poolInfo.lpReserve.toString()).div(
+    const lpReserve:any = new Decimal(poolInfo.lpReserve.toString()).div(
       new Decimal(10).pow(lpDecimals)
     );
-    const lpCurrentSupply = await connection.getTokenSupply(
+    const lpCurrentSupply:any = await connection.getTokenSupply(
       new PublicKey(lpMint)
     );
 
@@ -35,6 +34,5 @@ async function getLPBurnPercentage(tokenAddress) {
     console.log("Error getting current SOL in pool: ", e);
   }
 }
-getLPBurnPercentage("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP");
+//getLPBurnPercentage("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP");
 
-module.exports = { getLPBurnPercentage };

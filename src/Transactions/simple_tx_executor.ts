@@ -1,11 +1,11 @@
-const {
+import {
   BlockhashWithExpiryBlockHeight,
   Connection,
   Keypair,
   Transaction,
   VersionedTransaction,
-} = require("@solana/web3.js");
-const { connection } = require("../helpers/config.js");
+} from "@solana/web3.js";
+import { connection } from "../helpers/config.js";
 
 /**
  * Executes a transaction and confirms it on the Solana blockchain.
@@ -14,21 +14,21 @@ const { connection } = require("../helpers/config.js");
  * @param {string} lastestBlockhash - The latest blockhash of the Solana blockchain.
  * @returns {Promise<boolean>} - A promise that resolves to true if the transaction is confirmed, false otherwise.
  */
-async function simple_executeAndConfirm(transaction, payer, lastestBlockhash) {
+export async function simple_executeAndConfirm(transaction:any, payer:any, lastestBlockhash:any) {
   console.log("Executing transaction...");
   const signature = await simple_execute(transaction);
   console.log("Transaction executed. Confirming transaction...");
   return simple_confirm(signature, lastestBlockhash);
 }
 
-async function simple_execute(transaction) {
+async function simple_execute(transaction:any) {
   return connection.sendRawTransaction(transaction.serialize(), {
     skipPreflight: true,
     maxRetries: 0,
   });
 }
 
-async function simple_confirm(signature, latestBlockhash) {
+async function simple_confirm(signature:any, latestBlockhash:any) {
   const confirmation = await connection.confirmTransaction(
     {
       signature,
@@ -40,4 +40,3 @@ async function simple_confirm(signature, latestBlockhash) {
   return { confirmed: !confirmation.value.err, signature };
 }
 
-module.exports = { simple_executeAndConfirm };

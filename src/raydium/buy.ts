@@ -1,12 +1,13 @@
-const { swap } = require("./Pool/swap.js");
-const { program } = require("commander");
-const { loadOrCreateKeypair_wallet } = require("../helpers/util.js");
-const { wallet } = require("../helpers/config.js");
+import { swap } from "./Pool/swap";
+import { program } from "commander";
+import { loadOrCreateKeypair_wallet } from "../helpers/util";
+import { wallet } from "../helpers/config";
+import { Keypair } from "@solana/web3.js";
 
-let payer_keypair = null,
-  token_address = null,
-  sol = null,
-  cluster = null;
+let payer_keypair:any = null,
+  token_address:any = null,
+  sol:any = null,
+  cluster:any = null;
 program
   .option("--payer <PATH_TO_SECRET_KEY>", "Specify the path to the secret key")
   .option("--token_address <ADDRESS_TOKEN>", "Specify the token address")
@@ -42,7 +43,7 @@ program.parse();
  * @param {string} payer - The payer's keypair for the transaction.
  * @returns {Promise<void>} - A promise that resolves when the swap is completed.
  */
-async function buy(side, address, no_of_sol, payer) {
+async function buy(side:string, address:string, no_of_sol:number, payer:Keypair) {
   let payer_wallet = null;
   if (payer_keypair !== null) {
     payer_wallet = await loadOrCreateKeypair_wallet(payer_keypair);

@@ -1,4 +1,4 @@
-const {
+import {
   LIQUIDITY_STATE_LAYOUT_V4,
   MARKET_STATE_LAYOUT_V3,
   SPL_MINT_LAYOUT,
@@ -8,14 +8,14 @@ const {
   LiquidityStateV4,
   publicKey,
   struct,
-} = require("@raydium-io/raydium-sdk");
-const { PublicKey } = require("@solana/web3.js");
+} from "@raydium-io/raydium-sdk";
+import { PublicKey } from "@solana/web3.js";
 const MINIMAL_MARKET_STATE_LAYOUT_V3 = struct([
   publicKey("eventQueue"),
   publicKey("bids"),
   publicKey("asks"),
 ]);
-const { connection } = require("../../helpers/config");
+import { connection } from "../../helpers/config";
 
 // Promise<ApiPoolInfoV4>
 /**
@@ -24,7 +24,7 @@ const { connection } = require("../../helpers/config");
  * @returns {Object} - The formatted AMM keys.
  * @throws {Error} - If there is an error retrieving the account information.
  */
-async function formatAmmKeysById_swap(id) {
+export async function formatAmmKeysById_swap(id:PublicKey) {
   const account = await connection.getAccountInfo(id);
   if (account === null) throw Error(" get id info error ");
   const info = LIQUIDITY_STATE_LAYOUT_V4.decode(account.data);
@@ -84,7 +84,7 @@ async function formatAmmKeysById_swap(id) {
   };
 }
 
-async function formatAmmKeysById_pool(id) {
+export async function formatAmmKeysById_pool(id:PublicKey) {
   const account = await connection.getAccountInfo(id);
   if (account === null) throw Error(" get id info error ");
   const info = LIQUIDITY_STATE_LAYOUT_V4.decode(account.data);
@@ -134,4 +134,3 @@ async function formatAmmKeysById_pool(id) {
   };
 }
 
-module.exports = { formatAmmKeysById_swap, formatAmmKeysById_pool };

@@ -1,49 +1,49 @@
-const assert = require("assert");
+import assert from "assert";
 
-const {
+import {
   jsonInfo2PoolKeys,
   Liquidity,
   LiquidityPoolKeys,
   TokenAmount,
   Token,
   TOKEN_PROGRAM_ID,
-} = require("@raydium-io/raydium-sdk");
+} from "@raydium-io/raydium-sdk";
 
-const { Keypair, PublicKey } = require("@solana/web3.js");
-const { Decimal } = require("decimal.js");
-const {
+import { Keypair, PublicKey } from "@solana/web3.js";
+import { Decimal } from "decimal.js";
+import {
   connection,
   DEFAULT_TOKEN,
   makeTxVersion,
   wallet,
   dev_connection,
-} = require("../../helpers/config.js");
-const {
+} from "../../helpers/config";
+import {
   formatAmmKeysById_pool,
   formatAmmKeysById_swap,
-} = require("./formatAmmKeysById.js");
-const {
+} from "./formatAmmKeysById";
+import {
   buildAndSendTx,
   getWalletTokenAccount,
   loadOrCreateKeypair_wallet,
   checkTx,
-} = require("../../helpers/util.js");
-// const {
+} from "../../helpers/util";
+// import {
 //   getPoolId,
 //   getPoolIdByPair,
 //   queryLpByToken,
 //   queryLpPair,
-// } = require("./query_pool.js");
-const { fetchAMMPoolId, fetchLPToken} = require("./fetch_pool.js")
-const { getSPLTokenBalance } = require("../helpers/check_balance.js");
-const { getDecimals, getTokenMetadata } = require("../helpers/util.js");
-const { BN } = require("@project-serum/anchor");
-const { program } = require("commander");
+// } from("./query_pool.js");
+import { fetchAMMPoolId, fetchLPToken} from "./fetch_pool";
+import { getSPLTokenBalance } from "../../helpers/check_balance";
+import { getDecimals, getTokenMetadata } from "../../helpers/util";
+import { BN } from "@project-serum/anchor";
+import { program } from "commander";
 
-let payer_keypair = null,
-  tokenAddress = null,
-  percentage = null,
-  cluster = null;
+let payer_keypair:any = null,
+  tokenAddress:any = null,
+  percentage:any = null,
+  cluster:any = null;
 program
   .option("--payer <PATH_TO_SECRET_KEY>", "Specify the path to the secret key")
   .option("--token_address <TOKEN_ADDRESS>", "Specify the token address")
@@ -83,14 +83,14 @@ program.parse();
  * @param {number} makeTxVersion - The transaction version.
  * @returns {Object} - The transaction IDs.
  */
-async function ammRemoveLiquidity(input) {
+export async function ammRemoveLiquidity(input:any) {
   try {
     // -------- pre-action: fetch basic info --------
     const targetPoolInfo = await formatAmmKeysById_pool(input.targetPool);
     assert(targetPoolInfo, "cannot find the target pool");
 
     // -------- step 1: make instructions --------
-    const poolKeys = jsonInfo2PoolKeys(targetPoolInfo);
+    const poolKeys:any = jsonInfo2PoolKeys(targetPoolInfo);
     const removeLiquidityInstructionResponse =
       await Liquidity.makeRemoveLiquidityInstructionSimple({
         connection,
@@ -114,14 +114,6 @@ async function ammRemoveLiquidity(input) {
     };
   } catch (err) {
     console.log(err);
-    return {
-      txids: await buildAndSendTx(
-        removeLiquidityInstructionResponse.innerTransactions,
-        {
-          preflightCommitment: "confirmed",
-        }
-      ),
-    };
   }
 }
 
@@ -130,11 +122,10 @@ async function ammRemoveLiquidity(input) {
  * @param {string} tokenAddress - The token address.
  * @returns {string} - The LP token address.
  */
-async function findLPTokenAddress(tokenAddress) {
-  const response = await fetchLPToken(tokenAddress);
+export async function findLPTokenAddress(tokenAddress:string) {
+  const response:any = await fetchLPToken(tokenAddress);
   console.log(response);
-  console.log(response.Raydium_LiquidityPoolv4[0].lpMint);
-  return response.Raydium_LiquidityPoolv4[0].lpMint;
+  return response;
 }
 
 /**
@@ -142,12 +133,12 @@ async function findLPTokenAddress(tokenAddress) {
  * @param {Object} input - The input parameters for removing liquidity.
  * @returns {Promise<void>} - A promise that resolves when the liquidity is removed.
  */
-async function ammRemoveLiquidityHelper(input) {
-  const { txids } = await ammRemoveLiquidity(input);
-  console.log("txids:", txids);
-  const response = await checkTx(txids[0]);
+export async function ammRemoveLiquidityHelper(input:any) {
+  const res:any = await ammRemoveLiquidity(input);
+  console.log("txids:", res?.txids);
+  const response = await checkTx(res?.txids[0]);
   if (response) {
-    console.log(`https://explorer.solana.com/tx/${txids}?cluster=mainnet`);
+    console.log(`https://explorer.solana.com/tx/${res.txids}?cluster=mainnet`);
   } else {
     console.log("Transaction failed");
     console.log("trying to send the transaction again");

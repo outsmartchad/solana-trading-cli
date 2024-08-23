@@ -1,4 +1,5 @@
-const { swap } = require("./Pool/swap");
+import { Keypair } from "@solana/web3.js";
+import { swap } from "./Pool/swap";
 
 /**
  * Sells a specified percentage of a token.
@@ -8,10 +9,10 @@ const { swap } = require("./Pool/swap");
  * @param {string} payer - The payer of the transaction.
  * @returns {Promise<void>} - A promise that resolves when the sell operation is complete.
  */
-async function sell(side, address, sell_percentage, payer) {
+export async function sell(side:string, address:string, sell_percentage:number, payer:Keypair) {
   await swap(side, address, -1, sell_percentage, payer, "trade");
 }
-async function get_sell_transaction(side, tokenAddr, payer_wallet) {
+export async function get_sell_transaction(side:string, tokenAddr:string, payer_wallet:Keypair) {
   const innerTransaction = await swap(
     side,
     tokenAddr,
@@ -22,4 +23,3 @@ async function get_sell_transaction(side, tokenAddr, payer_wallet) {
   );
   return innerTransaction;
 }
-module.exports = { sell, get_sell_transaction };

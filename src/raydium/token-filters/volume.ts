@@ -1,6 +1,6 @@
 const fetch = require('node-fetch');
-const {fetchAMMPoolId} = require("../Pool/fetch_pool")
-async function getDayVolume(tokenAddress){
+import {fetchAMMPoolId} from "../Pool/fetch_pool";
+export async function getDayVolume(tokenAddress:string){
     try{
         const poolId = await fetchAMMPoolId(tokenAddress);
         let response = await( await fetch(`https://api-v3.raydium.io/pools/info/ids?ids=${poolId}`)).json();
@@ -20,7 +20,7 @@ async function getDayVolume(tokenAddress){
         console.log("Error getting 24h volume: ", e)
     }
 }
-async function getWeekVolume(tokenAddress){
+export async function getWeekVolume(tokenAddress:string){
     try{
         const poolId = await fetchAMMPoolId(tokenAddress);
         let response = await( await fetch(`https://api-v3.raydium.io/pools/info/ids?ids=${poolId}`)).json();
@@ -41,7 +41,7 @@ async function getWeekVolume(tokenAddress){
     }
 }
 
-async function getMonthVolume(tokenAddress){
+export async function getMonthVolume(tokenAddress:string){
     try{
         const poolId = await fetchAMMPoolId(tokenAddress);
         let response = await( await fetch(`https://api-v3.raydium.io/pools/info/ids?ids=${poolId}`)).json();
@@ -61,6 +61,4 @@ async function getMonthVolume(tokenAddress){
     }
 }
 
-//getDayVolume("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP")
-
-module.exports = {getDayVolume, getMonthVolume, getWeekVolume}
+//getDayVolume("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP");

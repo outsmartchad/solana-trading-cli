@@ -1,11 +1,12 @@
-const { swap } = require("./Pool/swap.js");
-const { program } = require("commander");
-const { loadOrCreateKeypair_wallet } = require("../helpers/util.js");
-const { wallet } = require("../helpers/config.js");
+import { swap } from "./Pool/swap";
+import { program } from "commander";
+import { loadOrCreateKeypair_wallet } from "../helpers/util";
+import { wallet } from "../helpers/config";
+import { Keypair } from "@solana/web3.js";
 
-let payer_keypair = null,
-  token_address = null,
-  percentage = null,
+let payer_keypair:any = null,
+  token_address:any = null,
+  percentage:any = null,
   cluster = null;
 program
   .option("--payer <PATH_TO_SECRET_KEY>", "Specify the path to the secret key")
@@ -13,7 +14,7 @@ program
   .option("--percentage <SELL_PERCENTAGE>", "Specify the percentage")
   .option("--cluster <CLUSTER>", "Specify the cluster")
   .option("-h, --help", "display help for command")
-  .action((options) => {
+  .action((options:any) => {
     if (options.help) {
       console.log(
         "node sell --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>"
@@ -42,10 +43,10 @@ program.parse();
  * @param {string} payer - The payer address for the transaction.
  * @returns {Promise<void>} - A promise that resolves when the swap transaction is completed.
  */
-async function sell(side, address, sell_percentage, payer) {
+export async function sell(side:string, address:string, sell_percentage:number, payer:Keypair) {
   await swap(side, address, -1, sell_percentage, payer, "trade");
 }
-async function main() {
+export async function main() {
   let payer_wallet = null;
   if (payer_keypair !== null) {
     payer_wallet = await loadOrCreateKeypair_wallet(payer_keypair); // specified wallet by user in command

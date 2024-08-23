@@ -1,13 +1,13 @@
-const { initSdk } = require("../raydium_config");
-const Decimal = require("decimal.js");
-const { fetchAMMPoolId } = require("../Pool/fetch_pool");
-const { wsol } = require("../constants");
-const { connection } = require("../../helpers/config");
-const { PublicKey } = require("@solana/web3.js");
+import { initSdk } from "../raydium_config";
+import Decimal from "decimal.js";
+import { fetchAMMPoolId } from "../Pool/fetch_pool";
+import { wsol } from "../constants";
+import { connection } from "../../helpers/config";
+import { PublicKey } from "@solana/web3.js";
 let sdkCache = { sdk: null, expiry: 0 };
-async function getCurrentSolPrice() {
+export async function getCurrentSolPrice() {
   try {
-    let raydium = null;
+    let raydium:any = null;
     if (sdkCache.sdk) {
       raydium = sdkCache.sdk;
     } else {
@@ -22,9 +22,9 @@ async function getCurrentSolPrice() {
     console.log("Error getting current SOL price: ", e);
   }
 }
-async function getCurrentMarketCap(tokenAddress) {
+export async function getCurrentMarketCap(tokenAddress:string) {
   try {
-    let raydium = null;
+    let raydium:any = null;
     if (sdkCache.sdk) {
       raydium = sdkCache.sdk;
     } else {
@@ -63,10 +63,10 @@ async function getCurrentMarketCap(tokenAddress) {
       priceInSOL = poolInfo.poolPrice;
     }
     const priceInUSD = priceInSOL * (await getCurrentSolPrice());
+    const supply:any = await connection.getTokenSupply(new PublicKey(tokenAddress));
     const mc =
       priceInUSD *
-      (await connection.getTokenSupply(new PublicKey(tokenAddress))).value
-        .uiAmount;
+      supply.value.uiAmount;
     return mc;
   } catch (e) {
     console.log(`Error when getting current market cap of ${tokenAddress} `, e);
@@ -75,4 +75,3 @@ async function getCurrentMarketCap(tokenAddress) {
 
 //getCurrentMarketCap("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP");
 
-module.exports = { getCurrentMarketCap, getCurrentSolPrice };
