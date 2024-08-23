@@ -3,18 +3,12 @@
 - Trading any token using Jupiter API & Raydium swap function
 
 - Create your own Solana **_SPL tokens_** on mainnet | Pump.fun
-
-- Create your own zk-compressed token in your own zk-testnet
   
-- Performing **_LP transactions_** On Raydium, Orca and Meteora
+- Swap tokens on top of Raydium, Orca, Meteora, and pump.fun
   
 - Predefined Jito tips and Priority fee
-  
-- Volume Booster by bundling buy and sell in one transaction!
 
 - Fastest Copy Trade Program
-
-- **_Pump.fun sdk_** Integration
 
 - **_Got everything needed for any developer to create their own trading bot_**
 
@@ -23,100 +17,9 @@
 - https://github.com/rckprtr/pumpdotfun-sdk
 - https://github.com/Al366io/solana-transactions-wrapper
 
-
-## Project Structure
-```
-.solana-memecoin-cli
-├── data
-|   ├── Image_file                     # store image file (jpeg, jpg,...)
-|   ├── metadata_file                  # store .json file about the token metadata
-|   ├── payer_keypair                  # store wallet keypair .json
-|   └── token_keypair                  # store token keypair .json
-├── examples (Screenshots of Commands) # all screenshot to show how we use the command line tool
-|   ├── add_liquidity                  # see how to add liquidity to a pool on Raydium
-|   ├── burn_token                     # see how to burn a token with WSOL using Raydium swap
-|   ├── create_token                   # see how to create a SPL token on mainnet or devnet
-|   ├── buy_token                      # buy a token using raydium with both jito bundles and priority fees
-|   ├── create_token                   # create a token with 0% extra fees on solana (mainnet or devnet)
-|   ├── remove_liquidity               # remove some liquidity from a pool on Raydium
-|   ├── boost_volume                   # boost the volume of a token on raydium
-|   ├── pump_createAndInitialBuy       # create and initial buy token on pump.fun
-|   ├── pump_buy                       # buy token on pump.fun
-|   ├── pump_sell                      # sell token on pump.fun
-|   └── sell_token                     # sell the token with a percentage using Raydium swap
-├── src
-|   ├── helpers
-|   |   ├── .env.copy                  # .env file to store your keys, rmb change to .env
-|   |   ├── check_balance              
-|   |   ├── config.js                  # get value from .env
-|   |   └── util.js                    # useful functions
-|   ├── Pool                           # Only Supporting Raydium right now
-|   |   ├── add_pool.js                # adding liquidity to AMM pool on Raydium
-|   |   ├── create_pool.js             # create pool/create open book market on Raydium (not done)
-|   |   ├── check_pool.js              # check the pool's info (pool size, burn percentage of LP token...)
-|   |   ├── formatAmmKeysById.js       # get well-informated info of pool
-|   |   ├── query_pool.js              # query the pool's current info (not done)_
-|   |   ├── remove_pool.js             # remove liquidity from AMM pool on Raydium
-|   |   └── swap.js                    # swap on Raydium
-|   ├── pumpfunsdk
-|   |   ├── pump-keypair                      # store your new generated token keypair
-|   |   ├── pumpdotfun-sdk
-|   |   |   ├── example
-|   |   |   ├── images                        # store your token image
-|   |   |   ├── src
-|   |   |   |   ├── IDL
-|   |   |   |   ├── pump-events-listener
-|   |   |   |   |   ├── listener.js           # listen to the create, trade, and complete bonding curve event
-|   |   |   |   ├── amm.js 
-|   |   |   |   ├── createAndBuy.js           # create token and initial buy it in pump.fun
-|   |   |   |   ├── buy.js                    # buy token in pump.fun
-|   |   |   |   ├── sell.js                   # sell token in pump.fun
-|   |   |   |   ├── pumpfun.js                # the implementation of pump.fun sdk
-|   |   |   |   ├── util.js                   # useful functions
-|   |   |   |   └── tools.js                  # interact with pump.fun sdk
-|   ├── Token
-|   |   ├── create.js                  # create token with uploading token image and metadata to irys (storage provider)
-|   |   ├── burn.js                    # burn a percentage of token
-|   |   ├── query.js                   # query token's info (creator, price, metadata, holder...) (not done)
-|   |   └── revoke_authority.js        # revoke token's freeze and mint authority
-|   ├── Trading
-|   |   ├── dex
-|   |   |   ├── jupiter
-|   |   |   |   ├── swap
-|   |   |   |   |   ├── buy-helper.js         # buy token with sol using jup swap api
-|   |   |   |   |   ├── sell-helper.js        # sell token to sol using jup swap api
-|   |   |   |   |   └── swap-helper.js        # swap any to any token using jup swap api
-|   |   |   |   ├── dca.js                    # create a dollar cost average program using jup api
-|   |   |   |   └── limit_order.js            # create a limit order program using jup api
-|   |   |   ├── meteora
-|   |   |   ├── orca
-|   |   |   └── raydium
-|   |   |       ├── buy-helper.js             # buy token with WSOL using src\Pool\swap.js
-|   |   |       ├── buy.js                   
-|   |   |       ├── sell-helper.js            # sell token to WSOL using src\Pool\swap.js
-|   |   |       └── sell.js
-|   |   ├── volume
-|   |   |   └── boost-volume.js               # boosting token's volume
-|   |   |                                     # by doing one buy and one sell instruction in one transaction
-|   |   |                                     # [buy(), sell()] (only losing your gas fee)
-|   |   └── memecoin-trading-strategies
-|   |       ├── copy_trading
-|   |       |   ├── copy-buy.js               # copy trader's buy tx
-|   |       |   ├── copy-sell.js              # copy trader's sell tx
-|   |       |   └── copy-trade.js             # Use two core to both copy-buy and copy-sell
-|   |       ├── Filters                       
-|   |       ├── take-profit.js                # taking profits by setting a limit order
-|   |       └── stop-loss.js                  # stop loss by setting a limit order
-|   └── Transactions
-|       ├── jito-tips-tx-executor.js          # sending bundles(list of instructions) to Jito validators
-|                                             # validators help our tx land faster
-|       ├── simple-tx-executor.js             # submitting ur tx to RPC provider with predefined priority fees
-|       └── bloXroute-tips-tx-executor.js     
-└── help.js
-```
 ### Installation 🛠️
 
-1. `git clone https://github.com/ManofDiligence/solana-memecoin-cli.git`
+1. `git clone https://github.com/outsmartchad/solana-trading-cli.git`
 2. `cd solana-memecoin-cli`
 3. `nvm install v22.2.0`
 4. `nvm use v22.2.0`
@@ -152,10 +55,10 @@
 ## Features in Development 🚧:
 
 - With user-defined Jito tips and priority Lamports supported for every command
-- A Website for anyone to do these thing with their browser-based wallet
-- **More dexes support**, (Orca, Meteora, etc.)
-- **More Profitable functions** for Trading dev
-- **Phantom wallet integration**
+- tp/sl modules for Trading dev
+- sniping tools on pump.fun&raydium using yellowstone geyser grpc
+- copy trade program using yellowstone geyser grpc
+- **More Profitable Strategies** for Trading dev
 - more features to come...
 
 # Commands </> (Please see the command examples in examples/ to get start~)
@@ -283,6 +186,118 @@ node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
 - src/helpers/util.js: utility functions for the code, including: send transactions to Solana blockchain, dropped transactions handling, etc.
 
 - src/helpers/check_balance.js: check the balance of a given token in your wallet
+
+## Project Structure
+```
+.solana-memecoin-cli
+├── data
+|   ├── Image_file                     # store image file (jpeg, jpg,...)
+|   ├── metadata_file                  # store .json file about the token metadata
+|   ├── payer_keypair                  # store wallet keypair .json
+|   └── token_keypair                  # store token keypair .json
+├── examples (Screenshots of Commands) # all screenshot to show how we use the command line tool
+|   ├── add_liquidity                  # see how to add liquidity to a pool on Raydium
+|   ├── burn_token                     # see how to burn a token with WSOL using Raydium swap
+|   ├── create_token                   # see how to create a SPL token on mainnet or devnet
+|   ├── buy_token                      # buy a token using raydium with both jito bundles and priority fees
+|   ├── create_token                   # create a token with 0% extra fees on solana (mainnet or devnet)
+|   ├── remove_liquidity               # remove some liquidity from a pool on Raydium
+|   ├── boost_volume                   # boost the volume of a token on raydium
+|   ├── pump_createAndInitialBuy       # create and initial buy token on pump.fun
+|   ├── pump_buy                       # buy token on pump.fun
+|   ├── pump_sell                      # sell token on pump.fun
+|   └── sell_token                     # sell the token with a percentage using Raydium swap
+└── src
+    ├── helpers
+    │   ├── .env
+    │   ├── .env.copy
+    │   ├── check_balance.js
+    │   ├── config.js
+    │   ├── unwrap_sol.js
+    │   ├── util.js
+    │   └── wrap_sol.js
+    ├── Trading_dev
+    │   ├── dex
+    │   │   ├── meteora
+    │   │   │   ├── swap.js
+    │   │   │   ├── buy.js
+    │   │   │   ├── sell.js
+    │   │   │   ├── constants.js
+    │   │   │   ├── fetch-pool.js
+    │   │   │   ├── fetch-price.js
+    │   │   │   └── idl.js
+    │   │   └── orca
+    │   │       └── #same as meteora/raydium
+    │   └── memecoin_trading_strategies/
+    │       ├── copy-trading/
+    │       │   ├── copy-buy.js
+    │       │   ├── copy-sell.js
+    │       │   ├── copy-trade.js
+    │       │   └── grpc-copy-bot/
+    │       └── tp_sl
+    │           ├── stop-loss.js
+    │           └── take-profit.js
+    ├── Memecoin_dev
+    │   ├── bundled_launcher
+    │   ├── market-making_dev/
+    │   │   └── boost_volume.js
+    │   └── sniping_dev
+    │       ├── grpc_pump_sniper/
+    │       └── grpc_raydium_sniper/
+    ├── Transactions
+    │   ├── bloXroute_tips_tx_executor.js
+    │   ├── jito_tips_tx_executor.js
+    │   └── simple_tx_executor.js
+    ├── Token
+    │   ├── zk-compression/
+    │   ├── burn.js
+    │   ├── create.js
+    │   └── revoke_authority.js
+    ├── raydium
+    │   ├── Pool/
+    │   │   ├── add_pool.js
+    │   │   ├── create_pool.js
+    │   │   ├── fetch_pool.js
+    │   │   ├── formatAmmKeysById.js
+    │   │   ├── query_pool.js
+    │   │   ├── remove_pool.js
+    │   │   └── swap.js
+    │   ├── token-filters
+    │   │   ├── lp-burn.js
+    │   │   ├── maker-count.js
+    │   │   ├── marketcap.js
+    │   │   ├── pool-sol.js
+    │   │   ├── tx-count.js
+    │   │   └── volume.js
+    │   ├── buy.js
+    │   ├── constants.js
+    │   ├── fetch-price.js
+    │   ├── raydium_config.js
+    │   └── sell.js
+    ├── jupiter
+    │   ├── swap/
+    │   │   ├── buy-helper.js
+    │   │   ├── sell-helper.js
+    │   │   └── swap-helper.js
+    │   ├── dca.js
+    │   └── limit-order.js
+    └── pumpfunsdk
+        ├── pump-keypair/
+        └── pumpdotfun-sdk
+            ├── images/
+            └── src
+                ├── IDL/
+                ├── pump-events-listener/
+                │   └── listeners.js
+                ├── amm.js
+                ├── buy.js
+                ├── createAndBuy.js
+                ├── pumpfun.js
+                ├── sell.js
+                ├── tools.js
+                └── util.js
+
+```
 
 ## Contributing
 - Contributions is wellcome!!!
