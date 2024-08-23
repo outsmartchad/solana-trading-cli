@@ -1,15 +1,15 @@
 {
-  "name": "solana-memecoin-cli",
+  "name": "solana-trading-cli",
   "version": "1.0.0",
-  "description": "",
+  "description": "Best tool for High-Frequency Trading developers on Solana",
   "main": "help.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "vincentso",
-  "url": "https://github.com/outsmartchad/solana-memecoin-cli/issues",
-  "homepage": "https://github.com/outsmartchad/solana-memecoin-cli",
+  "url": "https://github.com/outsmartchad/solana-trading-cli/issues",
+  "homepage": "https://github.com/outsmartchad/solana-trading-cli",
   "license": "ISC",
   "dependencies": {
     "@bloxroute/solana-trader-client-ts": "^2.1.6",
