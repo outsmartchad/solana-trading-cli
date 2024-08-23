@@ -1,18 +1,18 @@
-const {
+import {
   TOKEN_PROGRAM_ID,
   SPL_ACCOUNT_LAYOUT,
   buildSimpleTransaction,
-} = require("@raydium-io/raydium-sdk");
-const { PublicKey, VersionedTransaction, Keypair } = require("@solana/web3.js");
-const {
+} from "@raydium-io/raydium-sdk";
+import { PublicKey, VersionedTransaction, Keypair } from "@solana/web3.js";
+import {
   addLookupTableInfo,
   connection,
   makeTxVersion,
   wallet,
-} = require("./config.js");
-const { Metaplex } = require("@metaplex-foundation/js");
-const fs = require("fs");
-const {
+} from "./config.js";
+import { Metaplex } from "@metaplex-foundation/js";
+import fs from "fs";
+import {
   Connection,
   LAMPORTS_PER_SOL,
   SystemProgram,
@@ -20,15 +20,15 @@ const {
   TransactionMessage,
   Transaction,
   ComputeBudgetProgram,
-} = require("@solana/web3.js");
+} from "@solana/web3.js";
 
 /**
  * Retrieves the number of decimals for a given mint address.
  * @param {PublicKey} mintAddress - The address of the mint.
  * @returns {Promise<number>} The number of decimals.
  */
-async function getDecimals(mintAddress) {
-  const info = await connection.getParsedAccountInfo(mintAddress);
+export async function getDecimals(mintAddress:PublicKey) {
+  const info:any = await connection.getParsedAccountInfo(mintAddress);
   const result = (info.value?.data).parsed.info.decimals || 0;
   return result;
 }
@@ -37,7 +37,7 @@ async function getDecimals(mintAddress) {
  * @param {string} address - The address of the token.
  * @returns {Promise<{ tokenName: string, tokenSymbol: string }>} The token metadata, including the token name and symbol.
  */
-async function getTokenMetadata(address) {
+export async function getTokenMetadata(address:string) {
   const metaplex = Metaplex.make(connection);
 
   const mintAddress = new PublicKey(address);
@@ -69,7 +69,7 @@ async function getTokenMetadata(address) {
  * @param {TransactionSendOptions} options - The options for sending the transactions.
  * @returns {Promise<Array<string>>} - A promise that resolves to an array of transaction IDs.
  */
-async function sendTx(connection, payer, txs, options) {
+export async function sendTx(connection:Connection, payer:Keypair, txs:any, options:any) {
   const txids = [];
   try {
     for (const iTx of txs) {
@@ -96,7 +96,7 @@ async function sendTx(connection, payer, txs, options) {
  * @param {Wallet} localwallet - The wallet object.
  * @returns {Array} An array of token account objects.
  */
-async function getWalletTokenAccount(localconnection, localwallet) {
+export async function getWalletTokenAccount(localconnection:Connection, localwallet:PublicKey) {
   const walletTokenAccount = await localconnection.getTokenAccountsByOwner(
     localwallet,
     {
@@ -116,7 +116,7 @@ async function getWalletTokenAccount(localconnection, localwallet) {
  * @param {Object} options - The options for the transaction.
  * @returns {Promise} - A promise that resolves with the result of the transaction.
  */
-async function buildAndSendTx(innerSimpleV0Transaction, options) {
+export async function buildAndSendTx(innerSimpleV0Transaction:any, options:any) {
   try {
     const recentBlockhash = await connection.getLatestBlockhash("confirmed");
     const priority_fee_arr = [
@@ -155,7 +155,7 @@ async function buildAndSendTx(innerSimpleV0Transaction, options) {
  * @param {number} ms - The duration to sleep in milliseconds.
  * @returns {Promise<void>} - A promise that resolves after the specified duration.
  */
-async function sleepTime(ms) {
+export async function sleepTime(ms:any) {
   console.log(new Date().toLocaleString(), "sleepTime", ms);
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -168,7 +168,7 @@ async function sleepTime(ms) {
  * @param {string} filepath - The path to the file where the keypair is stored or will be stored.
  * @returns {Promise<Keypair>} The loaded or newly created keypair.
  */
-async function loadOrCreateKeypair_wallet(filepath) {
+export async function loadOrCreateKeypair_wallet(filepath:string) {
   try {
     const keypairString = fs.readFileSync(filepath, { encoding: "utf8" });
     return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(keypairString)));
@@ -182,7 +182,7 @@ async function loadOrCreateKeypair_wallet(filepath) {
     return newKeypair;
   }
 }
-async function isBlockhashExpired(lastValidBlockHeight) {
+export async function isBlockhashExpired(lastValidBlockHeight:number) {
   let currentBlockHeight = await connection.getBlockHeight("finalized");
   console.log("                           ");
   console.log("Current Block height:             ", currentBlockHeight);
@@ -199,10 +199,10 @@ async function isBlockhashExpired(lastValidBlockHeight) {
 
   return currentBlockHeight > lastValidBlockHeight - 150;
 }
-const sleep = (ms) => {
+export const sleep = (ms:number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
-async function checkTx(txId) {
+export async function checkTx(txId:string) {
   const blockhashResponse = await connection.getLatestBlockhashAndContext(
     "finalized"
   );
@@ -242,14 +242,3 @@ async function checkTx(txId) {
     await sleep(2500);
   }
 }
-
-module.exports = {
-  getDecimals,
-  getTokenMetadata,
-  getWalletTokenAccount,
-  sendTx,
-  buildAndSendTx,
-  sleepTime,
-  loadOrCreateKeypair_wallet,
-  checkTx,
-};

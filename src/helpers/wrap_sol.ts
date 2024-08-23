@@ -1,13 +1,13 @@
-const { NATIVE_MINT, getOrCreateAssociatedTokenAccount, createSyncNativeInstruction,  } = require("@solana/spl-token");
-const { wallet, connection } = require("./config");
-const { Transaction, SystemProgram, LAMPORTS_PER_SOL,  sendAndConfirmTransaction } = require("@solana/web3.js");
-const {getSPLTokenBalance} = require("./check_balance")
-const { program } = require("commander");
+import { NATIVE_MINT, getOrCreateAssociatedTokenAccount, createSyncNativeInstruction,  } from "@solana/spl-token";
+import { wallet, connection } from "./config";
+import { Transaction, SystemProgram, LAMPORTS_PER_SOL,  sendAndConfirmTransaction } from "@solana/web3.js";
+import {getSPLTokenBalance} from "./check_balance";
+import { program } from "commander";
 let wrap_size = 0;
 program
   .option("-s, --size <size>", "size of sol to wrap")
   .option("-h, --help", "display help for command")
-  .action((options) => {
+  .action((options:any) => {
     if (options.help) {
       console.log(
         "node wrap_sol.js --size <size>"
@@ -23,8 +23,8 @@ program
     }
   });
 program.parse();
-async function wrap_sol(
-    amount
+export async function wrap_sol(
+    amount:number
 ){
     // wSol ATA 
     const wSolAta = await getOrCreateAssociatedTokenAccount(connection, wallet, NATIVE_MINT, wallet.publicKey);
@@ -62,12 +62,12 @@ async function wrap_sol(
     return txSignature;
 }
 
-async function check_wsol_balance(wSolAta){
+export async function check_wsol_balance(wSolAta:any){
     const wsolBalance = await getSPLTokenBalance(connection, NATIVE_MINT, wallet.publicKey);
     console.log(`new wsol balance: ${wsolBalance}`);
 }
 
-async function main(){
+export async function main(){
     await wrap_sol(wrap_size);
     
 }

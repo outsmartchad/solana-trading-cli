@@ -1,19 +1,18 @@
-const { Connection, LAMPORTS_PER_SOL, PublicKey } = require("@solana/web3.js");
-const {
+import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import {
   getDomainKeySync,
   NameRegistryState,
-} = require("@bonfida/spl-name-service");
-const { main_endpoint, dev_endpoint } = require("./config");
-const connectionDev = new Connection(dev_endpoint, "confirmed");
+} from "@bonfida/spl-name-service";
+import { main_endpoint } from "./config";
 const connectionMain = new Connection(main_endpoint);
-const { getAssociatedTokenAddressSync } = require("@solana/spl-token");
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 
 /**
  * Retrieves the public key associated with a given .sol domain.
  * @param {string} domain - The .sol domain to retrieve the public key for.
  * @returns {Promise<string>} The public key associated with the domain.
  */
-async function getPublicKeyFromSOLDomain(domain) {
+export async function getPublicKeyFromSOLDomain(domain:string) {
   // check if the domain is a .sol domain
   // the last four characters should be ".sol"
   if (!domain.endsWith(".sol")) {
@@ -35,7 +34,7 @@ async function getPublicKeyFromSOLDomain(domain) {
  * @param {object} connection - The connection object for interacting with the Solana network.
  * @returns {Promise<void>} - A promise that resolves when the balance is checked.
  */
-async function checkBalanceByAddress(address, connection) {
+export async function checkBalanceByAddress(address:string, connection:Connection) {
   // check if the address is valid
   // check the domain name of the address
 
@@ -62,7 +61,7 @@ async function checkBalanceByAddress(address, connection) {
  * @returns {Promise<number>} The balance of the SPL token.
  * @throws {Error} If no balance is found.
  */
-async function getSPLTokenBalance(connection, tokenAccount, payerPubKey) {
+export async function getSPLTokenBalance(connection:Connection, tokenAccount:PublicKey, payerPubKey:PublicKey) {
   const address = getAssociatedTokenAddressSync(tokenAccount, payerPubKey);
   const info = await connection.getTokenAccountBalance(address);
   if (info.value.uiAmount == null) throw new Error("No balance found");
@@ -74,10 +73,10 @@ async function getSPLTokenBalance(connection, tokenAccount, payerPubKey) {
  * @param {object} connection - The connection object for interacting with the Solana network.
  * @returns {Promise<void>} - A promise that resolves once the balance is checked.
  */
-async function checkBalanceByDomain(domain, connection) {
+export async function checkBalanceByDomain(domain:string, connection:Connection) {
   // get the public key from the domain
 
-  const owner = await getPublicKeyFromSOLDomain(domain);
+  const owner:any = await getPublicKeyFromSOLDomain(domain);
 
   const balanceInLamports = await connection.getBalance(new PublicKey(owner));
   const balanceInSOL = balanceInLamports / LAMPORTS_PER_SOL;
@@ -85,4 +84,3 @@ async function checkBalanceByDomain(domain, connection) {
     `💰 Finished! The balance for the wallet at domain ${domain} is ${balanceInSOL}!`
   );
 }
-module.exports = { checkBalanceByAddress, getSPLTokenBalance };

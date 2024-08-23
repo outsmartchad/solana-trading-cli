@@ -1,7 +1,7 @@
-const { NATIVE_MINT, getOrCreateAssociatedTokenAccount, createCloseAccountInstruction } = require("@solana/spl-token");
-const { wallet, connection } = require("./config");
-const { Transaction, LAMPORTS_PER_SOL, sendAndConfirmTransaction } = require("@solana/web3.js");
-const { program } = require("commander");
+import { NATIVE_MINT, getOrCreateAssociatedTokenAccount, createCloseAccountInstruction } from "@solana/spl-token";
+import { wallet, connection } from "./config";
+import { Transaction, LAMPORTS_PER_SOL, sendAndConfirmTransaction } from "@solana/web3.js";
+import { program } from "commander";
 program
   .option("-h, --help", "display help for command")
   .action((options) => {
@@ -13,7 +13,7 @@ program
     }
   });
 program.parse();
-async function unwrapSol(){
+export async function unwrapSol(){
         // wSol ATA
         const wSolAta = await getOrCreateAssociatedTokenAccount(connection, wallet, NATIVE_MINT, wallet.publicKey);
     
