@@ -1,50 +1,50 @@
-const {
+import {
   percentAmount,
   generateSigner,
   signerIdentity,
   createSignerFromKeypair,
   Umi,
   generatedSignerPayer,
-} = require("@metaplex-foundation/umi");
-const {
+} from "@metaplex-foundation/umi";
+import {
   TokenStandard,
   createAndMint,
-} = require("@metaplex-foundation/mpl-token-metadata");
-const {
+} from "@metaplex-foundation/mpl-token-metadata";
+import {
   Metaplex,
   keypairIdentity,
   toMetaplexFile,
   irysStorage,
-} = require("@metaplex-foundation/js");
-const { createUmi } = require("@metaplex-foundation/umi-bundle-defaults");
-const { mplCandyMachine } = require("@metaplex-foundation/mpl-candy-machine");
-const { AuthorityType, setAuthority } = require("@solana/spl-token");
-const bs58 = require("bs58");
-const fs = require("fs");
-const { PublicKey, Keypair } = require("@solana/web3.js");
-const { program } = require("commander");
-const {
+} from "@metaplex-foundation/js";
+import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
+import { mplCandyMachine } from "@metaplex-foundation/mpl-candy-machine";
+import { AuthorityType, setAuthority } from "@solana/spl-token";
+import bs58 from "bs58";
+import fs from "fs";
+import { PublicKey, Keypair } from "@solana/web3.js";
+import { program } from "commander";
+import {
   main_endpoint,
   dev_connection,
   dev_endpoint,
   connection,
   wallet,
-} = require("../helpers/config");
+} from "../helpers/config";
 
 // info
-let payer_keypair_path = null,
-  symbol = null,
-  token_name = null,
-  mintkeypair_path = null,
-  supply = null,
-  decimals = null,
-  metadata_path = null,
-  image_path = null,
-  cluster = null,
-  priority_fee = null,
-  file_type = null,
-  newConnection = null,
-  endpoint = null;
+let payer_keypair_path: any = null,
+  symbol: any = null,
+  token_name: any = null,
+  mintkeypair_path:any = null,
+  supply:any = null,
+  decimals:any = null,
+  metadata_path:any = null,
+  image_path:any = null,
+  cluster:any = null,
+  priority_fee:any = null,
+  file_type:any = null,
+  newConnection:any = null,
+  endpoint:any = null;
 
 // handle the input value from the user's command line here
 program
@@ -98,7 +98,6 @@ program
     supply = options.supply;
     decimals = options.decimals;
     metadata_path = options.metadata;
-    image = options.image;
     cluster = options.cluster;
     priority_fee = options.priority;
     file_type = options.file_type;
@@ -134,8 +133,8 @@ if (!mintkeypair_path) {
 } else {
   mintSecret = loadOrCreateKeypair(mintkeypair_path);
 }
-let payerSecret = null,
-  PayerWallet = null;
+let payerSecret:any = null,
+  PayerWallet:any = null;
 // create the Umi object
 const umi = createUmi(endpoint); //Replace with your RPC Endpoint
 
@@ -169,7 +168,7 @@ umi.use(mplCandyMachine());
  * @returns {Keypair} - The loaded or newly created keypair.
  * @throws {Error} - If there is an error reading or writing the keypair file.
  */
-async function loadOrCreateKeypair_wallet(filepath) {
+async function loadOrCreateKeypair_wallet(filepath:string) {
   try {
     const keypairString = fs.readFileSync(filepath, { encoding: "utf8" });
     return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(keypairString)));
@@ -188,7 +187,7 @@ async function loadOrCreateKeypair_wallet(filepath) {
  * @param {string} filepath - The path to the keypair file.
  * @returns {Uint8Array} - The loaded or created keypair.
  */
-function loadOrCreateKeypair(filepath) {
+function loadOrCreateKeypair(filepath:string) {
   try {
     const keypairStringArr = fs.readFileSync(filepath, {
       encoding: "utf8",
@@ -208,7 +207,7 @@ function loadOrCreateKeypair(filepath) {
  * @param {string} owner - The owner address.
  * @returns {Promise<void>} - A promise that resolves when the freeze authority is disabled.
  */
-async function revokeFreeze(mint, payer, owner) {
+export async function revokeFreeze(mint:any, payer:any, owner:any) {
   console.log("Disabling the freeze authority...");
   await setAuthority(
     newConnection,
@@ -229,7 +228,7 @@ async function revokeFreeze(mint, payer, owner) {
  * @param {string} owner - The owner address.
  * @returns {Promise<void>} - A promise that resolves when the mint authority is revoked.
  */
-async function revokeMint(mint, payer, owner) {
+export async function revokeMint(mint:any, payer:any, owner:any) {
   console.log("Disabling the mint authority...");
   await setAuthority(
     newConnection,
@@ -248,7 +247,7 @@ async function revokeMint(mint, payer, owner) {
  * @param {string} walletPath - The path to the wallet.
  * @returns {Promise<Metaplex>} The Metaplex instance.
  */
-async function getMetaplex(walletPath) {
+export async function getMetaplex(walletPath:string) {
   let WALLET = null;
   if (walletPath === null) WALLET = wallet;
   else WALLET = await loadOrCreateKeypair_wallet(walletPath);
@@ -276,15 +275,15 @@ async function getMetaplex(walletPath) {
  * @param {Metaplex} METAPLEX - The Metaplex instance used for uploading metadata.
  * @returns {Promise<string>} - The URI of the uploaded metadata.
  */
-async function uploadMetadata(
-  imgUri,
-  imgType,
-  nftName,
-  symbol,
-  description,
-  website,
-  twitter,
-  telegram,
+export async function uploadMetadata(
+  imgUri:any,
+  imgType:any,
+  nftName:any,
+  symbol:any,
+  description:any,
+  website:any,
+  twitter:any,
+  telegram:any,
   METAPLEX = Metaplex.make(newConnection)
 ) {
   const uri = await METAPLEX.nfts().uploadMetadata({
@@ -318,9 +317,9 @@ async function uploadMetadata(
  * @param {Metaplex} METAPLEX - The Metaplex instance.
  * @returns {Promise<string>} The image URI.
  */
-async function uploadImage(
-  filePath,
-  fileName,
+export async function uploadImage(
+  filePath:any,
+  fileName:any,
   METAPLEX = Metaplex.make(newConnection)
 ) {
   const imgBuffer = fs.readFileSync(filePath);
@@ -346,20 +345,20 @@ async function uploadImage(
  * @param {object} mintSigner - The mint signer object.
  * @returns {Promise<void>} A promise that resolves when the meme token is created.
  */
-async function createMeme(
-  name,
-  symbol,
-  filetype,
-  description,
-  website,
-  twitter,
-  telegram,
-  ownerWallet,
-  max_supply,
-  decimals,
-  imgURI,
-  uri,
-  mintSigner
+export async function createMeme(
+  name:any,
+  symbol:any,
+  filetype:any,
+  description:any,
+  website:any,
+  twitter:any,
+  telegram:any,
+  ownerWallet:any,
+  max_supply:any,
+  decimals:any,
+  imgURI:any,
+  uri:any,
+  mintSigner:any
 ) {
   const CONFIG = {
     uploadPath: image_path,
@@ -448,15 +447,15 @@ async function createMeme(
  * @param {number} decimals - The number of decimals for the token.
  * @returns {Promise<void>} - A promise that resolves when the token is successfully minted.
  */
-async function mint_token(
-  umi,
-  mint,
-  name,
-  symbol,
-  uri,
-  owner,
-  amount,
-  decimals
+export async function mint_token(
+  umi:any,
+  mint:any,
+  name:any,
+  symbol:any,
+  uri:any,
+  owner:any,
+  amount:any,
+  decimals:any
 ) {
   try {
     console.log(`minting token ${name}, CA: ${mint.publicKey}`);
@@ -502,4 +501,3 @@ async function main() {
 }
 main();
 
-module.exports = { loadOrCreateKeypair };

@@ -1,5 +1,5 @@
-const stateless = require("@lightprotocol/stateless.js");
-const connection = stateless.createRpc(
+import stateless from "@lightprotocol/stateless.js";
+const newConnection:any = stateless.createRpc(
   "https://zk-testnet.helius.dev:8899", // rpc
   "https://zk-testnet.helius.dev:8784", // zk compression rpc
   "https://zk-testnet.helius.dev:3001" // prover
@@ -9,17 +9,17 @@ const connection = stateless.createRpc(
  * Main function that retrieves various information from the Solana network.
  * @returns {Promise<void>} A promise that resolves when the function completes.
  */
-async function main() {
-  let slot = await connection.getSlot();
+export async function main() {
+  let slot = await newConnection.getSlot();
   console.log("Slot: ", slot);
 
-  let health = await connection.getIndexerHealth(slot);
+  let health = await newConnection.getIndexerHealth(slot);
   console.log("health: ", health);
 
-  let leaderSchedule = await connection.getLeaderSchedule();
+  let leaderSchedule = await newConnection.getLeaderSchedule();
   console.log("Current leader schedule: ", leaderSchedule);
 
-  let latestNonVotingSig = await connection.getLatestNonVotingSignatures(); 
+  let latestNonVotingSig = await newConnection.getLatestNonVotingSignatures(); 
   console.log(latestNonVotingSig);
 }
 main();

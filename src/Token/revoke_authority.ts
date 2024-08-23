@@ -1,17 +1,18 @@
-const { AuthorityType, setAuthority } = require("@solana/spl-token");
-const bs58 = require("bs58");
-const fs = require("fs");
-const { Connection, PublicKey, Keypair } = require("@solana/web3.js");
-const { program } = require("commander");
-const { connection, dev_connection } = require("../helpers/config");
-const { loadOrCreateKeypair_wallet } = require("../helpers/util");
-const { wallet } = require("../helpers/config");
+import { AuthorityType, setAuthority } from "@solana/spl-token";
+import bs58 from "bs58" ;
+import fs from "fs";
+import { Connection, PublicKey, Keypair } from "@solana/web3.js";
+import { program } from "commander";
+import { connection, dev_connection } from "../helpers/config";
+import { loadOrCreateKeypair_wallet } from "../helpers/util";
+import { wallet } from "../helpers/config";
 
-let newConnection = null;
-let payer_keypair_path = null,
-  token_address = null,
+let newConnection:any = null;
+let payer_keypair_path:any = null,
+  token_address:any = null,
   mint = false,
-  freeze = false;
+  freeze = false,
+  cluster:any = null;
 program
   .option("--payer <PATH_TO_SECRET_KEY>", "Specify the path to the secret key")
   .option("--token_address <ADDRESS_TOKEN>", "Specify the token address")
@@ -59,7 +60,7 @@ program.parse();
  * @param {string} owner - The owner address.
  * @returns {Promise<void>} - A promise that resolves when the mint authority is revoked.
  */
-async function revokeMint(mint, payer, owner) {
+export async function revokeMint(mint:any, payer:any, owner:any) {
   console.log("Disabling the mint authority...");
   await setAuthority(
     newConnection,
@@ -81,7 +82,7 @@ async function revokeMint(mint, payer, owner) {
  * @param {string} owner - The owner address.
  * @returns {Promise<void>} - A promise that resolves when the freeze authority is disabled.
  */
-async function revokeFreeze(mint, payer, owner) {
+export async function revokeFreeze(mint:any, payer:any, owner:any) {
   console.log("Disabling the freeze authority...");
   await setAuthority(
     newConnection,
@@ -103,7 +104,7 @@ async function revokeFreeze(mint, payer, owner) {
  * @function revokeAuthority
  * @returns {Promise<void>}
  */
-async function revokeAuthority() {
+export async function revokeAuthority() {
   // let payer_wallet = null;
   // if (payer_keypair !== null) {
   //   payer_wallet = await loadOrCreateKeypair_wallet(payer_keypair);

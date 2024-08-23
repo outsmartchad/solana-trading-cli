@@ -1,24 +1,22 @@
-const {
+import {
   LightSystemProgram,
   Rpc,
   confirmTx,
   createRpc,
-} = require("@lightprotocol/stateless.js");
-const {
+} from "@lightprotocol/stateless.js";
+import {
   createMint,
   mintTo,
   transfer,
-  compressToken,
-} = require("@lightprotocol/compressed-token");
-const { Keypair } = require("@solana/web3.js");
-const { req } = require("pino-std-serializers");
+} from "@lightprotocol/compressed-token";
+import { Keypair } from "@solana/web3.js";
 
 const payer = Keypair.generate();
 const tokenRecipient = Keypair.generate();
 
 const connection = createRpc();
 
-async function main() {
+export async function main() {
   console.log("Payer: ", payer.publicKey.toBase58());
   console.log("Token recipient: ", tokenRecipient.publicKey.toBase58());
   await confirmTx(

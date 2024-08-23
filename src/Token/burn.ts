@@ -1,28 +1,28 @@
-const fs = require("fs");
-const {
+import fs from "fs";
+import {
   Connection,
   PublicKey,
   Keypair,
   TransactionMessage,
   VersionedTransaction,
-} = require("@solana/web3.js");
-const { program } = require("commander");
-const {
+} from "@solana/web3.js";
+import { program } from "commander";
+import {
   getAccount,
   getMint,
   getAssociatedTokenAddress,
   createBurnCheckedInstruction,
-} = require("@solana/spl-token");
-const { connection, dev_connection } = require("../helpers/config");
-const { wallet } = require("../helpers/config");
+} from "@solana/spl-token";
+import { connection, dev_connection } from "../helpers/config";
+import { wallet } from "../helpers/config";
 
 let payer_keypair_path = null,
-  token_address = null,
-  percentage = null,
+  token_address:any = null,
+  percentage:any = null,
   decimals = null,
   cluster = null,
   payerKeypair = null,
-  newConnection = null;
+  newConnection:any = null;
 program
   .option("--payer <PATH_TO_SECRET_KEY>", "Specify the path to the secret key")
   .option("--token_address <ADDRESS_TOKEN>", "Specify the token address")
@@ -58,7 +58,7 @@ if (cluster === "devnet") {
  * @param {string} filepath - The path to the keypair file.
  * @returns {Uint8Array} - The loaded or created keypair.
  */
-function loadOrCreateKeypair(filepath) {
+export function loadOrCreateKeypair(filepath:string) {
   try {
     const keypairStringArr = fs.readFileSync(filepath, {
       encoding: "utf8",
@@ -73,10 +73,10 @@ function loadOrCreateKeypair(filepath) {
 }
 /**
  * Retrieves the token balance for a given token account.
- * @param {string} tokenAccount - The token account address.
+ * @param {PublicKey} tokenAccount - The token account address.
  * @returns {number} The token balance.
  */
-async function getTokenBalance(tokenAccount) {
+export async function getTokenBalance(tokenAccount:PublicKey) {
   const info = await getAccount(newConnection, tokenAccount); // token account right here
   const amount = Number(info.amount);
   const mint = await getMint(newConnection, info.mint);
@@ -87,21 +87,21 @@ async function getTokenBalance(tokenAccount) {
 
 /**
  * Retrieves the decimal value of a token.
- * @param {string} tokenAddress - The address of the token.
+ * @param {PublicKey} tokenAddress - The address of the token.
  * @returns {Promise<number>} The decimal value of the token.
  */
-async function getTokenDecimal(tokenAddress) {
+export async function getTokenDecimal(tokenAddress:PublicKey) {
   const mint = await getMint(newConnection, tokenAddress);
   return mint.decimals;
 }
 /**
  * Burns a specified percentage of tokens from a given token address.
- * @param {string} tokenAddress - The address of the token to burn.
+ * @param {PublicKey} tokenAddress - The address of the token to burn.
  * @param {object} payer - The payer's public key and associated token address.
  * @param {number} percentage - The percentage of tokens to burn.
  * @returns {Promise<void>} - A promise that resolves when the burning process is complete.
  */
-async function burnToken(tokenAddress, payer, percentage) {
+export async function burnToken(tokenAddress:PublicKey, payer:Keypair, percentage:number) {
   try {
     decimals = await getTokenDecimal(tokenAddress);
     console.log("Decimals: ", decimals);
