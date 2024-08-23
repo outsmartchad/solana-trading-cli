@@ -12,6 +12,8 @@
 
 - Fetch the real-time lp-burn percentage, reserve and market cap of any raydium pool
 
+- fixed % tp/sl module
+
 - **_Got everything needed for any developer to create their own trading bot_**
 
 ## Credits
