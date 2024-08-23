@@ -82,7 +82,7 @@ export async function finalizeTransaction(swapTransaction:any) {
     // sign the transaction
     transaction.sign([wallet]);
 
-    const latestBlockhash = await connection.getLatestBlockhash("processed");
+    const latestBlockhash = await connection.getLatestBlockhash("confirmed");
     const res = await jito_executeAndConfirm(
       transaction,
       wallet,

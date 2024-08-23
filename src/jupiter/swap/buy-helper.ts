@@ -45,3 +45,12 @@ export async function buy(tokenToBuy:string, amountTokenOut:number, slippage:any
   }
 }
 
+async function main() {
+  const tokenAddress = "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh";
+  const amountOfSOLToUse = 0.015
+  const slippage = 1;
+  await buy(tokenAddress, amountOfSOLToUse, slippage);
+}
+
+//main();
+
