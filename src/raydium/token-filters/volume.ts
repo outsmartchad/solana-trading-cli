@@ -31,6 +31,7 @@ export async function getWeekVolume(tokenAddress:string){
             response = await( await fetch(`https://api-v3.raydium.io/pools/info/ids?ids=${poolId}`)).json();
             if(response.success) weekVolume = response.data[0].week.volume
         }
+        console.log(weekVolume);
         if(weekVolume !== 0) return weekVolume;
         else{
             weekVolume = response.data[0].week.volume
@@ -52,6 +53,7 @@ export async function getMonthVolume(tokenAddress:string){
             response = await( await fetch(`https://api-v3.raydium.io/pools/info/ids?ids=${poolId}`)).json();
             if(response.success) monthVolume = response.data[0].month.volume
         }
+        console.log(monthVolume);
         if(monthVolume !== 0) return monthVolume;
         else{
             monthVolume = response.data[0].month.volume
@@ -62,4 +64,4 @@ export async function getMonthVolume(tokenAddress:string){
     }
 }
 
-getDayVolume("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP");
+getMonthVolume("GiMsMKgMq3cX3PJwPZCxh6CsrsVTc5P975eeAMPLpump");
