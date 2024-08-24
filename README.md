@@ -28,8 +28,7 @@
 3. `nvm install v22.2.0`
 4. `nvm use v22.2.0`
 5. `npm install`
-6. `node help.js `（to see commands or read cli_doc.txt file)
-7. also see the command examples in examples/
+6. also see the command examples in examples/
 
 ### Prerequisites 🚨
 
@@ -72,60 +71,60 @@
 1. Specify the token symbol, name, mint keypair(optional, will help u to generate), supply, decimals, path to metadata json file, path to image file, the cluster you want to use, and the file type(png, jpg, jpeg).
 
 ```
-node create --payer <PATH_TO_SECRET_KEY> --symbol <TOKEN_SYMBOL> --token_name <TOKEN_NAME> --mint <PATH_TO_MINT_KEYPAIR> --supply <SUPPLY_OF_TOKEN> --decimals <DECIMALS> --metadata <PATH_METADATA_JSON> --image <PATH_TO_IMAGE> --cluster <CLUSTER> --priority-fee <PRIORITY_FEE> --file_type <FILE_TYPE>
+ts-node create --payer <PATH_TO_SECRET_KEY> --symbol <TOKEN_SYMBOL> --token_name <TOKEN_NAME> --mint <PATH_TO_MINT_KEYPAIR> --supply <SUPPLY_OF_TOKEN> --decimals <DECIMALS> --metadata <PATH_METADATA_JSON> --image <PATH_TO_IMAGE> --cluster <CLUSTER> --priority-fee <PRIORITY_FEE> --file_type <FILE_TYPE>
 ```
 
 2. Specify the token address, the percentage of the token you want to burn and the cluster you want to use.
 
 ```
-node burn --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <BURN_PERCENTAGE> --cluster <CLUSTER>
+ts-node burn --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <BURN_PERCENTAGE> --cluster <CLUSTER>
 ```
 
 3. Specify the token address and the cluster you want to use.
 
 ```
-node revoke_authority --payer <PATH_TO_SECRET_KEY> --mint_address <ADDRESS_TOKEN> --cluster <CLUSTER> --mint --freeze
+ts-node revoke_authority --payer <PATH_TO_SECRET_KEY> --mint_address <ADDRESS_TOKEN> --cluster <CLUSTER> --mint --freeze
 ```
 
 4. Specify the token address you want to query and the cluster for boosting the volume of the token.
 
 ```
-node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> --cluster <CLUSTER> --sol_per_order <SOL_PER_ORDER>
+ts-node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> --cluster <CLUSTER> --sol_per_order <SOL_PER_ORDER>
 
 ```
 
 5. Specify the token address, the amount of Sol you want to swap, and the cluster you want to use.
 
 ```
-node buy --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL> --cluster <CLUSTER>
+ts-node buy --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL> --cluster <CLUSTER>
 ```
 
 6. Specify the token address, the percentage of the token you want to sell, and the cluster you want to use.
 
 ```
-node sell --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>
+ts-node sell --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>
 ```
 
 7. Specify the token address, the pool id(optional, will help to find the pool with the most liquidity using the given token address), the amount of Sol you want to add, and the cluster you want to use.
 
 ```
-node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <POOL_ID> --sol <NUMBER_OF_SOL> --cluster <CLUSTER> --priority_fee <PRIORITY_FEE>
+ts-node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <POOL_ID> --sol <NUMBER_OF_SOL> --cluster <CLUSTER> --priority_fee <PRIORITY_FEE>
 ```
 
 8. Specify the token address, the percentage of the LP token you want to remove(1=1%), and the cluster you want to use.
 
 ```
-node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
+ts-node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
 ```
 9. wrap your sol to wsol.
     
 ```
-node wrap_sol.js --size <size>
+ts-node wrap_sol.js --size <size>
 ```
 
 10. unwrap your wsol to sol.
 ```
-node unwrap_sol.js
+ts-node unwrap_sol.js
 ```
 
 ### Pump.fun commands
@@ -133,19 +132,19 @@ node unwrap_sol.js
 9. Specify the path to your mint keypair, the amount of Sol you want to buy, the name of the token, the symbol of the token, the description of the token, the telegram link, the twitter link, the website link, and the image file path.
 
 ```
-node createAndBuy --pathToMintKeypair <PATH_TO_MINT_KEYPAIR> --sol <NUMBER_OF_SOL> --name <TOKEN_NAME> --symbol <TOKEN_SYMBOL> --description <TOKEN_DESCRIPTION> --telegram <TELEGRAM_LINK> --twitter <TWITTER_LINK> --website <WEBSITE_LINK> --file <IMAGE_FILE_PATH>
+ts-node createAndBuy --pathToMintKeypair <PATH_TO_MINT_KEYPAIR> --sol <NUMBER_OF_SOL> --name <TOKEN_NAME> --symbol <TOKEN_SYMBOL> --description <TOKEN_DESCRIPTION> --telegram <TELEGRAM_LINK> --twitter <TWITTER_LINK> --website <WEBSITE_LINK> --file <IMAGE_FILE_PATH>
 ```
 
 10. Specify the token address, the sol you want to buy
 
 ```
-node buy --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>
+ts-node buy --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>
 ```
 
 11. Specify the token address, the percentage of the token you want to sell
 
 ```
-node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
+ts-node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
 ```
 # Code Usage </>
 
