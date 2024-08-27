@@ -4,17 +4,17 @@
 
 - Create your own Solana **_SPL tokens_** on mainnet | Pump.fun
   
-- Swap tokens on top of Raydium, Orca, Meteora, and pump.fun
+- Swap tokens on Raydium, Orca, Meteora, and pump.fun
   
-- Predefined Jito tips and Priority fee
+- land transactions faster using Jito/bloXroute
 
 - Fastest Copy Trade Program
 
-- Fetch the real-time lp-burn percentage, reserve and market cap of any raydium pool
+- Fetch the real-time lp-burn percentage, pool reserve and market cap of any liquidity pool
 
 - fixed % tp/sl module
 
-- **_Got everything needed for any developer to create their own trading bot_**
+- **_Got everything needed to create your own trading bot_**
 
 ## Credits
 - https://github.com/raydium-io/raydium-sdk-V2
