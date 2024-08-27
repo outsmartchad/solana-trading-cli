@@ -24,11 +24,10 @@ export async function getCurrentPriceInUSD(tokenAddress:string):Promise<any> {
 }
 
 
-
 async function main(){
     // console.log(await getCurrentPriceInSOL("7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr"));
     // console.log(await getCurrentPriceInUSD("7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr"));
     console.log(await getCurrentPriceInUSD("7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr"));
 }
 
-main();
+//main();
