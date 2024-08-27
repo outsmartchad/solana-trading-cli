@@ -1,31 +1,34 @@
-import { fetchDLMMPoolId } from "./fetch-pool";
+import { fetchDLMMPoolId, fetchDLMMPool } from "./Pool";
 import {usdc} from "./constants";
 
-export async function getCurrentPriceInSOL(tokenAddress:string) {
-  const poolId = await fetchDLMMPoolId(tokenAddress);
-  const response = await (
-    await fetch(`https://dlmm-api.meteora.ag/pair/${poolId}`)
-  ).json();
-  return response.current_price;
+// on-chain rpc method to get the current price of the token
+export async function getCurrentPriceInSOL(tokenAddress:string):Promise<any> {
+  const dlmmPool = await fetchDLMMPool(tokenAddress);
+  const activeBin = await dlmmPool.getActiveBin();
+  const activeBinPricePerToken = dlmmPool.fromPricePerLamport(
+    Number(activeBin.price)
+  );
+  return activeBinPricePerToken;
 }
-export async function getCurrentSolPrice() {
-    const poolId = await fetchDLMMPoolId(usdc);
-    const response = await (
-      await fetch(`https://dlmm-api.meteora.ag/pair/${poolId}`)
-    ).json();
-    return response.current_price;
+export async function getCurrentSolPrice():Promise<any> {
+
+  const dlmmPool = await fetchDLMMPool(usdc);
+  const activeBin = await dlmmPool.getActiveBin();
+  const activeBinPricePerToken = dlmmPool.fromPricePerLamport(
+    Number(activeBin.price)
+  );
+  return activeBinPricePerToken;
 }
-export async function getCurrentPriceInUSD(tokenAddress:string) {
-    const poolId = await fetchDLMMPoolId(tokenAddress);
-    const response = await (
-        await fetch(`https://dlmm-api.meteora.ag/pair/${poolId}`)
-    ).json();
-    return response.current_price*(await getCurrentSolPrice());
+export async function getCurrentPriceInUSD(tokenAddress:string):Promise<any> {
+    return (await getCurrentPriceInSOL(tokenAddress))*(await getCurrentSolPrice());
 }
 
+
+
 async function main(){
-    console.log(await getCurrentPriceInSOL("7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr"));
+    // console.log(await getCurrentPriceInSOL("7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr"));
+    // console.log(await getCurrentPriceInUSD("7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr"));
     console.log(await getCurrentPriceInUSD("7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr"));
 }
 
-//main();
+main();
