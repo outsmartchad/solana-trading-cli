@@ -2,6 +2,7 @@ import { initSdk } from "./raydium_config";
 import {fetchAMMPoolId} from "./Pool/fetch_pool";
 import Decimal from "decimal.js";
 import {wsol} from "./constants";
+import { sol } from "@metaplex-foundation/js";
 let sdkCache = { sdk: null, expiry: 0 };
 export async function getCurrentPriceInSOL(
   tokenAddress:string
@@ -90,6 +91,7 @@ export async function getCurrentPriceInUSD(tokenAddress:string){
 async function main(){
     // console.log(await getCurrentPriceInSOL("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP"));
     // console.log(await getCurrentSolPrice());
-    console.log(await getCurrentPriceInUSD("4MBEqrtgabZ9G5EmKm7XTrcknZ1nWg3TrvFHZMrENgrd"));
+    //console.log(await getCurrentPriceInUSD("4MBEqrtgabZ9G5EmKm7XTrcknZ1nWg3TrvFHZMrENgrd"));
+    //console.log(await getCurrentPriceInSOL("7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr"));
 }
 //main();
