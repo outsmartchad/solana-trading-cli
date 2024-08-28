@@ -8,4 +8,4 @@ import {swap} from "./Pool";
  */
 export async function buy(token_address:string, buyAmountInSOL:number) {
   await swap("buy", token_address, buyAmountInSOL, -1);
-}   
+}

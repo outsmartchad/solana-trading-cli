@@ -13,7 +13,7 @@ export const provider = new AnchorProvider(connection, ourWallet, {
 export const ctx = WhirlpoolContext.withProvider(
     provider,
     ORCA_WHIRLPOOL_PROGRAM_ID
-  );
+);
 export const client = buildWhirlpoolClient(ctx);
 export const PROGRAM_ID = "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
 export const MAINNET_WHIRLPOOLS_CONFIG = new PublicKey("2LecshUwdy9xi7meFgHtFJQNSKk4KdTrcpvaB56dP2NQ");
