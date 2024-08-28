@@ -14,4 +14,4 @@ export async function getCurrentMarketCap(
   return marketCap;
 }
 
-getCurrentMarketCap("7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr");
+//getCurrentMarketCap("7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr");
