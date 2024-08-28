@@ -4,6 +4,7 @@ import {usdc} from "./constants";
 // on-chain rpc method to get the current price of the token
 export async function getCurrentPriceInSOL(tokenAddress:string):Promise<any> {
   const dlmmPool = await fetchDLMMPool(tokenAddress);
+  dlmmPool.refetchStates();
   const activeBin = await dlmmPool.getActiveBin();
   const activeBinPricePerToken = dlmmPool.fromPricePerLamport(
     Number(activeBin.price)
@@ -13,6 +14,7 @@ export async function getCurrentPriceInSOL(tokenAddress:string):Promise<any> {
 export async function getCurrentSolPrice():Promise<any> {
 
   const dlmmPool = await fetchDLMMPool(usdc);
+  dlmmPool.refetchStates();
   const activeBin = await dlmmPool.getActiveBin();
   const activeBinPricePerToken = dlmmPool.fromPricePerLamport(
     Number(activeBin.price)

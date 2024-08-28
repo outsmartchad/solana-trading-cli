@@ -74,5 +74,5 @@ export async function getCurrentMarketCap(tokenAddress:string) {
   }
 }
 
-//getCurrentMarketCap("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP");
+//getCurrentMarketCap("7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr");
 
