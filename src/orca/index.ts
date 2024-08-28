@@ -14,7 +14,7 @@ import {
   connection,
   dev_connection,
   wallet,
-} from "../../../helpers/config";
+} from "../helpers/config";
 const ourWallet = new Wallet(wallet);
 async function main() {
   const provider = new AnchorProvider(connection, ourWallet, {

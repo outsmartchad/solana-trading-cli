@@ -1,19 +1,15 @@
 import { PublicKey } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, AccountLayout } from "@solana/spl-token";
-import {
-  connection,
-  wallet,
-  smart_money_wallet,
-} from "../../../helpers/config";
-import path from "path" ;
-import { swap } from "../../../jupiter/swap/swap-helper";
-import { buy } from "../../../raydium/buy_helper";
-import { sell } from "../../../raydium/sell_helper";
+import { connection, wallet, smart_money_wallet } from "../../helpers/config";
+import path from "path";
+import { swap } from "../../jupiter/swap/swap-helper";
+import { buy } from "../../raydium/buy_helper";
+import { sell } from "../../raydium/sell_helper";
 import fs from "fs";
 const boughtTokensPath = path.join(__dirname, "bought-tokens.json");
 let walletsToListen = [];
-var previous_trader_wallet_state:any = {};
-var previous_our_wallet_state:any = {};
+var previous_trader_wallet_state: any = {};
+var previous_our_wallet_state: any = {};
 // [usdc, sol, usdt, wsol]
 const wsol = "So11111111111111111111111111111111111111112";
 const quoteToken = [
@@ -24,7 +20,7 @@ const quoteToken = [
 ];
 let boughtTokens = JSON.parse(fs.readFileSync(boughtTokensPath, "utf8"));
 
-export async function saveToJson(token:string) {
+export async function saveToJson(token: string) {
   boughtTokens.push(token);
   fs.writeFileSync(boughtTokensPath, JSON.stringify(boughtTokens, null, 2));
 }
@@ -33,7 +29,7 @@ export async function saveToJson(token:string) {
  * Listens to changes in multiple wallets and performs trading actions based on the changes.
  * @returns {Promise<void>} A promise that resolves once the wallet listening is set up.
  */
-export async function listenToWallets(address:PublicKey) {
+export async function listenToWallets(address: PublicKey) {
   try {
     connection.onProgramAccountChange(
       TOKEN_PROGRAM_ID,
@@ -45,10 +41,10 @@ export async function listenToWallets(address:PublicKey) {
         // realize in smart money wallet there is a token's balance changed
         // then we look at trader's portfolio
         console.log("Wallet state changed");
-        const current_trader_wallet_state:any = await retriveWalletState(
+        const current_trader_wallet_state: any = await retriveWalletState(
           address.toBase58()
         );
-        const current_our_wallet_state:any = await retriveWalletState(
+        const current_our_wallet_state: any = await retriveWalletState(
           wallet.publicKey.toBase58()
         );
         if (
@@ -212,7 +208,7 @@ export async function listenToWallets(address:PublicKey) {
  * @param {string} wallet_address - The address of the wallet to retrieve the state for.
  * @returns {Object} - An object containing the token balances of the wallet and the SOL balance.
  */
-async function retriveWalletState(wallet_address:string) {
+async function retriveWalletState(wallet_address: string) {
   try {
     const filters = [
       {
@@ -229,13 +225,13 @@ async function retriveWalletState(wallet_address:string) {
       TOKEN_PROGRAM_ID, //new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
       { filters: filters }
     );
-    let results:any = {};
+    let results: any = {};
     const solBalance = await connection.getBalance(
       new PublicKey(wallet_address)
     );
     accounts.forEach((account, i) => {
       //Parse the account data
-      const parsedAccountInfo:any = account.account.data;
+      const parsedAccountInfo: any = account.account.data;
       const mintAddress = parsedAccountInfo["parsed"]["info"]["mint"];
       const tokenBalance =
         parsedAccountInfo["parsed"]["info"]["tokenAmount"]["uiAmount"];
@@ -255,7 +251,7 @@ async function retriveWalletState(wallet_address:string) {
  */
 export async function copy_buy() {
   // smart money wallet address
-  let smart_money_address:any = smart_money_wallet;
+  let smart_money_address: any = smart_money_wallet;
   // our wallet address
   let our_wallet_address = wallet.publicKey.toBase58();
   previous_trader_wallet_state = await retriveWalletState(smart_money_address);
