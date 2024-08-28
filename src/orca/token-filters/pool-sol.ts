@@ -7,6 +7,8 @@ export async function getCurrentSolInPool(token_address:string):Promise<any> {
     console.log(whirlPool.tokenVaultAInfo)
     if(whirlPool.tokenVaultAInfo.mint.toBase58() === wsol){
         solReserve = Number(whirlPool.tokenVaultAInfo.amount)/Math.pow(10,9);
+    }else{
+        solReserve = Number(whirlPool.tokenVaultBInfo.amount)/Math.pow(10,9);
     }
     console.log(solReserve);
     return solReserve;
