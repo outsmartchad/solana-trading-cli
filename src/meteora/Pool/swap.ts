@@ -96,6 +96,7 @@ export async function swap(
     minOutAmount: swapQuote.minOutAmount,
     outToken: outToken,
   });
+  console.log(swapTx);
   // try {
   //   const swapTxHash = await sendAndConfirmTransaction(connection, swapTx, [
   //     wallet,
