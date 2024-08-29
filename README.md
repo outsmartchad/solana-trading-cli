@@ -315,6 +315,14 @@ ts-node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
 - ``` git pull --rebase # Pull the latest changes```
 - ``` git stash pop # Apply Your stashed changes```
 
+## Disclaimer
+
+This software is provided "as is," without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software.
+
+**Use at your own risk.** The authors take no responsibility for any harm or damage caused by the use of this software. Users are responsible for ensuring the suitability and safety of this software for their specific use cases.
+
+By using this software, you acknowledge that you have read, understood, and agree to this disclaimer.
+
 ### If you think this project is useful, please give us a star🌟, it will help us a lot.
 
 ### Discord channel: https://discord.gg/hFhQeBCqWX
