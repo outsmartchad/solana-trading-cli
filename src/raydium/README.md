@@ -2,7 +2,7 @@
 
 ### Buy token through cli
 `
-ts-node ts-node src/raydium/buy.ts --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>
+ts-node src/raydium/buy.ts --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>
 `
 
 ### Sell token through cli
