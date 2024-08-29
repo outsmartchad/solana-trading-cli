@@ -4,24 +4,8 @@ import { fetchAMMPoolId } from "../Pool/fetch_pool";
 import { wsol } from "../constants";
 import { connection } from "../../helpers/config";
 import { PublicKey } from "@solana/web3.js";
+import { getCurrentSolPrice } from "../fetch-price";
 let sdkCache = { sdk: null, expiry: 0 };
-export async function getCurrentSolPrice() {
-  try {
-    let raydium:any = null;
-    if (sdkCache.sdk) {
-      raydium = sdkCache.sdk;
-    } else {
-      raydium = await initSdk();
-      sdkCache.sdk = raydium;
-    }
-    const sol_usdc = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2";
-    const res = await raydium.liquidity.getRpcPoolInfos([sol_usdc]);
-    const poolInfo = res[sol_usdc];
-    return poolInfo.poolPrice;
-  } catch (e) {
-    console.log("Error getting current SOL price: ", e);
-  }
-}
 export async function getCurrentMarketCap(tokenAddress:string) {
   try {
     let raydium:any = null;
