@@ -11,7 +11,7 @@
 
 ## Limitations
 - It only works on raydium swap transactions now.
-- It uses SOL for settlement, buy using SOL and sell for SOL.
+- It uses WSOL for settlement, buy using WSOL and sell for WSOL.
 
 ## Prerequisites
 
