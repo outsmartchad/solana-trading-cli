@@ -23,16 +23,6 @@ import {
 } from "@solana/web3.js";
 
 /**
- * Retrieves the number of decimals for a given mint address.
- * @param {PublicKey} mintAddress - The address of the mint.
- * @returns {Promise<number>} The number of decimals.
- */
-export async function getDecimals(mintAddress:PublicKey) {
-  const info:any = await connection.getParsedAccountInfo(mintAddress);
-  const result = (info.value?.data).parsed.info.decimals || 0;
-  return result;
-}
-/**
  * Retrieves the metadata of a token based on its address.
  * @param {string} address - The address of the token.
  * @returns {Promise<{ tokenName: string, tokenSymbol: string }>} The token metadata, including the token name and symbol.
