@@ -1,4 +1,4 @@
-#*Geyser grpc Pump.fun Sniper Bot (Beta)*
+#*Geyser grpc copy Bot (Beta)*
 
 ## How it works
 
