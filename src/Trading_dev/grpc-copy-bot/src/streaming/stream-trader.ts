@@ -13,6 +13,7 @@ import { connection, quoteToken, wallet, GRPC_XTOKEN } from "../constants/consta
 import { sell, buy } from "../raydium";
 let trader_balance_wallet:any = {};
 let targetTrader = "";
+export const raydium_authority = "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1"; // ***it represent the person who extract/put the sol/token to the pool for every raydium swap txn***
 const client = new Client(
   "https://grpc.fra.shyft.to",
   GRPC_XTOKEN,
@@ -49,172 +50,61 @@ export async function checkTraderBuyOrSell(data: any, traderAddress: string) {
   const preTokenBalances = data.transaction.transaction.meta.preTokenBalances;
   const postTokenBalances = data.transaction.transaction.meta.postTokenBalances;
   const latestBlockhash = await connection.getLatestBlockhash("processed");
-  let targetToken = "";
+  let targetToken = "", postPoolSOL=0, postPoolToken=0, prePoolSOL=0, prePoolToken=0, side = "";
   // look for the token that the trader is buying or selling
-  for (let i = 0; i < preTokenBalances.length; i++) {
-    if (
-      preTokenBalances[i].owner === traderAddress &&
-      preTokenBalances[i].mint !== wsol
-    ) {
-      targetToken = preTokenBalances[i].mint;
-      break;
+  for (const account of preTokenBalances) {
+    if (targetToken !== "" && prePoolSOL !== 0 && prePoolToken!==0) break; // make sure we get the target token and pool sol balances and trader address only
+    if (account.owner === raydium_authority && account.mint !== wsol) targetToken = account.mint;
+    if (account.owner === raydium_authority && account.mint === wsol) {
+      prePoolSOL = account.uiTokenAmount.uiAmount;
+    }
+    if (account.owner === raydium_authority && account.mint !== wsol) {
+      prePoolToken = account.uiTokenAmount.uiAmount;
     }
   }
-  for (let i = 0; i < postTokenBalances.length; i++) {
-    if (
-      postTokenBalances[i].owner === traderAddress &&
-      postTokenBalances[i].mint !== wsol
-    ) {
-      targetToken = postTokenBalances[i].mint;
-      break;
+ for (const account of postTokenBalances) {
+    if (postPoolSOL !== 0 && postPoolToken!==0) break; // make sure we get the target token and pool sol balances and trader address only
+    if (account.owner === raydium_authority && account.mint !== wsol ) targetToken = account.mint;
+    if (account.owner === raydium_authority && account.mint === wsol) {
+      postPoolSOL = account.uiTokenAmount.uiAmount;
+    }
+    if (account.owner === raydium_authority && account.mint !== wsol) {
+      postPoolToken = account.uiTokenAmount.uiAmount;
     }
   }
   if (targetToken === "") return;
-  const old_wallet_state = trader_balance_wallet;
-  trader_balance_wallet = await retriveWalletState(traderAddress);
-  console.log("Old wallet state: ", old_wallet_state);
-  console.log("New wallet state: ", trader_balance_wallet);
-  if (trader_balance_wallet[wsol] < old_wallet_state[wsol]) {
-    logger.info(`Trader is buying ${targetToken} using WSOL`);
-    let buy_percentage = Math.abs(
-      (trader_balance_wallet[wsol] - old_wallet_state[wsol]) /
-        old_wallet_state[wsol]
-    );
-    console.log("Buy percentage: ", buy_percentage);
-    const ourWsolBalance = await getSPLBalance(
-      connection,
-      new PublicKey(wsol),
-      wallet.publicKey
-    );
-    console.log(`We are using ${ourWsolBalance * buy_percentage} WSOL`);
-    const { pool, txn } = await buy(
-      "buy",
-      targetToken,
-      buy_percentage * ourWsolBalance,
-      wallet
-    );
-    sendBundle(latestBlockhash.blockhash, txn, pool, wallet);
-  } else if (trader_balance_wallet[wsol] > old_wallet_state[wsol]) {
-    logger.info(`Trader is selling ${targetToken} for WSOL`);
-    let newBalanceOfToken = 0;
-    if (targetToken in trader_balance_wallet)
-      newBalanceOfToken = trader_balance_wallet[targetToken];
-    let sell_percentage = Math.abs(
-      (newBalanceOfToken - old_wallet_state[targetToken]) /
-        old_wallet_state[targetToken]
-    );
-    console.log("Sell percentage: ", sell_percentage);
-    const ourTokenBalance = await getSPLBalance(
-      connection,
-      new PublicKey(targetToken),
-      wallet.publicKey
-    );
-    if (ourTokenBalance === 0) {
-      logger.info(`We don't have any ${targetToken} to sell`);
-      return;
-    }
-    const { pool, txn } = await sell(
-      "sell",
-      targetToken,
-      sell_percentage,
-      wallet
-    );
-    sendBundle(latestBlockhash.blockhash, txn, pool, wallet);
-    // wait for 1 second and send again
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    sendBundle(latestBlockhash.blockhash, txn, pool, wallet);
-  } else if (trader_balance_wallet["SOL"] < old_wallet_state["SOL"]) {
-    logger.info(`Trader is buying ${targetToken} using SOL`);
-    let buy_percentage = Math.abs(
-      (trader_balance_wallet["SOL"] - old_wallet_state["SOL"]) /
-        old_wallet_state["SOL"]
-    );
-    console.log("Buy percentage: ", buy_percentage);
-    const ourWsolBalance = await getSPLBalance(
-      connection,
-      new PublicKey(wsol),
-      wallet.publicKey
-    );
-    console.log(`We are using ${ourWsolBalance * buy_percentage} WSOL`);
-    const { pool, txn } = await buy(
-      "buy",
-      targetToken,
-      buy_percentage * ourWsolBalance,
-      wallet
-    );
-    sendBundle(latestBlockhash.blockhash, txn, pool, wallet);
-  } else if (trader_balance_wallet["SOL"] > old_wallet_state["SOL"]) {
-    logger.info(`Trader is selling ${targetToken} for SOL`);
-    let newBalanceOfToken = 0;
-    if (targetToken in trader_balance_wallet)
-      newBalanceOfToken = trader_balance_wallet[targetToken];
-    let sell_percentage = Math.abs(
-      (newBalanceOfToken - old_wallet_state[targetToken]) /
-        old_wallet_state[targetToken]
-    );
-    console.log("Sell percentage: ", sell_percentage);
-    const ourTokenBalance = await getSPLBalance(
-      connection,
-      new PublicKey(targetToken),
-      wallet.publicKey
-    );
-    if (ourTokenBalance === 0) {
-      logger.info(`We don't have any ${targetToken} to sell`);
-      return;
-    }
-    const { pool, txn } = await sell(
-      "sell",
-      targetToken,
-      sell_percentage,
-      wallet
-    );
-    sendBundle(latestBlockhash.blockhash, txn, pool, wallet);
-    // wait for 1 second and send again
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    sendBundle(latestBlockhash.blockhash, txn, pool, wallet);
-  } else {
-    // check if the trader is swapping tokens
-    let increasedToken = "",
-      decreasedToken = "";
-    for (const mint in trader_balance_wallet) {
-      if (mint === wsol || mint === "SOL") {
-        continue;
-      }
-      if (increasedToken && decreasedToken) {
-        break;
-      }
-      const prevBalance = old_wallet_state[mint] || 0;
-      const currentBalance = trader_balance_wallet[mint];
-
-      if (currentBalance > prevBalance) {
-        increasedToken = mint;
-      } else if (currentBalance < prevBalance) {
-        decreasedToken = mint;
-      }
-    }
-    if (increasedToken && decreasedToken) {
-      logger.info(`Trader is swapping ${decreasedToken} for ${increasedToken}`);
-      let swap_percentage = Math.abs(
-        (trader_balance_wallet[decreasedToken] -
-          old_wallet_state[decreasedToken]) /
-          old_wallet_state[decreasedToken]
-      );
-      console.log("Swap percentage: ", swap_percentage);
-      // we use wsol as the quote token to buy the increased token
-      const ourWsolBalance = await getSPLBalance(
-        connection,
-        new PublicKey(wsol),
-        wallet.publicKey
-      );
-      const { pool, txn } = await buy(
-        "buy",
-        increasedToken,
-        swap_percentage * ourWsolBalance,
-        wallet
-      );
-      sendBundle(latestBlockhash.blockhash, txn, pool, wallet);
-    }
+  let swappedSOLAmount = 0, swappedTokenAmount = 0;
+  if(postPoolSOL > prePoolSOL){ 
+    side = "buy"; 
+    swappedSOLAmount = postPoolSOL - prePoolSOL; 
+    swappedTokenAmount = prePoolToken - postPoolToken;
   }
+  else {
+    side = "sell"; 
+    swappedSOLAmount = prePoolSOL - postPoolSOL;
+    swappedTokenAmount = postPoolToken - prePoolToken;
+  }
+  if(side==="buy") {
+    logger.info(`Trader ${traderAddress} is ${side}ing ${swappedTokenAmount} of ${targetToken} using ${swappedSOLAmount}SOL in price of ${postPoolSOL/postPoolToken}`);
+    const { pool, txn } = await buy(
+      "buy",
+      targetToken,
+      swappedSOLAmount,
+      wallet
+    );
+    sendBundle(latestBlockhash.blockhash, txn, pool, wallet);
+  }else{
+    logger.info(`Trader ${traderAddress} is ${side}ing ${swappedTokenAmount} of ${targetToken} for ${swappedSOLAmount}SOL in price of ${postPoolSOL/postPoolToken}`);
+    const { pool, txn } = await sell(
+      "sell",
+      targetToken,
+      swappedTokenAmount,
+      wallet
+    );
+    sendBundle(latestBlockhash.blockhash, txn, pool, wallet);
+  }
+
+  
 }
 
 export async function streamTargetTrader(traderAddress: string) {

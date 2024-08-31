@@ -102,7 +102,7 @@ async function swapOnlyAmm(input: any): Promise<VersionedTransaction> {
  * @param {string} side - The side of the swap operation ("buy" or "sell").
  * @param {string} tokenAddr - The address of the token involved in the swap.
  * @param {number} buy_AmountOfSol - The amount of SOL to buy (only applicable for "buy" side).
- * @param {number} sell_PercentageOfToken - The percentage of the token to sell (only applicable for "sell" side).
+ * @param {number} sell_AmountOfToken - The amount of Token to sell (only applicable for "sell" side).
  * @param {object} payer_wallet - The payer's wallet object.
  * @param {string} usage - The usage of the swap operation.
  * @param {object} connection_obj - The connection object.
@@ -112,7 +112,7 @@ export async function swap(
   side: string,
   tokenAddr: string,
   buy_AmountOfSol: number,
-  sell_PercentageOfToken: number,
+  sell_AmountOfToken: number,
   payer_wallet: Keypair,
   usage: string,
   connection_obj: Connection
@@ -221,13 +221,7 @@ export async function swap(
       );
       return Object.create(null);
     }
-    const balnaceOfToken = await getSPLBalance(
-      connection_obj,
-      new PublicKey(tokenAddress),
-      payer_wallet.publicKey
-    );
-    const percentage = sell_PercentageOfToken;
-    const amount = new Decimal(percentage * balnaceOfToken);
+    const amount = new Decimal(sell_AmountOfToken);
     const slippage = new Percent(5, 100);
     const inputTokenAmount = new TokenAmount(
       inputToken,
@@ -235,7 +229,6 @@ export async function swap(
     );
     const input = {
       outputToken,
-      sell_PercentageOfToken,
       targetPool,
       inputTokenAmount,
       slippage,
