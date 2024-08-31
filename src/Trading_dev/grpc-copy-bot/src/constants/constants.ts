@@ -3,11 +3,6 @@ import { logger, retrieveEnvVariable } from "../../../../utils";
 import {
   Currency,
   Token,
-  ENDPOINT,
-  MAINNET_PROGRAM_ID,
-  RAYDIUM_MAINNET,
-  TxVersion,
-  LOOKUP_TABLE_CACHE,
   TOKEN_PROGRAM_ID,
 } from "@raydium-io/raydium-sdk";
 import { Commitment, Connection, Keypair, PublicKey } from "@solana/web3.js";

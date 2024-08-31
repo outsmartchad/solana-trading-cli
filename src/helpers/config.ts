@@ -19,16 +19,18 @@ const envPath = path.join(__dirname, ".env");
 dotenv.config({
   path: envPath, // fill in your .env path
 });
-export function loadKeypairFromFile(filename:string) {
+export function loadKeypairFromFile(filename: string) {
   const secret = fs.readFileSync(filename, { encoding: "utf8" });
   return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(secret)));
 }
 export const jito_fee = process.env.JITO_FEE; // 0.00009 SOL
 export const shyft_api_key = process.env.SHYFT_API_KEY; // your shyft api key
-export const wallet = Keypair.fromSecretKey(bs58.decode(process.env.PRIVATE_KEY || "")); // your wallet
+export const wallet = Keypair.fromSecretKey(
+  bs58.decode(process.env.PRIVATE_KEY || "")
+); // your wallet
 export const private_key = process.env.PRIVATE_KEY; // your private key
-export const dev_endpoint = process.env.DEVNET_ENDPOINT||""; // devnet endpoint, if you use devnet
-export const main_endpoint = process.env.MAINNET_ENDPOINT||""; // mainnet endpoint
+export const dev_endpoint = process.env.DEVNET_ENDPOINT || ""; // devnet endpoint, if you use devnet
+export const main_endpoint = process.env.MAINNET_ENDPOINT || ""; // mainnet endpoint
 export const bloXRoute_auth_header = process.env.BLOXROUTE_AUTH_HEADER;
 export const bloXroute_fee = process.env.BLOXROUTE_FEE; // 0.001 SOL
 // const second_main_endpoint = process.env.SECOND_MAINNET_ENDPOINT; // if you use copy trade program, second mainnet endpoint
