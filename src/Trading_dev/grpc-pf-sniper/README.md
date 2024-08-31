@@ -2,15 +2,15 @@
 
 ## How it works
 
-- It uses the geyser grpc plugin that subscribe all the latest slot that receive from the validators of your grpc endpoint.
-- It basically only consider the slot or block in "processed" commitment level to make sure the request can land in the next block.
+- It uses the geyser grpc plugin that subscribe all the latest slot that receive from the grpc server.
+- It basically only consider the slot or block in "processed" commitment level to make sure the request can land in the next block or next few block(what we expected).
+
 - Use a grpc subscription to subscribe the transactions that including the solana account of the Pump.fun Token Mint Authority and listen for the mint event (https://solscan.io/account/TSLvdd1pWpHVjahSpsvCXUbgwsL3JAcvokwaKt1eokM).
 - Once the mint event is detected, it will create a snipe transaction to snipe the token!
 
 
 ## Prerequisites
 
-- run `npm install` to install all the dependencies
 - run `ts-node src/streaming/snipe-create.ts -h` to test the snipe-create command and see the available options
 - to change the parameters, you can modify the .env file
 - to have a try, run ```ts-node src/streaming/snipe-create.ts --auto-sell --jito --n 3```
