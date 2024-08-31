@@ -10,15 +10,15 @@ export const initSdk = async () => {
     connection: connection,
     cluster: "mainnet",
     disableFeatureCheck: true,
-    disableLoadToken: false,
-    blockhashCommitment: "processed",
+    disableLoadToken: true,
+    blockhashCommitment: "confirmed",
   });
   return raydium;
 };
 
 export async function fetchAMMPoolId(tokenAddress: string): Promise<string> {
   const raydium = await initSdk();
-  const data = await raydium.api.fetchPoolByMints({
+  const data:any = await raydium.api.fetchPoolByMints({
     mint1: wsol,
     mint2: tokenAddress,
   });
