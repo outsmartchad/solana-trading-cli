@@ -1,4 +1,4 @@
-#*Geyser grpc Pump.fun Sniper Bot (Beta)*
+# *Geyser grpc Pump.fun Sniper Bot (Beta)*
 
 ## How it works
 
@@ -7,7 +7,7 @@
 
 - Use a grpc subscription to subscribe the transactions that including the solana account of the Pump.fun Token Mint Authority and listen for the mint event (https://solscan.io/account/TSLvdd1pWpHVjahSpsvCXUbgwsL3JAcvokwaKt1eokM).
 - Once the mint event is detected, it will send a snipe transaction to snipe the token!
-
+- it uses SOL for settlement, buy using SOL, sell for SOL.
 
 ## Prerequisites
 
