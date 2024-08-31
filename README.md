@@ -8,11 +8,13 @@
   
 - land transactions faster using Jito/bloXroute
 
-- Fastest Copy Trade Program
-
 - Fetch the real-time lp-burn percentage, pool reserve and market cap of any liquidity pool
 
 - fixed % tp/sl module
+
+- Open-Source grpc pump.fun sniper bot (0-1x seconds latency) [here](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/Trading_dev/grpc-pf-sniper)
+  
+- Open-Source grpc copy bot [here](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/Trading_dev/grpc-copy-bot)
 
 - **_Got everything needed to create your own trading bot_**
 
