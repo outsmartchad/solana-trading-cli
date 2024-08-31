@@ -6,7 +6,7 @@
 - It basically only consider the slot or block in "processed" commitment level to make sure the request can land in the next block or next few block(what we expected).
 
 - Use a grpc subscription to subscribe the transactions that including the solana account of the Pump.fun Token Mint Authority and listen for the mint event (https://solscan.io/account/TSLvdd1pWpHVjahSpsvCXUbgwsL3JAcvokwaKt1eokM).
-- Once the mint event is detected, it will create a snipe transaction to snipe the token!
+- Once the mint event is detected, it will send a snipe transaction to snipe the token!
 
 
 ## Prerequisites
