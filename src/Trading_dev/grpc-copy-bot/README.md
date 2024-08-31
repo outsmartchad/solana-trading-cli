@@ -6,8 +6,8 @@
 - It basically only consider the slot or block in "processed" commitment level to make sure the request can land in the next block or next few block(what we expected).
 
 - Use a grpc subscription to subscribe the transactions that including the target smart wallet address and listen for the swap transactions.
-- Once the swap event is detected, it calculate the how much token the trader bought or how much token the trader sold by considering the number of token and sol changes in the liquidity pool.
-- The entry/exit price is calculated by the formula: entry/exit price = post SOL in Pool / post token in Pool
+- Once the swap event is detected, it calculate the how much token the trader bought or how much token the trader sold by considering the number of token and sol changes in the liquidity pool, and it follows the exact swapped token amount of the trader.
+- The entry/exit price is calculated by the formula: entry/exit price = post SOL in Pool / post token in Pool.
 
 ## Limitations
 - It only works on raydium swap transactions now.
