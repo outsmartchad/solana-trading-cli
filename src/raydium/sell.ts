@@ -18,11 +18,11 @@ program
   .action((options:any) => {
     if (options.help) {
       logger.info(
-        "ts-node sell --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>"
+        "ts-node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>"
       );
       process.exit(0);
     }
-    if (!options.token_address || !options.percentage || !options.cluster) {
+    if (!options.token_address || !options.percentage) {
       console.error("❌ Missing required options");
       process.exit(1);
     }

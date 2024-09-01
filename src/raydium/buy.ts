@@ -18,11 +18,11 @@ program
   .action((options) => {
     if (options.help) {
       logger.info(
-        "ts-node buy --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL> --cluster <CLUSTER>"
+        "ts-node buy --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>"
       );
       process.exit(0);
     }
-    if (!options.token_address || !options.sol || !options.cluster) {
+    if (!options.token_address || !options.sol) {
       console.error("❌ Missing required options");
       process.exit(1);
     }
