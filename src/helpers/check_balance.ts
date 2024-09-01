@@ -3,7 +3,7 @@ import {
   getDomainKeySync,
   NameRegistryState,
 } from "@bonfida/spl-name-service";
-import { main_endpoint } from "./config";
+import { main_endpoint, wallet } from "./config";
 const connectionMain = new Connection(main_endpoint);
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 
