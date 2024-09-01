@@ -1,5 +1,7 @@
 [🔗doc](https://outsmartchad.github.io/solana-trading-cli/)
+
 ## Main Features
+
 - Trading any token using Jupiter API & Raydium swap function
 
 - Create your own Solana **_SPL tokens_** on mainnet | Pump.fun
@@ -19,6 +21,7 @@
 - **_Got everything needed to create your own trading bot_**
 
 ## Credits
+
 - https://github.com/raydium-io/raydium-sdk-V2
 - https://github.com/rckprtr/pumpdotfun-sdk
 - https://github.com/Al366io/solana-transactions-wrapper
@@ -26,9 +29,9 @@
 ### Installation 🛠️
 
 1. `git clone https://github.com/outsmartchad/solana-trading-cli.git`
-2. `cd solana-memecoin-cli`
-3. `nvm install v22.2.0`
-4. `nvm use v22.2.0`
+2. `cd solana-trading-cli`
+3. `nvm install`
+4. `nvm use`
 5. `npm install`
 6. also see the command examples in examples/
 
@@ -41,6 +44,7 @@
 ## Features ✅:
 
 ### Developer CLI:
+
 - wrap/unwrap solana
 - Create a new SPL token or zk-compressed token (on SOL mainnet/devnet/zk-devnet) and it will automatically mint to your wallet
 - Integrates both **user-defined priority fee and jito tips** that land transactions faster
@@ -55,6 +59,7 @@
 - monitor real-time pump-fun's create, trade, and complete bonding curve events
   
 ### Trader CLI:
+
 - Optimized Copy Trading Program with auto-buy&sell
 
 ## Features in Development 🚧:
@@ -72,82 +77,84 @@
 
 1. Specify the token symbol, name, mint keypair(optional, will help u to generate), supply, decimals, path to metadata json file, path to image file, the cluster you want to use, and the file type(png, jpg, jpeg).
 
-```
-ts-node create --payer <PATH_TO_SECRET_KEY> --symbol <TOKEN_SYMBOL> --token_name <TOKEN_NAME> --mint <PATH_TO_MINT_KEYPAIR> --supply <SUPPLY_OF_TOKEN> --decimals <DECIMALS> --metadata <PATH_METADATA_JSON> --image <PATH_TO_IMAGE> --cluster <CLUSTER> --priority-fee <PRIORITY_FEE> --file_type <FILE_TYPE>
-```
+    ```sh
+    ts-node create --payer <PATH_TO_SECRET_KEY> --symbol <TOKEN_SYMBOL> --token_name <TOKEN_NAME> --mint <PATH_TO_MINT_KEYPAIR> --supply <SUPPLY_OF_TOKEN> --decimals <DECIMALS> --metadata <PATH_METADATA_JSON> --image <PATH_TO_IMAGE> --cluster <CLUSTER> --priority-fee <PRIORITY_FEE> --file_type <FILE_TYPE>
+    ```
 
 2. Specify the token address, the percentage of the token you want to burn and the cluster you want to use.
 
-```
-ts-node burn --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <BURN_PERCENTAGE> --cluster <CLUSTER>
-```
+    ```sh
+    ts-node burn --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <BURN_PERCENTAGE> --cluster <CLUSTER>
+    ```
 
 3. Specify the token address and the cluster you want to use.
 
-```
-ts-node revoke_authority --payer <PATH_TO_SECRET_KEY> --mint_address <ADDRESS_TOKEN> --cluster <CLUSTER> --mint --freeze
-```
+    ```sh
+    ts-node revoke_authority --payer <PATH_TO_SECRET_KEY> --mint_address <ADDRESS_TOKEN> --cluster <CLUSTER> --mint --freeze
+    ```
 
 4. Specify the token address you want to query and the cluster for boosting the volume of the token.
 
-```
-ts-node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> --cluster <CLUSTER> --sol_per_order <SOL_PER_ORDER>
-
-```
+    ```sh
+    ts-node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> --cluster <CLUSTER> --sol_per_order <SOL_PER_ORDER>
+    ```
 
 5. Specify the token address, the amount of Sol you want to swap, and the cluster you want to use.
 
-```
-ts-node buy --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL> --cluster <CLUSTER>
-```
+    ```sh
+    ts-node buy --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL> --cluster <CLUSTER>
+    ```
 
 6. Specify the token address, the percentage of the token you want to sell, and the cluster you want to use.
 
-```
-ts-node sell --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>
-```
+    ```sh
+    ts-node sell --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>
+    ```
 
 7. Specify the token address, the pool id(optional, will help to find the pool with the most liquidity using the given token address), the amount of Sol you want to add, and the cluster you want to use.
 
-```
-ts-node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <POOL_ID> --sol <NUMBER_OF_SOL> --cluster <CLUSTER> --priority_fee <PRIORITY_FEE>
-```
+    ```sh
+    ts-node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <POOL_ID> --sol <NUMBER_OF_SOL> --cluster <CLUSTER> --priority_fee <PRIORITY_FEE>
+    ```
 
 8. Specify the token address, the percentage of the LP token you want to remove(1=1%), and the cluster you want to use.
 
-```
-ts-node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
-```
+    ```sh
+    ts-node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
+    ```
+
 9. wrap your sol to wsol.
-    
-```
-ts-node wrap_sol.js --size <size>
-```
+
+    ```sh
+    ts-node wrap_sol.js --size <size>
+    ```
 
 10. unwrap your wsol to sol.
-```
-ts-node unwrap_sol.js
-```
+
+    ```sh
+    ts-node unwrap_sol.js
+    ```
 
 ### Pump.fun commands
 
 9. Specify the path to your mint keypair, the amount of Sol you want to buy, the name of the token, the symbol of the token, the description of the token, the telegram link, the twitter link, the website link, and the image file path.
 
-```
-ts-node createAndBuy --pathToMintKeypair <PATH_TO_MINT_KEYPAIR> --sol <NUMBER_OF_SOL> --name <TOKEN_NAME> --symbol <TOKEN_SYMBOL> --description <TOKEN_DESCRIPTION> --telegram <TELEGRAM_LINK> --twitter <TWITTER_LINK> --website <WEBSITE_LINK> --file <IMAGE_FILE_PATH>
-```
+    ```sh
+    ts-node createAndBuy --pathToMintKeypair <PATH_TO_MINT_KEYPAIR> --sol <NUMBER_OF_SOL> --name <TOKEN_NAME> --symbol <TOKEN_SYMBOL> --description <TOKEN_DESCRIPTION> --telegram <TELEGRAM_LINK> --twitter <TWITTER_LINK> --website <WEBSITE_LINK> --file <IMAGE_FILE_PATH>
+    ```
 
 10. Specify the token address, the sol you want to buy
 
-```
-ts-node buy --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>
-```
+    ```sh
+    ts-node buy --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>
+    ```
 
 11. Specify the token address, the percentage of the token you want to sell
 
-```
-ts-node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
-```
+    ```sh
+    ts-node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
+    ```
+
 # Code Usage </>
 
 ## Token:
@@ -193,7 +200,8 @@ ts-node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
 - src/helpers/check_balance.js: check the balance of a given token in your wallet
 
 ## Project Structure
-```
+
+```sh
 .solana-memecoin-cli
 ├── data
 |   ├── Image_file                     # store image file (jpeg, jpg,...)
@@ -305,21 +313,23 @@ ts-node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
 ```
 
 ## Contributing
+
 - Contributions is wellcome!!!
 - Fork it
-- ``` git checkout -b feature/YourNewFeature ```
-- ``` git commit -m 'bug Fixed/added new feature' ```
-- ``` git push origin feature/YourNewFeature ```
+- `git checkout -b feature/YourNewFeature`
+- `git commit -m 'bug Fixed/added new feature'`
+- `git push origin feature/YourNewFeature`
 - And Please open a pull request
 
 ## Apply Latest Changes from remote repo
-- ``` git stash -u  # Stash your changes``` 
-- ``` git pull --rebase # Pull the latest changes```
-- ``` git stash pop # Apply Your stashed changes```
+
+- `git stash -u  # Stash your changes`
+- `git pull --rebase # Pull the latest changes`
+- `git stash pop # Apply Your stashed changes`
 
 ## Disclaimer
 
-This software is provided "as is," without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software.
+This software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software.
 
 **Use at your own risk.** The authors take no responsibility for any harm or damage caused by the use of this software. Users are responsible for ensuring the suitability and safety of this software for their specific use cases.
 
@@ -328,6 +338,7 @@ By using this software, you acknowledge that you have read, understood, and agre
 ### If you think this project is useful, please give us a star🌟, it will help us a lot.
 
 ### Discord channel: https://discord.gg/hFhQeBCqWX
+
 ### It is a work in progress, if you have any suggestions or any problems, please let us know!
 
-### Stay tuned for the updates.🤖_**
+### **_Stay tuned for the updates.🤖_**
