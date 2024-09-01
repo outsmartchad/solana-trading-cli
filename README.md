@@ -45,30 +45,29 @@
 
 ### Developer CLI:
 
+- Check the balance of a token in your wallet
 - wrap/unwrap solana
 - Create a new SPL token or zk-compressed token (on SOL mainnet/devnet/zk-devnet) and it will automatically mint to your wallet
-- Integrates both **user-defined priority fee and jito tips** that land transactions faster
-- Burn a percentage of a token
-- Revoke mint and freeze authority of a token
+- Integrates both **jito tips, bloXroute fee** that land transactions faster
 - boost volume of a token by creating buy and sell orders in just **one transaction**
 - **Add or Remove liquidity** to a pool
-- Swap tokens in a **raydium dex's AMM pool and JUP Swap API**
-- Buy or sell a token using SOL using raydium and JUP
+- Swap tokens in a **raydium, orca, meteora dex's AMM pool**
+- Swap tokens using JUP Swap API
 - **Buy, Sell, and launch token in pump.fun**
-- Check the balance of a token in your wallet
 - monitor real-time pump-fun's create, trade, and complete bonding curve events
   
 ### Trader CLI:
 
-- Optimized Copy Trading Program with auto-buy&sell
+- ws copy bot with auto-buy&sell
+- geyser **grpc Pump.fun sniper bot** with 0.4-2 seconds latency
+- geyser **grpc Copy bot** to copy trades from a target wallet address
+- easy-to-use tp/sl module
 
 ## Features in Development 🚧:
 
 - With user-defined Jito tips and priority Lamports supported for every command
-- tp/sl modules for Trading dev
-- sniping tools on pump.fun&raydium using yellowstone geyser grpc
-- copy trade program using yellowstone geyser grpc
-- **More Profitable Strategies** for Trading dev
+- sniping tools on raydium using yellowstone geyser grpc
+- **More Strategies** for Trading dev
 - more features to come...
 
 # Commands </> (Please see the command examples in examples/ to get start~)
