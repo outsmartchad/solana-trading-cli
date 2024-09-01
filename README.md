@@ -33,7 +33,7 @@
 3. `nvm install`
 4. `nvm use`
 5. `npm install`
-6. `ts-node test.ts`
+6. `ts-node test.ts` (**Remember to run this to test all the cli script**)
 
 ### Prerequisites 🚨
 
