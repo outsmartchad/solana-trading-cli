@@ -1,8 +1,9 @@
 import * as fs from 'fs/promises';
 import fetch from 'cross-fetch';
-import {sl, tp, wsol} from "."
+import {sl, tp, wsol} from "./constants"
 import Decimal from 'decimal.js';
-import {getCurrentMarketCap, getDayVolume, getCurrentSolInPool, initSdk } from "../../raydium";
+import {getCurrentMarketCap, getDayVolume, getCurrentSolInPool } from "../../raydium/token-filters";
+import {initSdk} from "../../raydium/raydium_config"
 import {fetchAMMPoolId} from "../../raydium/Pool/fetch_pool"
 import {logger} from "../../utils"
 let sdkCache = {sdk: null, expiry: 0}

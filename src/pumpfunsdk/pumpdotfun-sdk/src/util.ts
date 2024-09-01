@@ -1,4 +1,4 @@
-import{
+import {
   Commitment,
   ComputeBudgetProgram,
   Connection,
@@ -14,12 +14,12 @@ import{
   LAMPORTS_PER_SOL,
   SystemProgram,
 } from "@solana/web3.js";
-import{ AnchorProvider } from "@coral-xyz/anchor";
-import {PumpFunSDK, DEFAULT_DECIMALS} from "./pumpfun";
-import{ PriorityFee, TransactionResult } from "./types";
-import{ jito_executeAndConfirm } from "../../../Transactions/jito_tips_tx_executor";
+import { AnchorProvider } from "@coral-xyz/anchor";
+import { PumpFunSDK, DEFAULT_DECIMALS } from "./pumpfun";
+import { PriorityFee, TransactionResult } from "./types";
+import { jito_executeAndConfirm } from "../../../transactions/jito_tips_tx_executor";
 import fs from "fs";
-import{ bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
+import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 export const DEFAULT_COMMITMENT = "finalized";
 export const DEFAULT_FINALITY = "finalized";
 
@@ -37,7 +37,7 @@ export const calculateWithSlippageSell = (
   return amount - (amount * basisPoints) / 10000n;
 };
 
-function readCSVFile(filePath:string) {
+function readCSVFile(filePath: string) {
   try {
     const data = fs.readFileSync(filePath, "utf8");
     return data;
@@ -48,20 +48,30 @@ function readCSVFile(filePath:string) {
 }
 
 export async function sendTxToJito(
-  connection:Connection,
-  tx:any,
-  payer:Keypair,
-  signers:Keypair[],
-  jitofee:any
-){
-  const blockhash = (await connection.getLatestBlockhash());
+  connection: Connection,
+  tx: any,
+  payer: Keypair,
+  signers: Keypair[],
+  jitofee: any
+) {
+  const blockhash = await connection.getLatestBlockhash();
   let final_tx = new Transaction();
   final_tx.add(tx);
-  let versionedTx = await buildVersionedTx(connection, payer.publicKey, final_tx, connection.commitment);
+  let versionedTx = await buildVersionedTx(
+    connection,
+    payer.publicKey,
+    final_tx,
+    connection.commitment
+  );
   versionedTx.sign(signers);
-    try{
-      const {confirmed, signature} = await jito_executeAndConfirm(versionedTx, payer, blockhash, jitofee);
-      // let txResult = await getTxDetails(connection, signature, connection.commitment, DEFAULT_FINALITY);
+  try {
+    const { confirmed, signature } = await jito_executeAndConfirm(
+      versionedTx,
+      payer,
+      blockhash,
+      jitofee
+    );
+    // let txResult = await getTxDetails(connection, signature, connection.commitment, DEFAULT_FINALITY);
     if (!confirmed) {
       return {
         success: false,
@@ -72,20 +82,17 @@ export async function sendTxToJito(
       success: true,
       signature: signature,
     };
-  
-    }catch(e){
-      if(e instanceof SendTransactionError){
-        let ste = e;
-      }else{
-        console.error(e);
-      }
-      return {
-        error: e,
-        success: false,
-      };
+  } catch (e) {
+    if (e instanceof SendTransactionError) {
+      let ste = e;
+    } else {
+      console.error(e);
     }
-    
-  
+    return {
+      error: e,
+      success: false,
+    };
+  }
 }
 
 export async function sendTx(
@@ -113,7 +120,12 @@ export async function sendTx(
 
   newTx.add(tx);
 
-  let versionedTx = await buildVersionedTx(connection, payer, newTx, commitment);
+  let versionedTx = await buildVersionedTx(
+    connection,
+    payer,
+    newTx,
+    commitment
+  );
   versionedTx.sign(signers);
 
   try {
@@ -153,8 +165,7 @@ export const buildVersionedTx = async (
   tx: Transaction,
   commitment: Commitment = DEFAULT_COMMITMENT
 ): Promise<VersionedTransaction> => {
-  const blockHash = (await connection.getLatestBlockhash(commitment))
-    .blockhash;
+  const blockHash = (await connection.getLatestBlockhash(commitment)).blockhash;
 
   let messageV0 = new TransactionMessage({
     payerKey: payer,
@@ -187,7 +198,10 @@ export const getTxDetails = async (
   });
 };
 
-export function generateKeysAndAllocateSol(targetNumberOfKeys:number, targetTotalSol:number) {
+export function generateKeysAndAllocateSol(
+  targetNumberOfKeys: number,
+  targetTotalSol: number
+) {
   // Generate private keys
   const keys = [];
   let sum = 0;
@@ -226,16 +240,15 @@ export function generateKeysAndAllocateSol(targetNumberOfKeys:number, targetTota
   return allocations;
 }
 
-
 export async function generateWalletsAndDropSOL(
-  connection:Connection,
-  masterWallet:Keypair,
-  amountOfSol:number,
-  numberOfNewWallet:number,
-  pathToSave:string
-){
+  connection: Connection,
+  masterWallet: Keypair,
+  amountOfSol: number,
+  numberOfNewWallet: number,
+  pathToSave: string
+) {
   // Check if the file already exists
-  let existingWallets= [];
+  let existingWallets = [];
   try {
     const fileContents = await fs.promises.readFile(pathToSave, "utf8");
     existingWallets = JSON.parse(fileContents);
@@ -297,7 +310,11 @@ export async function generateWalletsAndDropSOL(
   return existingWallets;
 }
 
- export async function checkIfBondingCurveComplete(connection:Connection, wallet:any, mintKeypair:any){ 
+export async function checkIfBondingCurveComplete(
+  connection: Connection,
+  wallet: any,
+  mintKeypair: any
+) {
   const provider = new AnchorProvider(connection, wallet, {
     commitment: "finalized",
   });
@@ -308,6 +325,4 @@ export async function generateWalletsAndDropSOL(
   );
   console.log("bondingCurveAccount: ", bondingCurveAccount);
   return bondingCurveAccount?.complete;
-
- }
-
+}

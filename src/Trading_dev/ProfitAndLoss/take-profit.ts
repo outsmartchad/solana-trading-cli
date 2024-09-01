@@ -1,4 +1,4 @@
-import {tp} from "."
+import {tp} from "./constants"
 import { readBoughtTokens, writeBoughtTokens, getCurrentPriceRaydium } from "./utils";
 import Decimal from 'decimal.js';
 /**

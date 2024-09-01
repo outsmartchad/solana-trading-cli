@@ -27,11 +27,7 @@ import {
   wallet,
   jito_fee,
 } from "../../helpers/config";
-import {
-  getDecimals,
-  getTokenMetadata,
-  checkTx,
-} from "../../helpers/util";
+import { getTokenMetadata, checkTx, getDecimals } from "../../helpers/util";
 import { fetchAMMPoolId } from "./fetch_pool";
 import {
   getAssociatedTokenAddress,
@@ -40,15 +36,11 @@ import {
   createCloseAccountInstruction,
 } from "@solana/spl-token";
 import { formatAmmKeysById_swap } from "./formatAmmKeysById";
-import {
-  simple_executeAndConfirm,
-} from "../../Transactions/simple_tx_executor";
-import {
-  jito_executeAndConfirm,
-} from "../../Transactions/jito_tips_tx_executor";
-import {bloXroute_executeAndConfirm} from "../../Transactions/bloXroute_tips_tx_executor";
+import { simple_executeAndConfirm } from "../../transactions/simple_tx_executor";
+import { jito_executeAndConfirm } from "../../transactions/jito_tips_tx_executor";
+import { bloXroute_executeAndConfirm } from "../../transactions/bloXroute_tips_tx_executor";
 import { Keypair } from "@solana/web3.js";
-let tokenToPoolIdMap:any = {};
+let tokenToPoolIdMap: any = {};
 
 /**
  * Performs a swap transaction using an Automated Market Maker (AMM) pool.
@@ -63,10 +55,10 @@ let tokenToPoolIdMap:any = {};
  * @param {string} input.side - The side of the swap transaction (e.g., "buy").
  * @returns {Object} - The transaction ID if successful, otherwise null.
  */
-async function swapOnlyAmm(input:any) {
+async function swapOnlyAmm(input: any) {
   // -------- pre-action: get pool info --------\
 
-  const poolKeys:any = await formatAmmKeysById_swap(
+  const poolKeys: any = await formatAmmKeysById_swap(
     new PublicKey(input.targetPool)
   );
   assert(poolKeys, "cannot find the target pool");
@@ -147,7 +139,7 @@ async function swapOnlyAmm(input:any) {
         console.log("jito fee transaction failed");
         console.log(`Retry attempt ${attempts}`);
       }
-    } catch (e:any) {
+    } catch (e: any) {
       console.log(e);
       if (e.signature) {
         return { txid: e.signature };
@@ -159,8 +151,8 @@ async function swapOnlyAmm(input:any) {
   console.log("Transaction failed after maximum retry attempts");
   return { txid: null };
 }
-async function swapOnlyAmmUsingBloXRoute(input:any) {
-  const poolKeys:any = await formatAmmKeysById_swap(
+async function swapOnlyAmmUsingBloXRoute(input: any) {
+  const poolKeys: any = await formatAmmKeysById_swap(
     new PublicKey(input.targetPool)
   );
   assert(poolKeys, "cannot find the target pool");
@@ -193,25 +185,25 @@ async function swapOnlyAmmUsingBloXRoute(input:any) {
   if (input.usage == "volume") return innerTransaction;
   const latestBlockhash = await connection.getLatestBlockhash();
   let tx = new Transaction();
-  tx.add(        
+  tx.add(
     ComputeBudgetProgram.setComputeUnitPrice({
-    microLamports: 305290,
+      microLamports: 305290,
     }),
     ComputeBudgetProgram.setComputeUnitLimit({
-    units: 312750,
+      units: 312750,
     }),
     ...(input.side === "buy"
-    ? [
-        createAssociatedTokenAccountIdempotentInstruction(
-          wallet.publicKey,
-          input.ataOut,
-          wallet.publicKey,
-          input.outputToken.mint
-        ),
-      ]
-    : []),
-  ...innerTransaction.instructions,
-  )
+      ? [
+          createAssociatedTokenAccountIdempotentInstruction(
+            wallet.publicKey,
+            input.ataOut,
+            wallet.publicKey,
+            input.outputToken.mint
+          ),
+        ]
+      : []),
+    ...innerTransaction.instructions
+  );
   await bloXroute_executeAndConfirm(tx, [wallet]);
 }
 /**
@@ -220,8 +212,8 @@ async function swapOnlyAmmUsingBloXRoute(input:any) {
  * @param {number} sol_per_order - The price of SOL per order.
  * @returns {Promise<{ confirmed: boolean, txid: string }>} The confirmation status and transaction ID.
  */
-export async function swapForVolume(tokenAddr:string, sol_per_order:number) {
-  const buy_instruction:any = await swap(
+export async function swapForVolume(tokenAddr: string, sol_per_order: number) {
+  const buy_instruction: any = await swap(
     "buy",
     tokenAddr,
     sol_per_order,
@@ -229,7 +221,7 @@ export async function swapForVolume(tokenAddr:string, sol_per_order:number) {
     wallet,
     "volume"
   );
-  const sell_instruction:any = await swap(
+  const sell_instruction: any = await swap(
     "sell",
     tokenAddr,
     -1,
@@ -264,10 +256,14 @@ export async function swapForVolume(tokenAddr:string, sol_per_order:number) {
   let signature = null,
     confirmed = null;
   try {
-    const res:any = simple_executeAndConfirm(transaction, wallet, latestBlockhash);
+    const res: any = simple_executeAndConfirm(
+      transaction,
+      wallet,
+      latestBlockhash
+    );
     signature = res.signature;
     confirmed = res.confirmed;
-  } catch (e:any) {
+  } catch (e: any) {
     console.log(e);
     return { confirmed: confirmed, txid: e.signature };
   }
@@ -279,8 +275,8 @@ export async function swapForVolume(tokenAddr:string, sol_per_order:number) {
  * @param {Object} input - The input object containing the necessary parameters for the swap.
  * @returns {Promise<void>} - A promise that resolves when the swap is completed.
  */
-async function swapOnlyAmmHelper(input:any) {
-  const res:any = await swapOnlyAmm(input);
+async function swapOnlyAmmHelper(input: any) {
+  const res: any = await swapOnlyAmm(input);
   console.log("txids:", res.txid);
   const response = await checkTx(res.txid);
   if (response) {
@@ -309,12 +305,12 @@ async function swapOnlyAmmHelper(input:any) {
  * @returns {Promise<void>} - A promise that resolves when the swap operation is completed.
  */
 export async function swap(
-  side:string,
-  tokenAddr:string,
-  buy_AmountOfSol:number,
-  sell_PercentageOfToken:number,
-  payer_wallet:Keypair,
-  usage:string
+  side: string,
+  tokenAddr: string,
+  buy_AmountOfSol: number,
+  sell_PercentageOfToken: number,
+  payer_wallet: Keypair,
+  usage: string
 ) {
   const tokenAddress = tokenAddr;
   const tokenAccount = new PublicKey(tokenAddress);
@@ -423,7 +419,7 @@ export async function swap(
     if (usage == "volume") {
       return await swapOnlyAmm(input);
     }
-   swapOnlyAmmHelper(input); // using Jito
+    swapOnlyAmmHelper(input); // using Jito
     //swapOnlyAmmUsingBloXRoute(input); // using bloXroute
   }
 }

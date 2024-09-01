@@ -1,4 +1,4 @@
-import {sl} from "."
+import {sl} from "./constants"
 import { readBoughtTokens, writeBoughtTokens, getCurrentPriceRaydium } from "./utils";
 import Decimal from 'decimal.js';
 /**

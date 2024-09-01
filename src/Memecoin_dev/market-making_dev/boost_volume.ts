@@ -1,15 +1,8 @@
 import { connection, wallet } from "../../helpers/config";
-import {
-  simple_executeAndConfirm,
-} from "../../Transactions/simple_tx_executor";
-import {
-  jito_executeAndConfirm,
-} from "../../Transactions/jito_tips_tx_executor";
+import { simple_executeAndConfirm } from "../../transactions/simple_tx_executor";
+import { jito_executeAndConfirm } from "../../transactions/jito_tips_tx_executor";
 import { program } from "commander";
-import {
-  loadOrCreateKeypair_wallet,
-  checkTx,
-} from "../../helpers/util";
+import { loadOrCreateKeypair_wallet, checkTx } from "../../helpers/util";
 import {
   ComputeBudgetProgram,
   TransactionMessage,
@@ -17,10 +10,10 @@ import {
 } from "@solana/web3.js";
 import { swapForVolume } from "../../raydium/Pool/swap";
 let slippage = null,
-  tokenAddress:any = null,
-  payer:any = null,
+  tokenAddress: any = null,
+  payer: any = null,
   cluster = null,
-  solPerOrder:any = null;
+  solPerOrder: any = null;
 
 program
   .option("--token_address <TOKEN_ADDRESS>", "Specify the token address")
@@ -31,7 +24,7 @@ program
     "Specify the number of SOL per order"
   )
   .option("-h, --help", "display help for command")
-  .action((options:any) => {
+  .action((options: any) => {
     if (options.help) {
       console.log(
         "node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> --cluster <CLUSTER> --sol_per_order <SOL_PER_ORDER>"
@@ -61,10 +54,7 @@ async function boost_volume() {
       `Boosting volume..., buying and selling ${tokenAddress} in one transaction...`
     );
     try {
-      const res:any = await swapForVolume(
-        tokenAddress,
-        solPerOrder
-      );
+      const res: any = await swapForVolume(tokenAddress, solPerOrder);
       await error_handling(res.signature, res.confirmed);
     } catch (e) {
       console.log(e);
@@ -81,7 +71,7 @@ async function boost_volume() {
  * @param {boolean} confirmed - Indicates if the transaction is confirmed.
  * @returns {Promise<void>} - A promise that resolves when the error handling is complete.
  */
-async function error_handling(signature:any, confirmed:any) {
+async function error_handling(signature: any, confirmed: any) {
   if (confirmed) {
     console.log(`https://solscan.io/tx/${signature}?cluster=mainnet`);
     return;

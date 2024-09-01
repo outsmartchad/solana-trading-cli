@@ -13,7 +13,8 @@ import {
 } from "@solana/web3.js";
 import { Decimal } from "decimal.js";
 import { BN } from "@project-serum/anchor";
-import { getSPLBalance, getDecimals } from "../../../../helpers/utils";
+import { getSPLBalance } from "../../../../helpers/utils";
+import { getDecimals } from "../../../../helpers/util";
 import { DEFAULT_TOKEN } from "../constants";
 import { fetchAMMPoolId } from "./utils";
 import {

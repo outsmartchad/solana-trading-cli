@@ -1,9 +1,7 @@
 import { VersionedTransaction, PublicKey } from "@solana/web3.js";
 import fetch from "cross-fetch";
 import { connection, wallet, jito_fee } from "../../helpers/config";
-import {
-  jito_executeAndConfirm,
-} from "../../Transactions/jito_tips_tx_executor";
+import { jito_executeAndConfirm } from "../../transactions/jito_tips_tx_executor";
 import { getDecimals } from "../../helpers/util";
 /**
  * Retrieves a quote for swapping tokens.
@@ -15,10 +13,10 @@ import { getDecimals } from "../../helpers/util";
  * @returns {Promise<object>} - The quote object containing swap details.
  */
 export async function getQuote(
-  tokenToSell:string,
-  tokenToBuy:string,
-  convertedAmountOfTokenOut:number,
-  slippage:any
+  tokenToSell: string,
+  tokenToBuy: string,
+  convertedAmountOfTokenOut: number,
+  slippage: any
 ) {
   const url = `https://quote-api.jup.ag/v6/quote?inputMint=${tokenToSell}&outputMint=${tokenToBuy}&amount=${convertedAmountOfTokenOut}&slippageBps=${slippage}`;
   const response = await fetch(url);
@@ -33,7 +31,10 @@ export async function getQuote(
  * @returns {Promise<string>} - The swap transaction.
  * @throws {Error} - If an error occurs during the process.
  */
-export async function getSwapTransaction(quoteResponse:any, wallet_pubKey:string) {
+export async function getSwapTransaction(
+  quoteResponse: any,
+  wallet_pubKey: string
+) {
   try {
     let body = null;
     body = {
@@ -52,7 +53,7 @@ export async function getSwapTransaction(quoteResponse:any, wallet_pubKey:string
     });
     const swapResponse = await resp.json();
     return swapResponse.swapTransaction;
-  } catch (error:any) {
+  } catch (error: any) {
     throw new Error(error);
   }
 }
@@ -62,7 +63,7 @@ export async function getSwapTransaction(quoteResponse:any, wallet_pubKey:string
  * @param {number} decimals - The number of decimal places.
  * @returns {Promise<number>} The converted integer value.
  */
-export async function convertToInteger(amount:number, decimals:number) {
+export async function convertToInteger(amount: number, decimals: number) {
   return Math.floor(amount * 10 ** decimals);
 }
 
@@ -72,7 +73,7 @@ export async function convertToInteger(amount:number, decimals:number) {
  * @returns {Promise<{ confirmed: boolean, signature: string }>} - A promise that resolves to an object containing the confirmation status and transaction signature.
  * @throws {Error} - If an error occurs during the transaction finalization process.
  */
-export async function finalizeTransaction(swapTransaction:any) {
+export async function finalizeTransaction(swapTransaction: any) {
   try {
     let confirmed = null,
       signature = null;
@@ -92,7 +93,7 @@ export async function finalizeTransaction(swapTransaction:any) {
     confirmed = res.confirmed;
     signature = res.signature;
     return { confirmed, signature };
-  } catch (error:any) {
+  } catch (error: any) {
     throw new Error(error);
   }
   return { confirmed: false, signature: null };
@@ -106,7 +107,12 @@ export async function finalizeTransaction(swapTransaction:any) {
  * @param {number} slippage - The allowed slippage percentage.
  * @returns {Promise<void>} - A promise that resolves when the swap transaction is completed.
  */
-export async function swap(tokenToSell:string, tokenToBuy:string, amountTokenOut:number, slippage:any) {
+export async function swap(
+  tokenToSell: string,
+  tokenToBuy: string,
+  amountTokenOut: number,
+  slippage: any
+) {
   try {
     const decimals = await getDecimals(new PublicKey(tokenToSell));
     const convertedAmountOfTokenOut = await convertToInteger(

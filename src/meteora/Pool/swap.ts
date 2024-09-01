@@ -17,7 +17,7 @@ import {
   ComputeBudgetProgram,
   VersionedTransaction,
 } from "@solana/web3.js";
-import { jito_executeAndConfirm } from "../../Transactions/jito_tips_tx_executor";
+import { jito_executeAndConfirm } from "../../transactions/jito_tips_tx_executor";
 import { jito_fee } from "../../helpers/config";
 import { C } from "@raydium-io/raydium-sdk-v2/lib/raydium-276d396e";
 const BN = require("bn.js");

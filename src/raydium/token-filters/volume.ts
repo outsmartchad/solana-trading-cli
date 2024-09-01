@@ -64,4 +64,4 @@ export async function getMonthVolume(tokenAddress:string){
     }
 }
 
-getMonthVolume("GiMsMKgMq3cX3PJwPZCxh6CsrsVTc5P975eeAMPLpump");
+//getMonthVolume("GiMsMKgMq3cX3PJwPZCxh6CsrsVTc5P975eeAMPLpump");

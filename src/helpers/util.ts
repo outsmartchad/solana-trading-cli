@@ -232,3 +232,9 @@ export async function checkTx(txId:string) {
     await sleep(2500);
   }
 }
+
+export async function getDecimals(mintAddress: PublicKey): Promise<number> {
+  const info: any = await connection.getParsedAccountInfo(mintAddress);
+  const result = (info.value?.data).parsed.info.decimals || 0;
+  return result;
+}
