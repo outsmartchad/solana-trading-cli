@@ -1,7 +1,7 @@
 import { VersionedTransaction, PublicKey } from "@solana/web3.js";
 import fetch from "cross-fetch";
 import { connection, wallet, jito_fee } from "../../helpers/config";
-import { jito_executeAndConfirm } from "../../transactions_old/jito_tips_tx_executor";
+import { jito_executeAndConfirm } from "../../transactions/jito_tips_tx_executor";
 import { getDecimals } from "../../helpers/util";
 /**
  * Retrieves a quote for swapping tokens.
