@@ -2,12 +2,13 @@ import { NATIVE_MINT, getOrCreateAssociatedTokenAccount, createCloseAccountInstr
 import { wallet, connection } from "./config";
 import { Transaction, LAMPORTS_PER_SOL, sendAndConfirmTransaction } from "@solana/web3.js";
 import { program } from "commander";
+import { logger } from "./logger";
 program
   .option("-h, --help", "display help for command")
   .action((options) => {
     if (options.help) {
-      console.log(
-        "node unwrap_sol.js"
+      logger.info(
+        "ts-node unwrap_sol.js"
       );
       process.exit(0);
     }

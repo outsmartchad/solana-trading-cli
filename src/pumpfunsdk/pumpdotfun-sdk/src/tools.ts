@@ -1,5 +1,5 @@
 import { AnchorProvider } from "@coral-xyz/anchor";
-import { PumpFunSDK, DEFAULT_DECIMALS } from "./pumpfun.js";
+import { PumpFunSDK, DEFAULT_DECIMALS } from "./pumpfun";
 import { wallet, connection } from "../../../helpers/config"; 
 import {
   getOrCreateKeypair,

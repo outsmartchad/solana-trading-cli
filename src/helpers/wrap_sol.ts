@@ -3,14 +3,15 @@ import { wallet, connection } from "./config";
 import { Transaction, SystemProgram, LAMPORTS_PER_SOL,  sendAndConfirmTransaction } from "@solana/web3.js";
 import {getSPLTokenBalance} from "./check_balance";
 import { program } from "commander";
+import { logger } from "./logger";
 let wrap_size = 0;
 program
   .option("-s, --size <size>", "size of sol to wrap")
   .option("-h, --help", "display help for command")
   .action((options:any) => {
     if (options.help) {
-      console.log(
-        "node wrap_sol.js --size <size>"
+      logger.info(
+        "ts-node wrap_sol.js --size <size>"
       );
       process.exit(0);
     }

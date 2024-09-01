@@ -1,6 +1,7 @@
 import {sell} from './tools';
 import { PublicKey } from "@solana/web3.js";
 import { program } from "commander";
+import { logger } from '../../../helpers/logger';
 let token_address:any = null, sellPercentage:any = null;
 program
   .option("--token_address <ADDRESS_TOKEN>", "Specify the token address")
@@ -8,8 +9,8 @@ program
   .option("-h, --help", "display help for command")
   .action((options:any) => {
     if (options.help) {
-      console.log(
-        "node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>"
+      logger.info(
+        "ts-node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>"
       );
       process.exit(0);
     }

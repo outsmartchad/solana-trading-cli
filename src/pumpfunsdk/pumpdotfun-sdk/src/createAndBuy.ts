@@ -2,6 +2,7 @@ import {createAndBuy} from "./tools";
 // command line tool
 import {program} from "commander";
 import fs from "fs";
+import { logger } from "../../../helpers/logger";
 
 let sol:any = null, mintKeypair:any = null, name:any = null, symbol:any = null, 
 description:any = null, telegram:any = null, twitter:any = null, website:any = null, file:any = null;
@@ -17,8 +18,8 @@ program.option("--pathToMintKeypair <PATH_TO_MINT_KEYPAIR>", "Specify the path t
   .option("-h, --help", "display help for command")
   .action((options) => {
     if (options.help) {
-      console.log(
-        "node createAndBuy --pathToMintKeypair <PATH_TO_MINT_KEYPAIR> --sol <NUMBER_OF_SOL> --name <TOKEN_NAME> --symbol <TOKEN_SYMBOL> --description <TOKEN_DESCRIPTION> --telegram <TELEGRAM_LINK> --twitter <TWITTER_LINK> --website <WEBSITE_LINK> --file <FILE_PATH>"
+      logger.info(
+        "ts-node createAndBuy --pathToMintKeypair <PATH_TO_MINT_KEYPAIR> --sol <NUMBER_OF_SOL> --name <TOKEN_NAME> --symbol <TOKEN_SYMBOL> --description <TOKEN_DESCRIPTION> --telegram <TELEGRAM_LINK> --twitter <TWITTER_LINK> --website <WEBSITE_LINK> --file <FILE_PATH>"
       );
       process.exit(0);
     }

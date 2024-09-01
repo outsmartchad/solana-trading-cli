@@ -30,6 +30,7 @@ import {
   connection,
   wallet,
 } from "../helpers/config";
+import { logger } from "../helpers/logger";
 
 // info
 let payer_keypair_path: any = null,
@@ -68,8 +69,8 @@ program
   .option("-h, --help", "display help for command")
   .action((options) => {
     if (options.help) {
-      console.log(
-        "node create --payer <PATH_TO_SECRET_KEY> --symbol <TOKEN_SYMBOL> --token_name <TOKEN_NAME> --mint <PATH_TO_MINT_KEYPAIR> --supply <SUPPLY_OF_TOKEN> --decimals <DECIMALS> --metadata <PATH_METADATA_JSON> --image <PATH_TO_IMAGE> --cluster <CLUSTER> --priority-fee <PRIORITY_FEE> --file_type <FILE_TYPE>"
+      logger.info(
+        "ts-node create --payer <PATH_TO_SECRET_KEY> --symbol <TOKEN_SYMBOL> --token_name <TOKEN_NAME> --mint <PATH_TO_MINT_KEYPAIR> --supply <SUPPLY_OF_TOKEN> --decimals <DECIMALS> --metadata <PATH_METADATA_JSON> --image <PATH_TO_IMAGE> --cluster <CLUSTER> --priority-fee <PRIORITY_FEE> --file_type <FILE_TYPE>"
       );
       process.exit(0);
     }

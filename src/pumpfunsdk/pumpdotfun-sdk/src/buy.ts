@@ -1,6 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 import {buy} from "./tools";
 import { program } from "commander";
+import { logger } from "../../../helpers/logger";
 let token_address:any = null, sol = null;
 program
   .option("--token_address <ADDRESS_TOKEN>", "Specify the token address")
@@ -8,8 +9,8 @@ program
   .option("-h, --help", "display help for command")
   .action((options) => {
     if (options.help) {
-      console.log(
-        "node buy --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>"
+      logger.info(
+        "ts-node buy --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>"
       );
       process.exit(0);
     }

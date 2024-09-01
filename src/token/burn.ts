@@ -15,6 +15,7 @@ import {
 } from "@solana/spl-token";
 import { connection, dev_connection } from "../helpers/config";
 import { wallet } from "../helpers/config";
+import { logger } from "../helpers/logger";
 
 let payer_keypair_path = null,
   token_address:any = null,
@@ -31,8 +32,8 @@ program
   .option("-h, --help", "display help for command")
   .action((options) => {
     if (options.help) {
-      console.log(
-        "node burn --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <BURN_PERCENTAGE> --cluster <CLUSTER>"
+      logger.info(
+        "ts-node burn --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <BURN_PERCENTAGE> --cluster <CLUSTER>"
       );
       process.exit(0);
     }

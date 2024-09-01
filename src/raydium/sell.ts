@@ -3,6 +3,7 @@ import { program } from "commander";
 import { loadOrCreateKeypair_wallet } from "../helpers/util";
 import { wallet } from "../helpers/config";
 import { Keypair } from "@solana/web3.js";
+import { logger } from "../helpers/logger";
 
 let payer_keypair:any = null,
   token_address:any = null,
@@ -16,8 +17,8 @@ program
   .option("-h, --help", "display help for command")
   .action((options:any) => {
     if (options.help) {
-      console.log(
-        "node sell --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>"
+      logger.info(
+        "ts-node sell --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>"
       );
       process.exit(0);
     }

@@ -9,6 +9,7 @@ import {
   VersionedTransaction,
 } from "@solana/web3.js";
 import { swapForVolume } from "../../raydium/Pool/swap";
+import { logger } from "../../helpers";
 let slippage = null,
   tokenAddress: any = null,
   payer: any = null,
@@ -26,8 +27,8 @@ program
   .option("-h, --help", "display help for command")
   .action((options: any) => {
     if (options.help) {
-      console.log(
-        "node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> --cluster <CLUSTER> --sol_per_order <SOL_PER_ORDER>"
+      logger.info(
+        "ts-node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> --cluster <CLUSTER> --sol_per_order <SOL_PER_ORDER>"
       );
       process.exit(0);
     }

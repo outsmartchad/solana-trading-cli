@@ -1,3 +1,4 @@
+import { logger } from "../helpers/logger";
 import {swap} from "./Pool"
 import { program } from "commander";
 
@@ -9,7 +10,7 @@ program
   .option("-h, --help", "display help for command")
   .action((options) => {
     if (options.help) {
-      console.log(
+      logger.info(
         "ts-node buy --token <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>"
       );
       process.exit(0);
