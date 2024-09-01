@@ -33,7 +33,7 @@
 3. `nvm install`
 4. `nvm use`
 5. `npm install`
-6. also see the command examples in examples/
+6. `ts-node test.ts`
 
 ### Prerequisites 🚨
 
