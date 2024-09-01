@@ -36,9 +36,9 @@ import {
   createCloseAccountInstruction,
 } from "@solana/spl-token";
 import { formatAmmKeysById_swap } from "./formatAmmKeysById";
-import { simple_executeAndConfirm } from "../../transactions/simple_tx_executor";
-import { jito_executeAndConfirm } from "../../transactions/jito_tips_tx_executor";
-import { bloXroute_executeAndConfirm } from "../../transactions/bloXroute_tips_tx_executor";
+import { simple_executeAndConfirm } from "../../transactions_old/simple_tx_executor";
+import { jito_executeAndConfirm } from "../../transactions_old/jito_tips_tx_executor";
+import { bloXroute_executeAndConfirm } from "../../transactions_old/bloXroute_tips_tx_executor";
 import { Keypair } from "@solana/web3.js";
 let tokenToPoolIdMap: any = {};
 

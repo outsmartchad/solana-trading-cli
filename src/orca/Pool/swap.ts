@@ -12,7 +12,7 @@ import {
 import Decimal from "decimal.js";
 import { connection, wallet, jito_fee } from "../../helpers/config";
 import { getSPLTokenBalance } from "../../helpers/check_balance";
-import { jito_executeAndConfirm } from "../../transactions";
+import { jito_executeAndConfirm } from "../../transactions_old";
 import {
   TransactionMessage,
   Transaction,

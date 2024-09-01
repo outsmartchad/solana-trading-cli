@@ -17,7 +17,7 @@ import {
 import { AnchorProvider } from "@coral-xyz/anchor";
 import { PumpFunSDK, DEFAULT_DECIMALS } from "./pumpfun";
 import { PriorityFee, TransactionResult } from "./types";
-import { jito_executeAndConfirm } from "../../../transactions/jito_tips_tx_executor";
+import { jito_executeAndConfirm } from "../../../transactions_old/jito_tips_tx_executor";
 import fs from "fs";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 export const DEFAULT_COMMITMENT = "finalized";
