@@ -137,3 +137,4 @@ dist
 .pnp.*
 node_modules
 test-ledger
+.DS_Store
