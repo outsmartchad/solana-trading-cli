@@ -27,8 +27,8 @@
 
 1. `git clone https://github.com/outsmartchad/solana-trading-cli.git`
 2. `cd solana-memecoin-cli`
-3. `nvm install v22.2.0`
-4. `nvm use v22.2.0`
+3. `nvm install`
+4. `nvm use`
 5. `npm install`
 6. also see the command examples in examples/
 
