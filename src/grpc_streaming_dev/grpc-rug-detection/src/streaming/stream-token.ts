@@ -42,26 +42,46 @@ export const logger = pino(
 })();
 
 export async function checkIfRug(data: any, token_address: string) {
-    
+  const suspiciousAddresses: { [key: string]: number } = {};
+  const threshold = 1000; // Define a threshold for suspicious inflow
 
-  
+  data.transaction.message.instructions.forEach((instruction: any) => {
+    if (instruction.programId === token_address) {
+      // Decode the instruction data from base58
+      const decodedInstruction = bs58.decode(instruction.data);
+
+      // Extract the destination address (bytes 1 to 33)
+      const destination = new PublicKey(decodedInstruction.slice(1, 33)).toString();
+
+      // Extract the amount (bytes 33 to 41) and convert to integer
+      const amountBuffer = decodedInstruction.slice(33, 41);
+      const amount = parseInt(Buffer.from(amountBuffer).toString('hex'), 16);
+
+      // Track the inflow to the destination address
+      if (!suspiciousAddresses[destination]) {
+        suspiciousAddresses[destination] = 0;
+      }
+      suspiciousAddresses[destination] += amount;
+
+      // Log a warning if the inflow exceeds the threshold
+      if (suspiciousAddresses[destination] > threshold) {
+        logger.warn(`Suspicious inflow detected to address: ${destination}, amount: ${suspiciousAddresses[destination]}`);
+      }
+    }
+  });
 }
 
 export async function streamTargetTrader(token_address: string) {
   try {
     logger.info("Target token to monitor if it's going to rug: ", token);
 
-
     const stream = await client.subscribe();
-    // throw new Error("test"); // test if it restarts when error occurs
-    // process.exit(1); // test if it restart when process exit
-    // Create `error` / `end` handler
     const r1 = await createSubscribeTokenRequest(token_address);
     handleSubscribe(stream, r1);
     stream.on("data", (data) => {
-      // receive an update when trader makes a transaction
       if (data.transaction !== undefined) {
-        logger.info(`Current slot: ${data.transaction.slot}`);  
+        logger.info(`Current slot: ${data.transaction.slot}`);
+        checkIfRug(data, token_address); // Call the checkIfRug function
       }
     });
   } catch (e) {
