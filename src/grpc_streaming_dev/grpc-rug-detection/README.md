@@ -1,4 +1,4 @@
-# *Geyser grpc Rug Detection Bot (Beta)*
+# *Geyser grpc Rug Detection Bot (Still in development, don't use it)*
 
 ## How it works
 
