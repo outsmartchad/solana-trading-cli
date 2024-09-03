@@ -1,4 +1,8 @@
-# *Geyser grpc Pump.fun Sniper Bot (Beta)*
+# *Geyser gRPC Pump.fun Sniper Bot (Beta)*
+
+## Overview
+
+A sniper bot that uses gRPC streaming to monitor and interact with Pump.fun's create token's txns. It's designed to quickly detect and trade new tokens or specific target tokens on pump.fun
 
 ## How it works
 
@@ -30,3 +34,22 @@
 - src/streaming/snipe-create.ts: a cli interface to interact the whole dir
 
 - src/streaming/grpc-requests-type.ts: different grpc request types for sniping on pump.fun
+
+## Features
+
+- Real-time streaming of Pump.fun's mint authority
+- Fast sniping using pump.fun sdk in milliseconds
+- Integration with Jito leader schedule (optional)
+- Customizable logging with Pino
+
+## Contributing
+
+Contributions are welcome. Please submit pull requests with any improvements or bug fixes.
+
+## Disclaimer
+
+This software is in beta and for educational purposes only. Use at your own risk. The authors are not responsible for any financial losses incurred while using this software.
+
+## Note
+
+The current implementation includes commented-out code for Jito leader schedule integration. Uncomment and configure as needed for advanced usage.

@@ -1,4 +1,8 @@
-# *Geyser grpc copy Bot (Beta)*
+# *Geyser gRPC Copy Bot (Beta)*
+
+## Overview
+
+A copy trading bot that uses gRPC streaming to monitor and interact with a target trader's swap txns. It's designed to quickly detect and trade the target trader's swap txns.
 
 ## How it works
 
@@ -32,3 +36,24 @@
 - src/streaming/grpc-requests-type.ts: different grpc request types for monitoring the target trader
 
 - src/raydium/*.ts: constructing the proper instructions of buy and sell on raydium
+
+## Features
+
+- streaming of trader's swap txns
+- copy the swap txns and we swap it on raydium in milliseconds
+- the entry/exit price of the trader's swap is calculated by the formula: entry/exit price = post SOL in Pool / post token in Pool
+- Integration with Jito leader schedule (optional)
+- Customizable logging with Pino
+
+## Contributing
+
+Contributions are welcome. Please submit pull requests with any improvements or bug fixes.
+
+## Disclaimer
+
+This software is in beta and for educational purposes only. Use at your own risk. The authors are not responsible for any financial losses incurred while using this software.
+
+## Note
+
+The current implementation includes commented-out code for Jito leader schedule integration. Uncomment and configure as needed for advanced usage.
+
