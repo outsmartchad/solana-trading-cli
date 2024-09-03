@@ -14,9 +14,12 @@
 
 - fixed % tp/sl module
 
-- First Open-Source grpc pump.fun sniper bot (0.4-2 seconds latency) [here](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-pf-sniper)
+- First Open-Source gRPC pump.fun sniper bot (0.4-2 seconds latency) [here](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-pf-sniper)
   
-- First Open-Source grpc copy bot [here](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-copy-bot)
+- First Open-Source gRPC copy bot [here](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-copy-bot)
+
+- Open-source gRPC Raydium sniper bot [here](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-raydium-sniper)
+
 - **_Got everything needed to create your own trading bot_**
 
 ## Credits
