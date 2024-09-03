@@ -7,7 +7,7 @@ import Client from "@triton-one/yellowstone-grpc";
 import { PublicKey } from "@solana/web3.js";
 import { buy, solanaConnection, sell } from "../transaction/transaction";
 import { storeJitoLeaderSchedule } from "../jito/bundle";
-import { AUTO_SELL, AUTO_SELL_TIMEOUT, GRPC_XTOKEN } from "../constants";
+import { AUTO_SELL, AUTO_SELL_TIMEOUT, GRPC_XTOKEN, GRPC_URL } from "../constants";
 import * as borsh from "@coral-xyz/borsh";
 import bs58 from "bs58";
 import { Buffer } from "buffer";
@@ -15,7 +15,7 @@ import {createSubscribeNewTokenRequest, createClearAllSubscriptionsRequest, crea
 import {handleSubscribe} from "./utils"
 
 const client:any = new Client(
-  "https://grpc.fra.shyft.to",
+  GRPC_URL,
   GRPC_XTOKEN,
   {
     "grpc.max_receive_message_length": 64 * 1024 * 1024, // 64MiB

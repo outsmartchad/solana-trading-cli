@@ -7,9 +7,9 @@ import Client from "@triton-one/yellowstone-grpc";
 import { MARKET_STATE_LAYOUT_V3 } from "@raydium-io/raydium-sdk";
 import { PublicKey } from "@solana/web3.js";
 import { BufferRingBuffer } from "../buffer";
-import {GRPC_XTOKEN} from "../constants";
+import {GRPC_XTOKEN, GRPC_URL} from "../constants";
 const client:any = new Client(
-  "https://grpc.fra.shyft.to",
+  GRPC_URL,
   GRPC_XTOKEN,
   undefined
 );

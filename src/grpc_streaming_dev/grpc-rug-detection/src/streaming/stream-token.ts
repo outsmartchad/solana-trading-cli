@@ -8,12 +8,12 @@ import {
 } from "./grpc-requests-type";
 import { handleSubscribe } from "./utils";
 import { getSPLBalance, retriveWalletState } from "../../../../utils";
-import { GRPC_XTOKEN } from "../constants/constants";
+import { GRPC_XTOKEN, GRPC_URL } from "../constants/constants";
 import { token } from "@metaplex-foundation/js";
 let trader_balance_wallet:any = {};
 export const raydium_authority = "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1"; // ***it represent the person who extract/put the sol/token to the pool for every raydium swap txn***
 const client = new Client(
-  "https://grpc.fra.shyft.to",
+  GRPC_URL,
   GRPC_XTOKEN,
   {
     "grpc.max_receive_message_length": 64 * 1024 * 1024, // 64MiB

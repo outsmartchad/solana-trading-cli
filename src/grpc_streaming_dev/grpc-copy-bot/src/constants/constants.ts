@@ -18,6 +18,7 @@ export const RPC_WEBSOCKET_ENDPOINT = retrieveEnvVariable(
 );
 export const GRPC_XTOKEN = retrieveEnvVariable("GRPC_XTOKEN", logger);
 export const LOG_LEVEL = retrieveEnvVariable("LOG_LEVEL", logger);
+export const GRPC_URL = retrieveEnvVariable("GRPC_URL", logger);
 export const PRIVATE_KEY = retrieveEnvVariable("PRIVATE_KEY", logger);
 export const JITO_TIPS = retrieveEnvVariable("JITO_FEE", logger);
 export const connection = new Connection(RPC_ENDPOINT, "processed");

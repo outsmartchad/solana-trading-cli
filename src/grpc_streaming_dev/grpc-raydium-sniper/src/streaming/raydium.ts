@@ -6,8 +6,8 @@ import { PublicKey } from "@solana/web3.js";
 import { bufferRing } from "./openbook";
 import { buy } from "../transaction/transaction";
 import { storeJitoLeaderSchedule } from "../jito/bundle";
-import {GRPC_XTOKEN} from "../constants"
-const client:any = new Client("https://grpc.fra.shyft.to", GRPC_XTOKEN, undefined); //grpc endpoint 
+import {GRPC_XTOKEN, GRPC_URL} from "../constants"
+const client:any = new Client(GRPC_URL, GRPC_XTOKEN, undefined); //grpc endpoint 
 let snipeCache:string[] = [] // to avoid duplicate sniping same token
 
 const transport = pino.transport({
