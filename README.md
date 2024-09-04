@@ -10,7 +10,7 @@
   
 - land transactions faster using Jito/bloXroute
 
-- Fetch the real-time lp-burn percentage, pool reserve and market cap of any liquidity pool
+- Fetch the real-time price, lp-burn percentage, pool reserve and market cap of any liquidity pool
 
 - fixed % tp/sl module
 
