@@ -1,4 +1,4 @@
-# Geyser gRPC Raydium Sniper (Beta)
+# Geyser gRPC Raydium Sniper (Still testing, don't use it plz)
 
 ## Overview
 
