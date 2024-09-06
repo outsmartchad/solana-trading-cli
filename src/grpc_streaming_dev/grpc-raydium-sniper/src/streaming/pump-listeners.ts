@@ -45,7 +45,7 @@ async function main() {
     const sdk = new PumpFunSDK(provider);
 
     // Set up event listeners
-    await subscribeToCreatePumpTokenEvent(sdk);
+    await subscribeToCompleteBondingCurveEvent(sdk);
   } catch (error) {
     console.error("An error occurred:", error);
   }
