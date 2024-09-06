@@ -65,6 +65,7 @@
 - ws copy bot with auto-buy&sell
 - geyser **grpc Pump.fun sniper bot** with 0.4-2 seconds latency
 - geyser **grpc Copy bot** to copy trades from a target wallet address
+- geyser **grpc Raydium sniper bot** 
 - easy-to-use tp/sl module
 
 ## Features in Development 🚧:
