@@ -9,7 +9,7 @@ ts-node src/orca/buy.ts --token <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>
 `
 ts-node src/orca/sell.ts --token <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
 `
-### buy/sell token by calling the function
+### buy/sell token on Orca
 ```typescript
 import {buy, sell} from "../orca";
 import {wallet} from "../helpers/config";
@@ -22,7 +22,7 @@ async function main() {
 }
 ```
 
-### Fetch the price
+### Fetch the price from Orca whirpool
 ```typescript
 import {getCurrentPriceInUSD, getCurrentPriceInSOL} from "../orca";
 

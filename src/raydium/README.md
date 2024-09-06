@@ -9,7 +9,7 @@ ts-node src/raydium/buy.ts --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>
 `
 ts-node src/raydium/sell.ts --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
 `
-### buy/sell token by calling the function
+### buy/sell token on Raydium
 ```typescript
 import {buy, sell} from "../raydium";
 import {wallet} from "../helpers/config";
@@ -22,7 +22,7 @@ async function main() {
 }
 ```
 
-### Fetch the price
+### Fetch the price from Raydium pool
 ```typescript
 import {getCurrentPriceInUSD, getCurrentPriceInSOL} from "../raydium";
 

@@ -9,7 +9,7 @@ ts-node src/meteora/buy.ts --token <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>
 `
 ts-node src/meteora/sell.ts --token <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
 `
-### buy/sell token by calling the function
+### buy/sell token on Meteora
 ```typescript
 import {buy, sell} from "../meteora";
 import {wallet} from "../helpers/config";
@@ -22,7 +22,7 @@ async function main() {
 }
 ```
 
-### Fetch the price
+### Fetch the price from Meteora DLMM pool
 ```typescript
 import {getCurrentPriceInUSD, getCurrentPriceInSOL} from "../meteora";
 
