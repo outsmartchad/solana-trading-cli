@@ -2,11 +2,13 @@
 
 ## Main Features
 
-- Trading any token using Jupiter API & Raydium swap function
-
 - Create your own Solana **_SPL tokens_** on mainnet | Pump.fun
   
-- Swap tokens on Raydium, Orca, Meteora, and pump.fun
+- Swap tokens on Jupiter, Raydium, Orca, Meteora, and pump.fun
+  - how to use Jupiter cli & trading functions: [here](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/jupiter/README.md)
+  - how to use Raydium cli & trading functions: [here](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/raydium/README.md)
+  - how to use Orca cli & trading functions: [here](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/orca/README.md)
+  - how to use Meteora cli & trading functions: [here](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/meteora/README.md)
   
 - land transactions faster using Jito/bloXroute
 
