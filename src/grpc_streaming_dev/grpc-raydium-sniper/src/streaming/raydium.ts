@@ -80,7 +80,7 @@ export async function streamNewTokens(snipeTokenType:string, targetToken:string)
           const marketDetails = bufferRing.findPattern(poolstate.baseMint);
           console.log("Token incoming: ", TokenToBuy);
           console.log("Market Details: ", marketDetails)
-          if(TokenToBuy.toBase58() !== targetToken) clearInterval(intervalId);
+          if(targetToken !== "" && TokenToBuy.toBase58() !== targetToken) clearInterval(intervalId);
           else if (Buffer.isBuffer(marketDetails)) {
             const fullMarketDetailsDecoded = MARKET_STATE_LAYOUT_V3.decode(marketDetails);
             const marketDetailsDecoded = {
@@ -90,6 +90,9 @@ export async function streamNewTokens(snipeTokenType:string, targetToken:string)
             };
             console.log(`Sniping ${targetToken}`)
             if(TokenToBuy.toBase58() === targetToken) buy(latestBlockHash, tokenAccount, poolstate, marketDetailsDecoded, snipeTokenType);
+            else {
+              if(targetToken === "") buy(latestBlockHash, tokenAccount, poolstate, marketDetailsDecoded, snipeTokenType);
+            }
             clearInterval(intervalId);
           } else if(Attempt>=maxAttempts){
             logger.error("Invalid market details")

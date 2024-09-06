@@ -13,10 +13,7 @@ program.option("--targetToken <TOKEN_ADDRESS>", "Specify the token you want to s
       );
       process.exit(0);
     }
-    if (!options.targetToken){
-      console.error("❌ Missing required options");
-      process.exit(1);
-    }
+
     targetTokenToSnipe = options.targetToken
   });
 program.parse();
@@ -24,8 +21,13 @@ program.parse();
 async function snipe(){
     console.log(`Siping ${targetTokenToSnipe}`)
     await init();
-    streamNewTokens("normal", targetTokenToSnipe)
-    streamOpenbook("normal", targetTokenToSnipe)
+    if(targetTokenToSnipe!== ""){
+      streamNewTokens("normal", targetTokenToSnipe)
+      streamOpenbook("normal", targetTokenToSnipe)
+    }else{
+      streamNewTokens("normal", "");
+      streamOpenbook("normal", "");
+    }
 }
 
 snipe();
