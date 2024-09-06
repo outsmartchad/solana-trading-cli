@@ -17,8 +17,8 @@ async function main() {
     const tokenAddress = "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr";
     const sol = 1; // buy 1 SOL worth of token using WSOL
     const sellPercentage = 50; // sell 50% of the token
-    await buy("buy", tokenAddress, sol); // buy 1 SOL worth of token
-    sell("sell", tokenAddress, sellPercentage); // sell 50% of the token
+    await buy(tokenAddress, sol) // buy 1 SOL worth of token
+    await sell(tokenAddress, sellPercentage); // sell 50% of the token
 }
 ```
 
