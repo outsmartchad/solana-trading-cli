@@ -52,16 +52,16 @@
 - Check the balance of a token in your wallet
 - wrap/unwrap solana
 - Create a new SPL token or zk-compressed token (on SOL mainnet/devnet/zk-devnet) and it will automatically mint to your wallet
-- Integrates both **jito tips, bloXroute fee** that land transactions faster
 - boost volume of a token by creating buy and sell orders in just **one transaction**
 - **Add or Remove liquidity** to a pool
-- Swap tokens in a **raydium, orca, meteora dex's AMM pool**
-- Swap tokens using JUP Swap API
 - **Buy, Sell, and launch token in pump.fun**
 - monitor real-time pump-fun's create, trade, and complete bonding curve events
   
 ### Trader CLI:
 
+- integrates both **jito tips, bloXroute fee** that land transactions faster
+- swap tokens on **Raydium, Meteora, and Orca**
+- swap tokens using Jupiter API
 - ws copy bot with auto-buy&sell
 - geyser **grpc Pump.fun sniper bot** with 0.4-2 seconds latency
 - geyser **grpc Copy bot** to copy trades from a target wallet address
