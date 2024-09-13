@@ -73,3 +73,4 @@ export async function fetchLPToken(tokenAddress:string) {
 }
 //fetchLPToken("3XTp12PmKMHxB6YkejaGPUjMGBLKRGgzHWgJuVTsBCoP");
 
+//fetchAMMPoolId("ukHH6c7mMyiWCf1b9pnWe25TSpkDDt3H5pQZgZ74J82")
