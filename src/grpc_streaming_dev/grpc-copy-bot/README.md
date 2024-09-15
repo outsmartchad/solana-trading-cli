@@ -2,7 +2,7 @@
 
 ## Overview
 
-A copy trading bot that uses gRPC streaming to monitor and interact with a target trader's swap txns. It's designed to quickly detect and trade the target trader's swap txns.
+A copy trading bot that uses gRPC to stream target trader's swap txns. It's designed to quickly detect and trade the target trader's Raydium swap txns.
 
 ## How it works
 
@@ -15,7 +15,7 @@ A copy trading bot that uses gRPC streaming to monitor and interact with a targe
 
 ## Limitations
 - It only works on raydium swap transactions now.
-- It uses WSOL for settlement, buy using WSOL and sell for WSOL.
+- It uses WSOL.
 
 ## Prerequisites
 
