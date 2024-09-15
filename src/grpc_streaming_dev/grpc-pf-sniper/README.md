@@ -11,7 +11,7 @@ A sniper bot that uses gRPC streaming to stream the new txns from mint authority
 
 - Use a grpc subscription to subscribe the transactions that includes the solana account of the Pump.fun Token Mint Authority and listen for the mint event (https://solscan.io/account/TSLvdd1pWpHVjahSpsvCXUbgwsL3JAcvokwaKt1eokM).
 - Once the mint event is detected, it will send a snipe transaction to snipe the token!
-- it uses SOL for settlement, buy using SOL, sell for SOL.
+- it uses SOL for trading.
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ A sniper bot that uses gRPC streaming to stream the new txns from mint authority
 
 - streaming/pump.fun.ts: subscribing any pump.fun create token's txns of newest block in processed level
 
-- src/jito/bundle.ts: sending the bundle with tips to jito
+- src/jito/bundle.ts: sending the bundle with tips to jito blockengine
 
 - src/transaction/transaction.ts: main functions of createAndBuy, buy, and sell
 
