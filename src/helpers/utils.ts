@@ -12,6 +12,7 @@ export const TOKEN_PROGRAM_ID = new PublicKey(
 );
 export const retrieveEnvVariable = (variableName: string, logger: Logger) => {
   const variable = process.env[variableName] || "";
+  if(variableName === "GRPC_XTOKEN") return variable;
   if (!variable) {
     logger.error(`${variableName} is not set`);
     process.exit(1);

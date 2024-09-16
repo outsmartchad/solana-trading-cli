@@ -7,6 +7,7 @@ export const COMMITMENT_LEVEL: Commitment = retrieveEnvVariable('COMMITMENT_LEVE
 export const RPC_ENDPOINT = retrieveEnvVariable('MAINNET_ENDPOINT', logger);
 export const RPC_WEBSOCKET_ENDPOINT = retrieveEnvVariable('WS_MAINNET_ENDPOINT', logger);
 export const GRPC_XTOKEN = retrieveEnvVariable('GRPC_XTOKEN', logger);
+console.log('GRPC_XTOKEN: ', GRPC_XTOKEN);
 export const GRPC_URL = retrieveEnvVariable('GRPC_URL', logger);
 export const LOG_LEVEL = retrieveEnvVariable('LOG_LEVEL', logger);
 export const PRIVATE_KEY = retrieveEnvVariable('PRIVATE_KEY', logger);
