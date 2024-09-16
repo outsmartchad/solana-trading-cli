@@ -2,16 +2,16 @@
 
 ## Overview
 
-A sniper bot that uses gRPC streaming to monitor and interact with Pump.fun's create token's txns. It's designed to quickly detect and trade new tokens or specific target tokens on pump.fun
+A sniper bot that uses gRPC to stream the new txns from mint authority of Pump.fun. It's designed to quickly detect and trade any new tokens or target new token on pump.fun
 
 ## How it works
 
 - It uses the geyser grpc plugin that subscribe all the latest slot that receive from the grpc server.
 - It basically only consider the slot or block in "processed" commitment level to make sure the request can land in the next block or next few block(what we expected).
 
-- Use a grpc subscription to subscribe the transactions that including the solana account of the Pump.fun Token Mint Authority and listen for the mint event (https://solscan.io/account/TSLvdd1pWpHVjahSpsvCXUbgwsL3JAcvokwaKt1eokM).
+- Use a grpc subscription to subscribe the transactions that includes the solana account of the Pump.fun Token Mint Authority and listen for the mint event (https://solscan.io/account/TSLvdd1pWpHVjahSpsvCXUbgwsL3JAcvokwaKt1eokM).
 - Once the mint event is detected, it will send a snipe transaction to snipe the token!
-- it uses SOL for settlement, buy using SOL, sell for SOL.
+- it uses SOL for trading.
 
 ## Prerequisites
 
@@ -25,7 +25,7 @@ A sniper bot that uses gRPC streaming to monitor and interact with Pump.fun's cr
 
 - streaming/pump.fun.ts: subscribing any pump.fun create token's txns of newest block in processed level
 
-- src/jito/bundle.ts: sending the bundle with tips to jito
+- src/jito/bundle.ts: sending the bundle with tips to jito blockengine
 
 - src/transaction/transaction.ts: main functions of createAndBuy, buy, and sell
 
