@@ -2,7 +2,7 @@
 
 ## Overview
 
-A copy trading bot that uses gRPC to stream target trader's swap txns. It's designed to quickly detect and trade the target trader's Raydium swap txns.
+A copy trading bot uses gRPC to stream target trader's swap txns. It's designed to quickly detect and trade the target trader's Raydium swap txns.
 
 ## How it works
 
