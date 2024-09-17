@@ -2,7 +2,7 @@
 
 ## Overview
 
-A sniper bot that uses gRPC to stream the new txns from mint authority of Pump.fun. It's designed to quickly detect and trade any new tokens or target new token on pump.fun
+A sniper bot uses gRPC to stream the new txns from mint authority of Pump.fun. It's designed to quickly detect and trade any new tokens or target new token on pump.fun
 
 ## How it works
 
