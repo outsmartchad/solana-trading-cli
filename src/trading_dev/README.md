@@ -24,7 +24,8 @@ async function searcherLogic() {
     // ...
     // ...
     const tokenAddress = "token address";
-    await setInitTokenObj(tokenAddress, path_To_bought_tokens); // successfully create a limit order object in the bought_tokens.json file, please see the implementation of setInitTokenObj() in src/trading_dev/ProfitAndLoss/utils.ts
+    await setInitTokenObj(tokenAddress, path_To_bought_tokens); // successfully create a limit order object in the bought_tokens.json file, 
+    // before using it, please see the implementation of setInitTokenObj() in src/trading_dev/ProfitAndLoss/utils.ts
    
   }
 }
