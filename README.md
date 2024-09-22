@@ -2,7 +2,7 @@
 ## High-Performance Solana trading Bot
 A open-sourced, free, low-latency trading bot designed for developing your own trading bot. It provides swap functions of multiple dexes, and uses low-latency infrastructures like Jito and BloXroute to minimize the time it takes to execute trades, as well as fetch the real-time metric of the liquidity pool.
   
-## Main Features
+## Key Features
 
 - Create your own Solana **_SPL tokens_** on mainnet | Pump.fun
   
@@ -16,7 +16,7 @@ A open-sourced, free, low-latency trading bot designed for developing your own t
 
 - Fetch the real-time price, lp-burn percentage, pool reserve and market cap of any liquidity pool
 
-- fixed % tp/sl module
+- Using the limit order & tp/sl module locally without any dependencies [here](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/trading_dev/README.md)
 
 - First Open-Source gRPC pump.fun sniper bot (0.4-2 seconds latency) [here](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-pf-sniper)
   
