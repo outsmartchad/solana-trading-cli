@@ -15,8 +15,8 @@ import {
 import { wallet} from "./helpers/config";
 import { buy } from "./raydium/buy_helper";
 
-// create a limit order object locally
-async function main() {
+// create a limit order object locally when your searcher bot finds a token
+async function searcherLogic() {
 
   // when your searcher bot finds a token, you can create a limit order object
   while(true){
@@ -27,8 +27,10 @@ async function main() {
     await setInitTokenObj(tokenAddress, path_To_bought_tokens); // successfully create a limit order object in the bought_tokens.json file, please see the implementation of setInitTokenObj() in src/trading_dev/ProfitAndLoss/utils.ts
    
   }
+}
 
-  // logic to check if the token has hit the entry price, if so, buy the token
+// check if the token has hit the entry price, if so, buy the token
+async function buy_checker(){
   while (true) {
     const bought_tokens = await loadBoughtTokens(path_To_bought_tokens);
     for (const token in bought_tokens) {
