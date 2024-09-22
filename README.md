@@ -16,7 +16,7 @@ A open-sourced, free, low-latency trading bot designed for developing your own t
 
 - Fetch the real-time price, lp-burn percentage, pool reserve and market cap of any liquidity pool
 
-- Using the limit order & tp/sl module locally without any dependencies [here](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/trading_dev/README.md)
+- Use the limit order & tp/sl module locally without any dependencies [here](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/trading_dev/README.md)
 
 - First Open-Source gRPC pump.fun sniper bot (0.4-2 seconds latency) [here](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-pf-sniper)
   
