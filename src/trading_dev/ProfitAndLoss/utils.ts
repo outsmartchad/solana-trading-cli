@@ -2,11 +2,62 @@ import * as fs from 'fs/promises';
 import fetch from 'cross-fetch';
 import {sl, tp, wsol} from "./constants"
 import Decimal from 'decimal.js';
+import { Connection, PublicKey } from "@solana/web3.js";
+import {connection} from "../../helpers/config";
 import {getCurrentMarketCap, getDayVolume, getCurrentSolInPool } from "../../raydium/token-filters";
 import {initSdk} from "../../raydium/raydium_config"
+import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import {fetchAMMPoolId} from "../../raydium/Pool/fetch_pool"
 import {logger} from "../../utils"
+import path from "path";
 let sdkCache = {sdk: null, expiry: 0}
+const log_path = path.join(__dirname, "info.log");
+export async function retriveWalletState(wallet_address: string) {
+    try{
+    const filters = [
+      {
+        dataSize: 165, //size of account (bytes)
+      },
+      {
+        memcmp: {
+          offset: 32, //location of our query in the account (bytes)
+          bytes: wallet_address, //our search criteria, a base58 encoded string
+        },
+      },
+    ];
+    const accounts = await connection.getParsedProgramAccounts(
+      TOKEN_PROGRAM_ID, //new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+      { filters: filters }
+    );
+    let results:any = {};
+    const solBalance = await connection.getBalance(new PublicKey(wallet_address));
+    accounts.forEach((account:any, i:any) => {
+      //Parse the account data
+      const parsedAccountInfo = account.account.data;
+      const mintAddress = parsedAccountInfo["parsed"]["info"]["mint"];
+      const tokenBalance =
+        parsedAccountInfo["parsed"]["info"]["tokenAmount"]["uiAmount"];
+      results[mintAddress] = tokenBalance;
+    });
+    results["SOL"] = solBalance / 10 ** 9;
+    return results || {};
+  }catch(e){
+    console.log(e)
+  }
+  return {};
+  }
+
+export async function getSPLTokenBalance(connection:Connection, tokenAccount:PublicKey, payerPubKey:PublicKey) {
+    try{
+    const address = getAssociatedTokenAddressSync(tokenAccount, payerPubKey);
+    const info = await connection.getTokenAccountBalance(address, "finalized");
+    if (info.value.uiAmount == null) throw new Error("No balance found");
+    return info.value.uiAmount;
+    }catch(err:any){
+        logger.error(`Errr when checking token balance...`)
+    }
+    return 0;
+}
 export async function loadBoughtTokens(path_To_bought_tokens:string) {
     try {
       let boughtTokens:any = [];
@@ -199,6 +250,9 @@ export async function getCurrentPriceRaydium(tokenAddress:string, path_To_bought
     }catch(e){
         logger.error(`Error when getting current price of ${tokenAddress} `, e)
     }
+}
+export async function writeLineToLogFile(logMessage:string){
+    fs.appendFile(log_path, `${logMessage}\n`, 'utf8');
 }
   //"tokenA": {
   //  "trader_entry_price": 0.5312,
