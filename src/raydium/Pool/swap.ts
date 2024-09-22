@@ -95,11 +95,8 @@ async function swapOnlyAmm(input: any) {
     recentBlockhash: latestBlockhash.blockhash,
     instructions: [
       ...[
-        ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: 305290,
-        }),
         ComputeBudgetProgram.setComputeUnitLimit({
-          units: 312750,
+          units: 70000,
         }),
       ],
       ...(input.side === "buy"
