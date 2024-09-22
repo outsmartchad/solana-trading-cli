@@ -11,25 +11,25 @@ let payer_keypair:any = null,
   cluster:any = null;
 program
   .option("--payer <PATH_TO_SECRET_KEY>", "Specify the path to the secret key")
-  .option("--token_address <ADDRESS_TOKEN>", "Specify the token address")
+  .option("--token <ADDRESS_TOKEN>", "Specify the token address")
   .option("--sol <NUMBER_OF_SOL>", "Specify the number of SOL")
   .option("--cluster <CLUSTER>", "Specify the cluster")
   .option("-h, --help", "display help for command")
   .action((options) => {
     if (options.help) {
       logger.info(
-        "ts-node buy --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>"
+        "ts-node buy --token <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>"
       );
       process.exit(0);
     }
-    if (!options.token_address || !options.sol) {
+    if (!options.token || !options.sol) {
       console.error("❌ Missing required options");
       process.exit(1);
     }
     if (options.payer) {
       payer_keypair = options.payer;
     }
-    token_address = options.token_address;
+    token_address = options.token;
     sol = options.sol;
     cluster = options.cluster;
   });
@@ -50,7 +50,6 @@ async function buy(side:string, address:string, no_of_sol:number, payer:Keypair)
     payer_wallet = await loadOrCreateKeypair_wallet(payer_keypair);
     await swap(side, address, no_of_sol, -1, payer_wallet, "trade");
   } else {
-    console.log("here")
     await swap(side, address, no_of_sol, -1, wallet, "trade");
   }
 }

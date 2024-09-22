@@ -11,25 +11,25 @@ let payer_keypair:any = null,
   cluster = null;
 program
   .option("--payer <PATH_TO_SECRET_KEY>", "Specify the path to the secret key")
-  .option("--token_address <ADDRESS_TOKEN>", "Specify the token address")
+  .option("--token <ADDRESS_TOKEN>", "Specify the token address")
   .option("--percentage <SELL_PERCENTAGE>", "Specify the percentage")
   .option("--cluster <CLUSTER>", "Specify the cluster")
   .option("-h, --help", "display help for command")
   .action((options:any) => {
     if (options.help) {
       logger.info(
-        "ts-node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>"
+        "ts-node sell --token <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>"
       );
       process.exit(0);
     }
-    if (!options.token_address || !options.percentage) {
+    if (!options.token || !options.percentage) {
       console.error("❌ Missing required options");
       process.exit(1);
     }
     if (options.payer) {
       payer_keypair = options.payer;
     }
-    token_address = options.token_address;
+    token_address = options.token;
     percentage = options.percentage;
     cluster = options.cluster;
   });
