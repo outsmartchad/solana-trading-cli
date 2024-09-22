@@ -42,9 +42,10 @@ async function buy_checker(){
     }
   }
 }
+
 ```
 
-## take profit / stop-loss module
+## take profit / stop-loss
 
 - it depends on the tp/sl percentage from the .env file
 
@@ -54,3 +55,4 @@ async function buy_checker(){
 ts-node src/trading_dev/ProfitAndLoss/sell-checker.ts
 ```
 
+### it will automatically sell the token from the bought_tokens.json if it hits the take profit or stop-loss percentage
