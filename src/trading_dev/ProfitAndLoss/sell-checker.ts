@@ -21,13 +21,32 @@ async function checkIsPricesHitTPorSL(){
           let tokenObj = await readBoughtTokens(token, path_To_bought_tokens);
           const entry_price = tokenObj.entry_price;
           if(entry_price>0){ // check if already bought
-            const balance = await getSPLTokenBalance(connection, new PublicKey(token), wallet.publicKey); // check if still holding the token
-            if(balance > 0) {
-              logger.info(`selling ${token}...`);
-              writeLineToLogFile(`selling ${token}...`);
-              sell("sell", token, 100, wallet);
-              
+
+            if(await checkTakeProfit(token, path_To_bought_tokens)){
+                logger.info(`Take profit price reached for token ${token}`);
+                writeLineToLogFile(`Take profit price reached for token ${token}`);
+                const balance = await getSPLTokenBalance(connection, new PublicKey(token), wallet.publicKey); // check if still holding the token
+                if(balance > 0) {
+                logger.info(`selling ${token}...`);
+                writeLineToLogFile(`selling ${token}...`);
+                sell("sell", token, 100, wallet); // sell all
+                
+                }
+                continue;
             }
+            if(await checkStopLoss(token, path_To_bought_tokens)){
+                logger.info(`Stop loss price reached for token ${token}`);
+                writeLineToLogFile(`Stop loss price reached for token ${token}`);
+                const balance = await getSPLTokenBalance(connection, new PublicKey(token), wallet.publicKey); // check if still holding the token
+                if(balance > 0) {
+                logger.info(`selling ${token}...`);
+                writeLineToLogFile(`selling ${token}...`);
+                sell("sell", token, 100, wallet); // sell all
+                
+                }
+            }
+
+
           }
     }
     }
