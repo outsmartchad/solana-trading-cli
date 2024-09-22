@@ -2,7 +2,7 @@
 ## High-Performance Solana trading Bot
 A open-sourced, free, low-latency trading bot designed for developing your own trading bot. It provides swap functions of multiple dexes, and uses low-latency infrastructures like Jito and BloXroute to minimize the time it takes to execute trades, as well as fetch the real-time metric of the liquidity pool.
   
-## Main Features
+## Key Features
 
 - Create your own Solana **_SPL tokens_** on mainnet | Pump.fun
   
