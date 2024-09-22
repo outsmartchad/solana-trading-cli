@@ -47,7 +47,7 @@ A open-sourced, free, low-latency trading bot designed for developing your own t
 1. Add your mainnet wallet secret key(must), devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(optional)
 2. rename the .env.copy file to .env
 
-## Usage ✅:
+# Documentation
 
 ### Developer CLI:
 
