@@ -183,11 +183,8 @@ async function swapOnlyAmmUsingBloXRoute(input: any) {
   const latestBlockhash = await connection.getLatestBlockhash();
   let tx = new Transaction();
   tx.add(
-    ComputeBudgetProgram.setComputeUnitPrice({
-      microLamports: 305290,
-    }),
     ComputeBudgetProgram.setComputeUnitLimit({
-      units: 312750,
+      units: 70000,
     }),
     ...(input.side === "buy"
       ? [
@@ -234,9 +231,6 @@ export async function swapForVolume(tokenAddr: string, sol_per_order: number) {
       ...[
         ComputeBudgetProgram.setComputeUnitLimit({
           units: 70000,
-        }),
-        ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: 90000,
         }),
       ],
       ...sell_instruction.instructions,
