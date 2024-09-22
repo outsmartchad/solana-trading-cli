@@ -77,9 +77,7 @@ A open-sourced, free, low-latency trading bot designed for developing your own t
 - **More Strategies** for Trading dev
 - more features to come...
 
-# Commands </> (Please see the command examples in examples/ to get start~)
-
-### payer options is by default use the private key in .env file, but you can also specify the path to the secret key if you want to use another wallet
+# Commands </>
 
 1. Specify the token symbol, name, mint keypair(optional, will help u to generate), supply, decimals, path to metadata json file, path to image file, the cluster you want to use, and the file type(png, jpg, jpeg).
 
