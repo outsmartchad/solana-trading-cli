@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import fetch from 'cross-fetch';
-import {sl, tp, wsol} from "./constants"
+import {sl, tp, wsol, order_size, buyin_percentage} from "./constants"
 import Decimal from 'decimal.js';
 import { Connection, PublicKey } from "@solana/web3.js";
 import {connection} from "../../helpers/config";
@@ -158,31 +158,33 @@ export async function logTraderEntryPrice(tokenAddress:string, entryPrice:number
 //     tokenObj.entry_price = trader_entry_price * (1 - entry_percentage);
 //     await writeBoughtTokens(tokenAddress, tokenObj);
 // }
-export async function setInitTokenObj(tokenAddress: string, ourEntryPrice: number, path_To_bought_tokens:string, poolId:string){
+export async function setInitTokenObj(tokenAddress: string, path_To_bought_tokens:string){
     // if day volume < 100k, 
     // we don't trade it
+    const currentPrice = new Decimal(await getCurrentPriceRaydium(tokenAddress, path_To_bought_tokens));
+    const ourEntryPrice = currentPrice.mul(new Decimal(1).minus(buyin_percentage));
     let ourEntryPriceDec = new Decimal(ourEntryPrice);
     let tpPriceDec = ourEntryPriceDec.mul(new Decimal(1).plus(tp));
     let slPriceDec = ourEntryPriceDec.mul(new Decimal(1).minus(sl));
     const mc = await getCurrentMarketCap(tokenAddress);
     const noOfSolInPool = await getCurrentSolInPool(tokenAddress);
-    let solPerOrder = 0;
-
-    if((mc||0) >= 10000000){
-        solPerOrder = 2;
-        tpPriceDec = ourEntryPriceDec.mul(new Decimal(1).plus(new Decimal(0.05)));
-      }
-      if((mc||0) >= 5000000){
-          solPerOrder = 1.5
-          tpPriceDec = ourEntryPriceDec.mul(new Decimal(1).plus(new Decimal(0.05)));
-      }
-      else if((mc||0) >= 1000000){
-          solPerOrder = 1;
-          tpPriceDec = ourEntryPriceDec.mul(new Decimal(1).plus(new Decimal(0.05)));
-      }else{
-          solPerOrder = 0.5;
-          tpPriceDec = ourEntryPriceDec.mul(new Decimal(1).plus(new Decimal(0.05)));
-    }
+    let solPerOrder = order_size;
+    const poolId = await fetchAMMPoolId(tokenAddress);
+    // if((mc||0) >= 10000000){
+    //     solPerOrder = 2;
+    //     tpPriceDec = ourEntryPriceDec.mul(new Decimal(1).plus(new Decimal(0.05)));
+    //   }
+    //   if((mc||0) >= 5000000){
+    //       solPerOrder = 1.5
+    //       tpPriceDec = ourEntryPriceDec.mul(new Decimal(1).plus(new Decimal(0.05)));
+    //   }
+    //   else if((mc||0) >= 1000000){
+    //       solPerOrder = 1;
+    //       tpPriceDec = ourEntryPriceDec.mul(new Decimal(1).plus(new Decimal(0.05)));
+    //   }else{
+    //       solPerOrder = 0.5;
+    //       tpPriceDec = ourEntryPriceDec.mul(new Decimal(1).plus(new Decimal(0.05)));
+    // }
 
     const tokenObj = {
         "entry_price": ourEntryPriceDec,
@@ -196,6 +198,16 @@ export async function setInitTokenObj(tokenAddress: string, ourEntryPrice: numbe
     }
     console.log("Init our trade successfully!", tokenObj)
     await writeBoughtTokens(tokenAddress, tokenObj, path_To_bought_tokens);
+}
+
+export async function checkIfHitEntryPrice(tokenAddress:string, path_To_bought_tokens:string){
+    const tokenObj = await readBoughtTokens(tokenAddress, path_To_bought_tokens);
+    const currentPrice = await getCurrentPriceRaydium(tokenAddress, path_To_bought_tokens);
+    const entryPrice = tokenObj.entry_price;
+    if(currentPrice <= entryPrice){
+        return true;
+    }
+    return false;
 }
 export async function getCurrentPriceRaydium(tokenAddress:string, path_To_bought_tokens:string){
     try{

@@ -9,6 +9,8 @@ import path from "path";
 export const path_To_bought_tokens = path.join(__dirname, "bought_tokens.json");
 export const tp = retrieveEnvVariable("TAKE_PROFIT", logger);
 export const sl = retrieveEnvVariable("STOP_LOSS", logger); 
+export const order_size = retrieveEnvVariable("ORDER_SIZE", logger);
+export const buyin_percentage = retrieveEnvVariable("BUYIN_PERCENTAGE", logger);
 export const wsol = "So11111111111111111111111111111111111111112"
 export const usdc = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 export const quoteToken = [
