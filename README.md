@@ -163,47 +163,76 @@ A open-sourced, free, low-latency trading bot designed for developing your own t
 
 # Code Usage </>
 
-## Token:
+## Raydium/Orca/Meteora as dex:
 
-- src/Token/create.js: create a spl token on devnet or mainnet with a given name, symbol, token image(using irys decentralized storage), metadata json file, supply, decimals, the code by default revokes the mint authority and freeze authority after creating the token so that the token has a cap and no one can feeze the token of the token holder, it will then mint all the token to your wallet
+- src/dex/sell_helper.ts: selling spl token to SOL using the dex swap function (use WSOL in Raydium, SOL in Orca/Meteora)
 
-- src/Token/burn.js: burn spl token with a given percentage of the token from your wallet
+- src/dex/buy_helper.ts: buying spl token using SOL using dex swap function (use WSOL in Raydium, SOL in Orca/Meteora)
 
-- src/Token/revoke_authority.js: revoke mint and freeze authority of a given token
+- src/dex/fetch-price.ts: fetch the current price of a token
 
-## Trading:
+- src/dex/Pool/swap.ts: swap function for buy/sell/swap token
 
-- src/Trading/dex/raydium/sell.js: selling spl token for SOL in your wallet using raydium dex swap function
+- src/dex/Pool/fetch_pool.ts: fetch the current address of a liquidity pool
 
-- src/Trading/dex/raydium/buy.js: buying spl token using SOL in your wallet using raydium dex swap function
+- src/dex/token-filters/lp-burn.ts: fetch current burn percentage of liquidity pool token
 
-- src/Trading/volume/boost_volume.js: boost the volume of a token by creating a buy and sell order in just one transaction in a way to avoid possible MEV
+- src/dex/token-filters/marketcap.ts: fetch current market cap of a token
 
-- src/Trading/memecoin_trading_strategies/copy-trading/copy-trade.js: copy trading program to follow a user-defined wallet address to auto-buy&sell
+- src/dex/token-filters/pool-sol.ts: fetch current SOL reserver in a liquidity pool
+
+- src/dex/token-filters/volume.ts: fetch current/historical volume of a liquidity pool
+
+## Jupiter
+
+- src/jupiter/swap/*.ts: helper functions for swap/sell/buy using Jupiter
+
+- src/jupiter/buy.ts: buy a token using Jupiter (using SOL)
+
+- src/jupiter/sell.ts: sell a token using Jupiter (using SOL)
+
+- src/jupiter/fetch-price.ts: fetch the current price of a token
+
+## gRPC bots
+
+- src/grpc_streaming_dev/grpc-copy-bot: first grpc copy trading bot on Raydium
+
+- src/grpc_streaming_dev/grpc-pf-sniper: first, fastest grpc sniper bot on Pump.fun
+
+- src/grpc_streaming_dev/grpc-raydium-sniper: fastest grpc sniper bot on raydium for sniping pump.fun-migrated token or raydium-launched token
+
+## gRPC projects for beginner: 
+
+- src/grpc_intro_projects/grpc-pool-price: grpc bot for streaming the pool price on Raydium
+
+- src/grpc_intro_projects/grpc-raydium-trades: grpc bot for streaming the trades on Raydium
+
+- src/grpc_intro_projects/grpc-jupiter-trades: grpc bot for streaming the trades on Jupiter
+
 
 ## Transactions:
 
-- src/Transactions/jito_tips_tx_executor.js: execute the transaction by sending the bundles to Jito validators, they help us to land the transaction to the Solana blockchain faster than just using priority fee.
+- src/transactions/jito_tips_tx_executor.ts: execute the transaction by sending the bundles to Jito validators, they help us to land the transaction to the Solana blockchain faster than just using priority fee.
 
-- src/Transactions/simple_tx_executor.js: execute the transaction by sending the request to the Solana blockchain with a given priority gas fee.
+- src/transactions/bloXroute_tips_tx_executor.ts: execute the transaction by sending the transaction to bloXroute node, they help us to prevent MEV and forward the transaction to current/next few block leaders for faster execution.
 
-## Pool:
+- src/transactions/simple_tx_executor.ts: execute the transaction by sending the request to the Solana blockchain with a given priority gas fee.
 
-- src/Pool/add_pool.js: add liquidity to a pool in a given token address, the code find the most liquid pool (TOKEN_ADDRESS/SOL) in the raydium dex and add liquidity to it. You need to specify the amount of liquidity(sol) you want to add.
+## token:
 
-- src/Pool/remove_pool.js: remove liquidity from a pool in a given token address, the code find the most liquid pool (TOKEN_ADDRESS/SOL) in the raydium dex and remove liquidity from it. You need to specify the amount of percentage of liquidity you want to remove.
+- src/token/create.ts: create a spl token on devnet or mainnet with a given name, symbol, token image(using irys decentralized storage), metadata json file, supply, decimals, the code by default revokes the mint authority and freeze authority after creating the token so that the token has a cap and no one can feeze the token of the token holder, it will then mint all the token to your wallet
 
-- src/Pool/swap.js: swap token for another token in the raydium dex, src/Trading/dex/raydium/buy.js and src/Trading/dex/raydium/sell.js are based on this code.
+- src/token/burn.ts: burn spl token with a given percentage of the token from your wallet
 
-- src/Pool/query_pool.js: query the pool information of a given pool address in the raydium dex, it use shyft api to get the pool information. Please make sure you have your shyft api key inside the code before running this code.
+- src/token/revoke_authority.ts: revoke mint and freeze authority of a given token
 
 ## Helper methods:
 
-- src/helpers/config.js: configuration file for the code.
+- src/helpers/config.ts: configuration file for the code.
 
-- src/helpers/util.js: utility functions for the code, including: send transactions to Solana blockchain, dropped transactions handling, etc.
+- src/helpers/util.ts: utility functions for the code, including: send transactions to Solana blockchain, dropped transactions handling, etc.
 
-- src/helpers/check_balance.js: check the balance of a given token in your wallet
+- src/helpers/check_balance.ts: check the balance of a given token in your wallet
 
 ## Contributing
 
