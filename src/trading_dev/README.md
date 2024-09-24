@@ -56,4 +56,4 @@ async function buy_checker(){
 ts-node src/trading_dev/ProfitAndLoss/sell-checker.ts
 ```
 
-### it will automatically sell the token from the bought_tokens.json if it hits the take profit or stop-loss percentage
+### it will automatically sell the token from the bought_tokens.json if it hits the take profit or stop-loss price
