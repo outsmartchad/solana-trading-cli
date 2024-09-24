@@ -46,7 +46,7 @@ Accelerate transaction finality using Jito and bloXroute for lightning-fast trad
 | Bloxroute | Fast trascation and accelerates transaction propagation |
 
 ### Real-Time Market Data
-Fetch critical metrics for any liquidity pool in real-time:
+Fetch critical metrics for any liquidity pool in real-time with RPC calls:
 - Price
 - LP-burn percentage
 - Pool reserve
@@ -62,7 +62,7 @@ Leverage our cutting-edge, open-source trading bots:
 | Bot Name | Features | Source |
 |----------|----------|--------|
 | gRPC Pump.fun Sniper Bot | Ultra-low latency (0.4-2 seconds) | [View source](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-pf-sniper) |
-| gRPC Copy Bot | Replicate successful trading strategies | [View source](https://github.com/outsmartchad/solana-trading-cli/tree/typescriptmain/src/grpc_streaming_dev/grpc-copy-bot) |
+| gRPC Copy Bot | Replicate successful trading strategies | [View source](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-copy-bot) |
 | gRPC Raydium Sniper Bot | Optimized for Raydium DEX | [View source](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-raydium-sniper) |
 
 ### Extensibility
