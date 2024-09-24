@@ -1,238 +1,163 @@
-[🔗doc](https://outsmartchad.github.io/solana-trading-cli/)
-## High-Performance Solana trading Bot
-A open-sourced, free, low-latency trading bot designed for developing your own trading bot. It provides swap functions of multiple dexes, and uses low-latency infrastructures like Jito and BloXroute to minimize the time it takes to execute trades, as well as fetch the real-time metric of the liquidity pool.
+## Table of Contents
+- [About](#-about)
+- [Key Features](#-key-features)
+- [Installation](#-installation)
+- [Prerequisites](#-prerequisites)
+- [Feedback and Contributions](#-feedback-and-contributions)
+- [Credits](#-credits)
+- [Disclaimer](#-disclaimer)
+- [Documentation](https://outsmartchad.github.io/solana-trading-cli/)
+
+## 🚀 About
+
+**Solana Trading Client** is a free, highly efficient library designed to facilitate rapid development and deployment of custom trading strategies across multiple Solana decentralized exchanges (DEXs). It emphasizes low-latency performance, flexibility, and real-time data processing, utilizing cutting-edge infrastructure and well-established software design principles. These features ensure the following benefits:
+
+* **Speed:** Leverages low-latency infrastructures like Jito and BloXroute to minimize trade execution times, giving your strategies a competitive edge.
+* **Versatility:** Supports multiple DEXs, allowing for diverse trading opportunities and cross-platform arbitrage.
+* **Real-time Insights:** Fetches and processes real-time live metrics using gRPC from liquidity pools, enabling data-driven decision making.
+
+The library is built with modularity and extensibility in mind, employing software design patterns that promote:
+
+* **Customizability:** Easily integrate your own trading strategies and extend the bot's functionality.
+* **Testability:** Well-separated components facilitate comprehensive testing of individual modules.
+* **Maintainability:** Clear structure and separation of concerns simplify ongoing development and updates.
+
+Designed for seamless integration into existing trading systems, the Open-Source Low-Latency Trading Bot provides a robust foundation for both novice algo-traders and experienced quantitative analysts. Its open-source nature encourages community contributions and continuous improvement, ensuring the bot evolves alongside the fast-paced world of decentralized finance.
   
-## Key Features
+## ⭐ Key Features
 
-- Create your own Solana **_SPL tokens_** on mainnet | Pump.fun
-  
-- Swap tokens on Jupiter, Raydium, Orca, Meteora, and pump.fun
-  - how to use Jupiter cli & trading functions: [here](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/jupiter/README.md)
-  - how to use Raydium cli & trading functions: [here](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/raydium/README.md)
-  - how to use Orca cli & trading functions: [here](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/orca/README.md)
-  - how to use Meteora cli & trading functions: [here](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/meteora/README.md)
-  
-- land transactions faster using Jito/bloXroute
+### Token Creation and Multi-DEX Support
+Create your own Solana SPL tokens on mainnet via Pump.fun and swap tokens across multiple decentralized exchanges:
 
-- Fetch the real-time price, lp-burn percentage, pool reserve and market cap of any liquidity pool
+| Exchange | Documentation |
+|----------|---------------|
+| Jupiter  | [CLI & trading functions guide](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/jupiter/README.md) |
+| Raydium   | [CLI & trading functions guide](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/raydium/README.md) |
+| Orca      | [CLI & trading functions guide](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/orca/README.md) |
+| Meteora   | [CLI & trading functions guide](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/meteora/README.md) |
+| Pump.fun  | Integrated support |
 
-- Using the limit order & tp/sl module locally without any dependencies [here](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/trading_dev/README.md)
+### Low-Latency Infrastructure
+Accelerate transaction finality using Jito and bloXroute for lightning-fast trades. Both capable of pushing your trasaction faster then any other service provider on the market
 
-- First Open-Source gRPC pump.fun sniper bot (0.4-2 seconds latency) [here](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-pf-sniper)
-  
-- First Open-Source gRPC copy bot [here](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-copy-bot)
+| Provider | Description |
+|----------|---------------|
+| Jito      | Fast trascation and optimizes transaction ordering and execution specifically |
+| Bloxroute | Fast trascation and accelerates transaction propagation |
 
-- Open-source gRPC Raydium sniper bot [here](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-raydium-sniper)
+### Real-Time Market Data
+Fetch critical metrics for any liquidity pool in real-time:
+- Price
+- LP-burn percentage
+- Pool reserve
+- Market cap
 
-- **_Got everything needed to create your own trading bot_**
+### Advanced Trading Tools
+Utilize our local limit order and TP/SL module with zero dependencies. 
+[Explore the documentation](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/trading_dev/README.md)
 
-## Credits
+### Open-Source Bots
+Leverage our cutting-edge, open-source trading bots:
 
-- https://github.com/raydium-io/raydium-sdk-V2
-- https://github.com/rckprtr/pumpdotfun-sdk
-- https://github.com/Al366io/solana-transactions-wrapper
+| Bot Name | Features | Source |
+|----------|----------|--------|
+| gRPC Pump.fun Sniper Bot | Ultra-low latency (0.4-2 seconds) | [View source](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-pf-sniper) |
+| gRPC Copy Bot | Replicate successful trading strategies | [View source](https://github.com/outsmartchad/solana-trading-cli/tree/typescriptmain/src/grpc_streaming_dev/grpc-copy-bot) |
+| gRPC Raydium Sniper Bot | Optimized for Raydium DEX | [View source](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-raydium-sniper) |
 
-### Installation 🛠️
+### Extensibility
+Our comprehensive toolkit provides everything you need to create your own custom trading bot, tailored to your unique strategies and requirements.
 
-1. `git clone https://github.com/outsmartchad/solana-trading-cli.git`
-2. `cd solana-trading-cli`
-3. `nvm install`
-4. `nvm use`
-5. `npm install`
-6. `ts-node test.ts` (**Remember to run this to test all the cli script**)
+## 🛠️ Installation
+Follow these steps to get your development environment set up:
 
-### Prerequisites 🚨
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/outsmartchad/solana-trading-cli.git
+   ```
 
-0. we have added a .env.copy file in src/helpers/.env.copy for you to follow and paste your keys to the code (specify the custom jito fee if you need).
-1. Add your mainnet wallet secret key(must), devnet wallet secret key (optional), RPC endpoint(must) and shyft api key(optional)
-2. rename the .env.copy file to .env
+2. **Navigate to the project directory**
+   ```bash
+   cd solana-trading-cli
+   ```
 
-# Documentation
+3. **Install the correct Node.js version**
+   ```bash
+   nvm install
+   nvm use
+   ```
 
-### Developer CLI:
+4. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-- Check the balance of a token in your wallet
-- wrap/unwrap solana
-- Create a new SPL token or zk-compressed token (on SOL mainnet/devnet/zk-devnet) and it will automatically mint to your wallet
-- boost volume of a token by creating buy and sell orders in just **one transaction**
-- **Add or Remove liquidity** to a pool
-- **Buy, Sell, and launch token in pump.fun**
-- monitor real-time pump-fun's create, trade, and complete bonding curve events
-  
-### Trader CLI:
+5. **Run the test script**
+   ```bash
+   ts-node test.ts
+   ```
 
-- integrates both **jito tips, bloXroute fee** that land transactions faster
-- swap tokens on **Raydium, Meteora, and Orca**
-- swap tokens using Jupiter API
-- ws copy bot with auto-buy&sell
-- geyser **grpc Pump.fun sniper bot** with 0.4-2 seconds latency
-- geyser **grpc Copy bot** to copy trades from a target wallet address
-- geyser **grpc Raydium sniper bot** 
-- easy-to-use tp/sl module
+### Installation Prerequisites
 
-## Features in Development 🚧:
+- [Node Version Manager (nvm)](https://github.com/nvm-sh/nvm)
+- [Node.js](https://nodejs.org/) (version specified in `.nvmrc`)
+- [npm](https://www.npmjs.com/) (comes with Node.js)
 
-- With user-defined Jito tips and priority Lamports supported for every command
-- sniping tools on raydium using yellowstone geyser grpc
-- **More Strategies** for Trading dev
-- more features to come...
+### Troubleshooting
 
-# Commands </>
+If you encounter any issues during installation, please check our [FAQ](link-to-faq) or [open an issue](https://github.com/outsmartchad/solana-trading-cli/issues).
 
-1. Specify the token symbol, name, mint keypair(optional, will help u to generate), supply, decimals, path to metadata json file, path to image file, the cluster you want to use, and the file type(png, jpg, jpeg).
+## 🚨 Set Up 
 
-    ```sh
-    ts-node create --payer <PATH_TO_SECRET_KEY> --symbol <TOKEN_SYMBOL> --token_name <TOKEN_NAME> --mint <PATH_TO_MINT_KEYPAIR> --supply <SUPPLY_OF_TOKEN> --decimals <DECIMALS> --metadata <PATH_METADATA_JSON> --image <PATH_TO_IMAGE> --cluster <CLUSTER> --priority-fee <PRIORITY_FEE> --file_type <FILE_TYPE>
-    ```
+Before you begin, ensure you have completed the following steps:
 
-2. Specify the token address, the percentage of the token you want to burn and the cluster you want to use.
+### 1. Environment Configuration
 
-    ```sh
-    ts-node burn --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <BURN_PERCENTAGE> --cluster <CLUSTER>
-    ```
+1. Locate the template file:
+   ```
+   src/helpers/.env.copy
+   ```
 
-3. Specify the token address and the cluster you want to use.
+2. Copy this file and rename it to `.env` in the same directory.
 
-    ```sh
-    ts-node revoke_authority --payer <PATH_TO_SECRET_KEY> --mint_address <ADDRESS_TOKEN> --cluster <CLUSTER> --mint --freeze
-    ```
+3. Open the `.env` file and add the following required information:
+   - Mainnet wallet secret key (required)
+   - RPC endpoint (required)
+   - Custom Jito fee (if needed)
 
-4. Specify the token address you want to query and the cluster for boosting the volume of the token.
+4. Optional configurations:
+   - Devnet wallet secret key
+   - Shyft API key
 
-    ```sh
-    ts-node boost_volume --token_address <TOKEN_ADDRESS> --payer <PATH_TO_SECRET_KEY> --cluster <CLUSTER> --sol_per_order <SOL_PER_ORDER>
-    ```
+### 2. API Keys and Wallet Setup
 
-5. Specify the token address, the amount of Sol you want to swap, and the cluster you want to use.
+- **Mainnet Wallet**: Ensure you have a funded Solana mainnet wallet. The secret key is required for mainnet transactions.
+- **RPC Endpoint**: Obtain a reliable RPC endpoint for connecting to the Solana network.
+- **Jito Integration**: If using Jito, prepare your custom fee configuration.
+- **Devnet Wallet** (Optional): For testing purposes, set up a devnet wallet.
+- **Shyft API** (Optional): If you plan to use Shyft services, obtain an API key from [Shyft](https://shyft.to/).
 
-    ```sh
-    ts-node buy --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL> --cluster <CLUSTER>
-    ```
+### 3. Final Check
 
-6. Specify the token address, the percentage of the token you want to sell, and the cluster you want to use.
+- Confirm that your `.env` file is properly configured and saved.
+- Ensure the `.env` file is in the correct location: `src/helpers/.env`
+- Verify that you haven't accidentally committed your `.env` file to version control.
 
-    ```sh
-    ts-node sell --payer <PATH_TO_SECRET_KEY> --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE> --cluster <CLUSTER>
-    ```
+> ⚠️ **Security Note**: Never share or commit your `.env` file or any private keys. The `.env` file is included in `.gitignore` for your safety.
 
-7. Specify the token address, the pool id(optional, will help to find the pool with the most liquidity using the given token address), the amount of Sol you want to add, and the cluster you want to use.
+For any issues with configuration, please refer to our [Troubleshooting Guide](link-to-troubleshooting) or [open an issue](https://github.com/yourusername/your-repo-name/issues).
 
-    ```sh
-    ts-node add_pool --payer <PATH_WALLET> --token_address <ADDRESS_TOKEN> --pool_id <POOL_ID> --sol <NUMBER_OF_SOL> --cluster <CLUSTER> --priority_fee <PRIORITY_FEE>
-    ```
+## 🤝 Feedback and Contributions
+We've made every effort to implement all the main aspects of solana trading in the best possible way. However, the development journey doesn't end here, and your input is crucial for our continuous improvement.
 
-8. Specify the token address, the percentage of the LP token you want to remove(1=1%), and the cluster you want to use.
+> [!IMPORTANT]
+> Whether you have feedback on features, have encountered any bugs, or have suggestions for enhancements, we're eager to hear from you. Your insights help us make the Solana Trading Client library more robust and user-friendly.
 
-    ```sh
-    ts-node remove_pool --payer <PATH_PAYER> --token_address <TOKEN_ADDRESS> --percentage <LP_TOKEN_PERCENTAGE> --cluster <CLUSTER>
-    ```
+Please feel free to contribute by submitting an issue, joining the discussions, or joining our discord. Each contribution helps us grow and improve.
 
-9. wrap your sol to wsol.
+We appreciate your support and look forward to making our product even better with your help!
 
-    ```sh
-    ts-node wrap_sol.js --size <size>
-    ```
-
-10. unwrap your wsol to sol.
-
-    ```sh
-    ts-node unwrap_sol.js
-    ```
-
-### Pump.fun commands
-
-9. Specify the path to your mint keypair, the amount of Sol you want to buy, the name of the token, the symbol of the token, the description of the token, the telegram link, the twitter link, the website link, and the image file path.
-
-    ```sh
-    ts-node createAndBuy --pathToMintKeypair <PATH_TO_MINT_KEYPAIR> --sol <NUMBER_OF_SOL> --name <TOKEN_NAME> --symbol <TOKEN_SYMBOL> --description <TOKEN_DESCRIPTION> --telegram <TELEGRAM_LINK> --twitter <TWITTER_LINK> --website <WEBSITE_LINK> --file <IMAGE_FILE_PATH>
-    ```
-
-10. Specify the token address, the sol you want to buy
-
-    ```sh
-    ts-node buy --token_address <ADDRESS_TOKEN> --sol <NUMBER_OF_SOL>
-    ```
-
-11. Specify the token address, the percentage of the token you want to sell
-
-    ```sh
-    ts-node sell --token_address <ADDRESS_TOKEN> --percentage <SELL_PERCENTAGE>
-    ```
-
-# Code Usage </>
-
-## Raydium/Orca/Meteora as dex:
-
-- src/dex/sell_helper.ts: selling spl token to SOL using the dex swap function (use WSOL in Raydium, SOL in Orca/Meteora)
-
-- src/dex/buy_helper.ts: buying spl token using SOL using dex swap function (use WSOL in Raydium, SOL in Orca/Meteora)
-
-- src/dex/fetch-price.ts: fetch the current price of a token
-
-- src/dex/Pool/swap.ts: swap function for buy/sell/swap token
-
-- src/dex/Pool/fetch_pool.ts: fetch the current address of a liquidity pool
-
-- src/dex/token-filters/lp-burn.ts: fetch current burn percentage of liquidity pool token
-
-- src/dex/token-filters/marketcap.ts: fetch current market cap of a token
-
-- src/dex/token-filters/pool-sol.ts: fetch current SOL reserver in a liquidity pool
-
-- src/dex/token-filters/volume.ts: fetch current/historical volume of a liquidity pool
-
-## Jupiter
-
-- src/jupiter/swap/*.ts: helper functions for swap/sell/buy using Jupiter
-
-- src/jupiter/buy.ts: buy a token using Jupiter (using SOL)
-
-- src/jupiter/sell.ts: sell a token using Jupiter (using SOL)
-
-- src/jupiter/fetch-price.ts: fetch the current price of a token
-
-## gRPC bots
-
-- src/grpc_streaming_dev/grpc-copy-bot: first grpc copy trading bot on Raydium
-
-- src/grpc_streaming_dev/grpc-pf-sniper: first, fastest grpc sniper bot on Pump.fun
-
-- src/grpc_streaming_dev/grpc-raydium-sniper: fastest grpc sniper bot on raydium for sniping pump.fun-migrated token or raydium-launched token
-
-## gRPC projects for beginner: 
-
-- src/grpc_intro_projects/grpc-pool-price: grpc bot for streaming the pool price on Raydium
-
-- src/grpc_intro_projects/grpc-raydium-trades: grpc bot for streaming the trades on Raydium
-
-- src/grpc_intro_projects/grpc-jupiter-trades: grpc bot for streaming the trades on Jupiter
-
-
-## Transactions:
-
-- src/transactions/jito_tips_tx_executor.ts: execute the transaction by sending the bundles to Jito validators, they help us to land the transaction to the Solana blockchain faster than just using priority fee.
-
-- src/transactions/bloXroute_tips_tx_executor.ts: execute the transaction by sending the transaction to bloXroute node, they help us to prevent MEV and forward the transaction to current/next few block leaders for faster execution.
-
-- src/transactions/simple_tx_executor.ts: execute the transaction by sending the request to the Solana blockchain with a given priority gas fee.
-
-## token:
-
-- src/token/create.ts: create a spl token on devnet or mainnet with a given name, symbol, token image(using irys decentralized storage), metadata json file, supply, decimals, the code by default revokes the mint authority and freeze authority after creating the token so that the token has a cap and no one can feeze the token of the token holder, it will then mint all the token to your wallet
-
-- src/token/burn.ts: burn spl token with a given percentage of the token from your wallet
-
-- src/token/revoke_authority.ts: revoke mint and freeze authority of a given token
-
-## Helper methods:
-
-- src/helpers/config.ts: configuration file for the code.
-
-- src/helpers/util.ts: utility functions for the code, including: send transactions to Solana blockchain, dropped transactions handling, etc.
-
-- src/helpers/check_balance.ts: check the balance of a given token in your wallet
-
-## Contributing
+### How to Contribute
 
 - Contributions is wellcome!!!
 - Fork it
@@ -241,13 +166,19 @@ A open-sourced, free, low-latency trading bot designed for developing your own t
 - `git push origin feature/YourNewFeature`
 - And Please open a pull request
 
-## Apply Latest Changes from remote repo
+### Apply Latest Changes from remote repo
 
 - `git stash -u  # Stash your changes`
 - `git pull --rebase # Pull the latest changes`
 - `git stash pop # Apply Your stashed changes`
 
-## Disclaimer
+## ✅ Credits
+
+- https://github.com/raydium-io/raydium-sdk-V2
+- https://github.com/rckprtr/pumpdotfun-sdk
+- https://github.com/Al366io/solana-transactions-wrapper
+
+## ‼️ Disclaimer
 
 This software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software.
 
