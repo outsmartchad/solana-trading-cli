@@ -115,7 +115,7 @@ Before you begin, ensure you have completed the following steps:
 
 1. Locate the template file:
    ```
-   src/helpers/.env.copy
+   src/helpers/.env.example
    ```
 
 2. Copy this file and rename it to `.env` in the same directory.
