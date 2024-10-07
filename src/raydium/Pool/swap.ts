@@ -40,8 +40,9 @@ import { simple_executeAndConfirm } from "../../transactions/simple_tx_executor"
 import { jito_executeAndConfirm } from "../../transactions/jito_tips_tx_executor";
 import { bloXroute_executeAndConfirm } from "../../transactions/bloXroute_tips_tx_executor";
 import { Keypair } from "@solana/web3.js";
+import { initSdk } from "../raydium_config";
 let tokenToPoolIdMap: any = {};
-
+let sdkCache = { sdk: null, expiry: 0 };
 /**
  * Performs a swap transaction using an Automated Market Maker (AMM) pool.
  * @param {Object} input - The input parameters for the swap transaction.
@@ -57,15 +58,22 @@ let tokenToPoolIdMap: any = {};
  */
 async function swapOnlyAmm(input: any) {
   // -------- pre-action: get pool info --------\
-
+  let raydium: any = null;
+  if (sdkCache.sdk) {
+    raydium = sdkCache.sdk;
+  } else {
+    raydium = await initSdk();
+    sdkCache.sdk = raydium;
+  }
   const poolKeys: any = await formatAmmKeysById_swap(
     new PublicKey(input.targetPool)
   );
   assert(poolKeys, "cannot find the target pool");
-  const poolInfo = await Liquidity.fetchInfo({
-    connection: connection,
-    poolKeys: poolKeys,
-  });
+  // const poolInfo = await Liquidity.fetchInfo({
+  //   connection: connection,
+  //   poolKeys: poolKeys,
+  // });
+  const poolInfo = await raydium.liquidity.getRpcPoolInfo(input.targetPool);
   // -------- step 1: coumpute amount out --------
   const { amountOut, minAmountOut } = Liquidity.computeAmountOut({
     poolKeys: poolKeys,
@@ -74,6 +82,7 @@ async function swapOnlyAmm(input: any) {
     currencyOut: input.outputToken,
     slippage: input.slippage,
   });
+
   // -------- step 2: create instructions by SDK function --------
   const { innerTransaction } = await Liquidity.makeSwapFixedInInstruction(
     {
