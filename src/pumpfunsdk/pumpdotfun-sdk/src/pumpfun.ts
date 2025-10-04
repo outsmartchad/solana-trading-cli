@@ -44,10 +44,10 @@ export const METADATA_SEED = "metadata";
 export const DEFAULT_DECIMALS = 6;
 
 export class PumpFunSDK {
-  public program: Program<PumpFun>;
+  public program: Program<any>;
   public connection: Connection;
   constructor(provider?: Provider) {
-    this.program = new Program<PumpFun>(IDL as PumpFun, provider);
+    this.program = new Program<any>(IDL as any, new PublicKey(PROGRAM_ID), provider);
     this.connection = this.program.provider.connection;
   }
   async bundleBuys(

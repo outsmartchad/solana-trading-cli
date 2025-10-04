@@ -25,17 +25,17 @@ const main = async () => {
 
   let sdk = new PumpFunSDK(provider);
 
-  let createEvent = sdk.addEventListener("createEvent", (event) => {
+  let createEvent = sdk.addEventListener("createEvent", (event: any) => {
     console.log("createEvent", event);
   });
   console.log("createEvent", createEvent);
 
-  let tradeEvent = sdk.addEventListener("tradeEvent", (event) => {
+  let tradeEvent = sdk.addEventListener("tradeEvent", (event: any) => {
     console.log("tradeEvent", event);
   });
   console.log("tradeEvent", tradeEvent);
 
-  let completeEvent = sdk.addEventListener("completeEvent", (event) => {
+  let completeEvent = sdk.addEventListener("completeEvent", (event: any) => {
     console.log("completeEvent", event);
   });
   console.log("completeEvent", completeEvent);

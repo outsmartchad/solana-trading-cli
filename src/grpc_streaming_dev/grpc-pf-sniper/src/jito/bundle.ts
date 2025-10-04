@@ -46,17 +46,21 @@ import {
   }
   
   
-  // Get Tip Accounts
-  
-  let tipAccounts: string[] = [];
-  (async () => {
+// Get Tip Accounts
+
+let tipAccounts: string[] = [];
+(async () => {
   try {
-      tipAccounts = await c.getTipAccounts();
-      // console.log('Result:', tipAccounts);
+    const tipResult = await c.getTipAccounts();
+    if ((tipResult as any).ok) {
+      tipAccounts = (tipResult as any).value as string[];
+    } else {
+      logger.warn({ err: (tipResult as any).error }, 'Failed to fetch tip accounts');
+    }
   } catch (error) {
-      console.error('Error:', error);
+    console.error('Error:', error);
   }
-  })();
+})();
   
   
   

@@ -51,7 +51,7 @@ import { AnchorProvider } from "@coral-xyz/anchor";
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 import { printSPLBalance } from "../pumpdotfun-sdk/example/util";
 let wallet: Keypair;
-let dev_wallet: Keypair;
+let dev_wallet: Keypair | undefined;
 let quoteAmount: TokenAmount;
 quoteAmount = new TokenAmount(Token.WSOL, QUOTE_AMOUNT, false);
 export const solanaConnection = new Connection(RPC_ENDPOINT, {
@@ -167,12 +167,14 @@ export async function sell(
   if (isJito) {
     sendBundle(latestBlockhash.blockhash, transaction, mintPublicKey, wallet); // with jito
     await new Promise((r) => setTimeout(r, 1000));
-    sendBundle(
-      latestBlockhash.blockhash,
-      transaction,
-      mintPublicKey,
-      dev_wallet
-    ); // with jito
+    if (dev_wallet) {
+      sendBundle(
+        latestBlockhash.blockhash,
+        transaction,
+        mintPublicKey,
+        dev_wallet
+      ); // with jito
+    }
   } else simple_executeAndConfirm(transaction); // without jito
 }
 
@@ -249,6 +251,9 @@ export async function createAndBuy(
   tokenMetadata: any,
   initialBuySolAmount: number
 ) {
+  if (!dev_wallet) {
+    throw new Error('dev_wallet is not configured');
+  }
   const Wallet = new NodeWallet(dev_wallet);
   const provider = new AnchorProvider(solanaConnection, Wallet, {
     commitment: "processed",
