@@ -70,12 +70,17 @@ return client;
 
 let tipAccounts: string[] = [];
 (async () => {
-try {
-    tipAccounts = await c.getTipAccounts();
-    console.log('Result:', tipAccounts);
-} catch (error) {
+  try {
+    const tipResult: any = await c.getTipAccounts();
+    if (tipResult && tipResult.ok) {
+      tipAccounts = tipResult.value as string[];
+      console.log('Result:', tipAccounts);
+    } else {
+      console.warn('Failed to fetch tip accounts', tipResult?.error);
+    }
+  } catch (error) {
     console.error('Error:', error);
-}
+  }
 })();
 
 

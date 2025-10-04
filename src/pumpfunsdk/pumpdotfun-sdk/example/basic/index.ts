@@ -11,7 +11,7 @@ import {
   printSPLBalance,
 } from "../util";
 
-const KEYS_FOLDER = __dirname + "/.keys";s
+const KEYS_FOLDER = __dirname + "/.keys";
 const SLIPPAGE_BASIS_POINTS = 100n;
 
 //create token example:
@@ -85,7 +85,7 @@ const main = async () => {
       },
     );
 
-    if (createResults.success) {
+    if ((createResults as any).success) {
       console.log("Success:", `https://pump.fun/${mint.publicKey.toBase58()}`);
       boundingCurveAccount = await sdk.getBondingCurveAccount(mint.publicKey);
       console.log("Bonding curve after create and buy", boundingCurveAccount);
