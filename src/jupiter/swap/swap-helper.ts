@@ -18,7 +18,7 @@ export async function getQuote(
   convertedAmountOfTokenOut: number,
   slippage: any
 ) {
-  const url = `https://quote-api.jup.ag/v6/quote?inputMint=${tokenToSell}&outputMint=${tokenToBuy}&amount=${convertedAmountOfTokenOut}&slippageBps=${slippage}`;
+  const url = `https://public.jupiterapi.com/quote?inputMint=${tokenToSell}&outputMint=${tokenToBuy}&amount=${convertedAmountOfTokenOut}&slippageBps=${slippage}`;
   const response = await fetch(url);
   const quote = await response.json();
   return quote;
@@ -44,7 +44,7 @@ export async function getSwapTransaction(
       dynamicComputeUnitLimit: true, // allow dynamic compute limit instead of max 1,400,000
       prioritizationFeeLamports: 4211970, // prioritization fee
     };
-    const resp = await fetch("https://quote-api.jup.ag/v6/swap", {
+    const resp = await fetch("https://public.jupiterapi.com/swap", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
