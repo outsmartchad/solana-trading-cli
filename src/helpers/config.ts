@@ -13,55 +13,116 @@ import fs from "fs";
 import dotenv from "dotenv";
 import bs58 from "bs58";
 import path from "path";
-// default path: /Users/{your_user_name}/Desktop/solana-trading-cli/src/helpers/.env
-// please specify your own .env path
-const envPath = path.join(__dirname, ".env");
 
-// Check if .env file exists before trying to load it
-if (!fs.existsSync(envPath)) {
-    throw new Error(`Please specify your private key and rpc url in src/helpers/.env.example and rename it to .env.`);
+// Config resolution order:
+// 1. Environment variables (always override)
+// 2. .env in current working directory
+// 3. .env in src/helpers/ (legacy path)
+// 4. ~/.outsmart/config.env (global config)
+const homeConfigPath = path.join(
+  process.env.HOME || process.env.USERPROFILE || "~",
+  ".outsmart",
+  "config.env"
+);
+const legacyEnvPath = path.join(__dirname, ".env");
+const cwdEnvPath = path.join(process.cwd(), ".env");
+
+if (fs.existsSync(cwdEnvPath)) {
+  dotenv.config({ path: cwdEnvPath });
+} else if (fs.existsSync(legacyEnvPath)) {
+  dotenv.config({ path: legacyEnvPath });
+} else if (fs.existsSync(homeConfigPath)) {
+  dotenv.config({ path: homeConfigPath });
 }
-dotenv.config({
-  path: envPath, // fill in your .env path
-});
-export function loadKeypairFromFile(filename: string) {
+// Note: if no .env file found, we proceed with environment variables only.
+// This allows the CLI to run `outsmart init` without a pre-existing config.
+
+export function loadKeypairFromFile(filename: string): Keypair {
   const secret = fs.readFileSync(filename, { encoding: "utf8" });
   return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(secret)));
 }
-export const jito_fee:any = process.env.JITO_FEE; // 0.00009 SOL
-export const shyft_api_key = process.env.SHYFT_API_KEY; // your shyft api key
-export const wallet = Keypair.fromSecretKey(
-  bs58.decode(process.env.PRIVATE_KEY || "")
-); // your wallet
-export const private_key = process.env.PRIVATE_KEY; // your private key
-export const dev_endpoint = process.env.DEVNET_ENDPOINT || ""; // devnet endpoint, if you use devnet
-export const main_endpoint = process.env.MAINNET_ENDPOINT || ""; // mainnet endpoint
-export const bloXRoute_auth_header = process.env.BLOXROUTE_AUTH_HEADER;
-export const bloXroute_fee = process.env.BLOXROUTE_FEE; // 0.001 SOL
-// const second_main_endpoint = process.env.SECOND_MAINNET_ENDPOINT; // if you use copy trade program, second mainnet endpoint
-// const RPC_Websocket_endpoint = process.env.WS_ENDPOINT;
-// const second_RPC_Websocket_endpoint = process.env.SECOND_WS_ENDPOINT; // if you use copy trade program
-// const stop_lost = process.env.STOP_LOST; // percentage of stop lost, if you use copy trade program
-// const take_profit = process.env.TAKE_PROFIT; // percentage of take profit, if you use copy trade program
-export const smart_money_wallet = process.env.SMART_MONEY_WALLET; // if you use copy trade program
-export const connection = new Connection(main_endpoint, "confirmed"); // mainnet connection
-//const connection = new Connection(main_endpoint, { // if you use copy trade program
-//  wsEndpoint: RPC_Websocket_endpoint,
-//  commitment: "confirmed",
-//});
-//const second_connection = new Connection(second_main_endpoint, { // if you use copy trade program
-//  wsEndpoint: second_RPC_Websocket_endpoint,
-//  commitment: "confirmed",
-//});
-export const dev_connection = new Connection(dev_endpoint, "confirmed"); // devnet connection
 
-export const PROGRAMIDS = MAINNET_PROGRAM_ID; // raydium mainnet program address
+// --- Lazy wallet initialization ---
+// The wallet is NOT decoded at import time. Use getWallet() to access it.
+let _wallet: Keypair | null = null;
 
-export const RAYDIUM_MAINNET_API = RAYDIUM_MAINNET; // raydium mainnet program's api
+export function getWallet(): Keypair {
+  if (!_wallet) {
+    const key = process.env.PRIVATE_KEY;
+    if (!key) {
+      throw new Error(
+        "PRIVATE_KEY not set. Run 'outsmart init' to configure, or set PRIVATE_KEY in your environment."
+      );
+    }
+    try {
+      _wallet = Keypair.fromSecretKey(bs58.decode(key));
+    } catch (e) {
+      throw new Error("Invalid PRIVATE_KEY. Must be a valid base58-encoded Solana secret key.");
+    }
+  }
+  return _wallet;
+}
 
-export const makeTxVersion = TxVersion.V0; // LEGACY
-export const _ENDPOINT = ENDPOINT; // raydium mainnet program's base api path
-export const addLookupTableInfo = LOOKUP_TABLE_CACHE; // only mainnet. other = undefined
+// Backward compatibility: lazy getter that triggers on first access
+// WARNING: Deprecated. Use getWallet() in new code.
+let _walletProxy: Keypair | null = null;
+Object.defineProperty(module.exports, "wallet", {
+  get: () => {
+    if (!_walletProxy) {
+      _walletProxy = getWallet();
+    }
+    return _walletProxy;
+  },
+  enumerable: true,
+});
+// Also export for TypeScript consumers that use the named export directly
+export const wallet: Keypair = null as unknown as Keypair; // Overridden by defineProperty above
+
+// --- Validated config values ---
+export const jito_fee: number = parseFloat(process.env.JITO_FEE || "0.0001");
+export const shyft_api_key: string = process.env.SHYFT_API_KEY || "";
+export const dev_endpoint: string = process.env.DEVNET_ENDPOINT || "";
+export const main_endpoint: string = process.env.MAINNET_ENDPOINT || "";
+export const bloXRoute_auth_header: string = process.env.BLOXROUTE_AUTH_HEADER || "";
+export const bloXroute_fee: number = parseFloat(process.env.BLOXROUTE_FEE || "0.001");
+export const smart_money_wallet: string = process.env.SMART_MONEY_WALLET || "";
+
+// --- TX Landing config ---
+export const DEFAULT_TIP_SOL: number = parseFloat(process.env.DEFAULT_TIP_SOL || "0.001");
+export const DEFAULT_SLIPPAGE_BPS: number = parseInt(process.env.DEFAULT_SLIPPAGE_BPS || "300", 10);
+export const TX_LANDING_MODE: string = process.env.TX_LANDING_MODE || "concurrent";
+
+// --- Lazy connection initialization ---
+let _connection: Connection | null = null;
+
+export function getConnection(): Connection {
+  if (!_connection) {
+    if (!main_endpoint) {
+      throw new Error(
+        "MAINNET_ENDPOINT not set. Run 'outsmart init' to configure, or set MAINNET_ENDPOINT in your environment."
+      );
+    }
+    _connection = new Connection(main_endpoint, "confirmed");
+  }
+  return _connection;
+}
+
+// Backward compatibility: eager connection (will throw if no endpoint)
+// WARNING: Deprecated. Use getConnection() in new code.
+export const connection: Connection = main_endpoint
+  ? new Connection(main_endpoint, "confirmed")
+  : (null as unknown as Connection);
+
+export const dev_connection: Connection = dev_endpoint
+  ? new Connection(dev_endpoint, "confirmed")
+  : (null as unknown as Connection);
+
+// --- Raydium SDK re-exports ---
+export const PROGRAMIDS = MAINNET_PROGRAM_ID;
+export const RAYDIUM_MAINNET_API = RAYDIUM_MAINNET;
+export const makeTxVersion = TxVersion.V0;
+export const _ENDPOINT = ENDPOINT;
+export const addLookupTableInfo = LOOKUP_TABLE_CACHE;
 
 export const DEFAULT_TOKEN = {
   SOL: new Currency(9, "SOL", "SOL"),
@@ -81,5 +142,7 @@ export const DEFAULT_TOKEN = {
   ),
 };
 
-
+// --- Common constants ---
 export const wsol = "So11111111111111111111111111111111111111112";
+export const usdc = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+export const usdt = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
