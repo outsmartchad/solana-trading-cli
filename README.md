@@ -17,7 +17,7 @@ outsmart add-liq --dex meteora-lp-dlmm --pool <POOL> --amount-a 1.0
 | raydium-clmm | CLMM | x | x | x | x | x | |
 | raydium-launchlab | Launchlab | x | | | x | x | |
 | meteora-damm-v1 | Dynamic AMM | x | | x | x | x | |
-| meteora-damm-v2 | CpAmm | x | x | x | x | x | |
+| meteora-damm-v2 | CpAmm | x | x | x | x | x | add/remove/claim |
 | meteora-dlmm | DLMM | x | | x | | x | |
 | meteora-dbc | DBC | x | x | x | | x | |
 | meteora-lp-dlmm | DLMM LP | | | | | | add/remove |
