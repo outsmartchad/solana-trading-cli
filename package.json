@@ -1,69 +1,88 @@
 {
-  "name": "solana-trading-cli",
-  "version": "1.0.0",
-  "description": "Best development tool for Algo Trading on Solana",
-  "main": "help.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "name": "outsmart",
+  "version": "2.0.0-alpha.0",
+  "description": "The most powerful Solana trading CLI. 19 DEXes, 12 TX landing providers.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "outsmart": "./dist/cli.js"
   },
-  "keywords": [],
+  "files": [
+    "dist/",
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "npm run clean && npm run build:ts && npm run build:chmod",
+    "build:ts": "tsc -p tsconfig.build.json",
+    "build:chmod": "chmod +x dist/cli.js || true",
+    "clean": "rm -rf dist/",
+    "dev": "ts-node src/cli.ts",
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [
+    "solana",
+    "trading",
+    "cli",
+    "dex",
+    "raydium",
+    "meteora",
+    "orca",
+    "jupiter",
+    "pancakeswap",
+    "sniper",
+    "swap",
+    "outsmart"
+  ],
   "author": "vincentso",
   "url": "https://github.com/outsmartchad/solana-trading-cli/issues",
   "homepage": "https://github.com/outsmartchad/solana-trading-cli",
   "license": "ISC",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "dependencies": {
     "@bloxroute/solana-trader-client-ts": "^2.1.6",
-    "@coral-xyz/anchor": "^0.28.1-beta.2",
-    "@mercurial-finance/dynamic-amm-sdk": "^1.0.3",
+    "@coral-xyz/anchor": "^0.30.1",
     "@meteora-ag/dlmm": "^1.0.54",
-    "@orca-so/common-sdk": "^0.6.0-alpha.3",
-    "@orca-so/whirlpools-sdk": "^0.11.8",
-    "@project-serum/anchor": "^0.26.0",
-    "@project-serum/serum": "^0.13.65",
     "@raydium-io/raydium-sdk": "^1.3.1-beta.47",
     "@raydium-io/raydium-sdk-v2": "^0.1.23-alpha",
     "@metaplex-foundation/js": "^0.20.1",
-    "@metaplex-foundation/mpl-candy-machine": "^6.0.1",
     "@metaplex-foundation/mpl-token-metadata": "^3.2.1",
     "@metaplex-foundation/umi": "^0.9.1",
     "@metaplex-foundation/umi-bundle-defaults": "^0.9.1",
     "@solana/spl-token": "^0.4.0",
-    "@solana/web3.js": "^1.89.1",
+    "@solana/web3.js": "^1.95.0",
     "axios": "^1.6.8",
-    "bip39": "^3.1.0",
     "bn.js": "^5.2.1",
     "bs58": "^5.0.0",
     "commander": "^12.1.0",
     "decimal.js": "^10.4.3",
     "dotenv": "^16.4.5",
-    "i": "^0.3.7",
-    "npm": "^10.5.2",
     "pino": "^8.18.0",
     "pino-pretty": "^10.3.1",
-    "pino-std-serializers": "^6.2.2",
     "pumpdotfun-sdk": "^1.3.2",
-    "random-js": "^2.1.0",
     "rpc-websockets": "7.10.0",
     "@triton-one/yellowstone-grpc": "^0.4.0",
-    "jito-ts": "^4.0.0",
     "async-mutex": "^0.5.0",
     "bigint-buffer": "^1.1.5",
     "@shyft-to/solana-transaction-parser": "^1.1.17"
   },
   "overrides": {
-    "@solana/web3.js": "^1.89.1",
+    "@solana/web3.js": "^1.95.0",
     "axios": "^1.6.8",
     "bigint-buffer": "^1.1.5"
   },
   "resolutions": {
-    "@solana/web3.js": "^1.89.1",
+    "@solana/web3.js": "^1.95.0",
     "axios": "^1.6.8",
     "bigint-buffer": "^1.1.5"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
     "typescript": "^5.5.4"
-  },
-  "engines": {
-    "node": "22.2.0"
   }
 }

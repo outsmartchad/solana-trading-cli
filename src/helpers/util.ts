@@ -6,93 +6,75 @@ import {
 import { PublicKey, VersionedTransaction, Keypair } from "@solana/web3.js";
 import {
   addLookupTableInfo,
-  connection,
+  getConnection,
+  getWallet,
   makeTxVersion,
-  wallet,
+  DEFAULT_SLIPPAGE_BPS,
 } from "./config";
 import { Metaplex } from "@metaplex-foundation/js";
 import fs from "fs";
 import {
   Connection,
   LAMPORTS_PER_SOL,
-  SystemProgram,
-  TransactionInstruction,
-  TransactionMessage,
-  Transaction,
   ComputeBudgetProgram,
 } from "@solana/web3.js";
 
 /**
  * Retrieves the metadata of a token based on its address.
- * @param {string} address - The address of the token.
- * @returns {Promise<{ tokenName: string, tokenSymbol: string }>} The token metadata, including the token name and symbol.
  */
-export async function getTokenMetadata(address:string) {
+export async function getTokenMetadata(address: string) {
+  const connection = getConnection();
   const metaplex = Metaplex.make(connection);
-
   const mintAddress = new PublicKey(address);
 
-  let tokenName;
-  let tokenSymbol;
+  let tokenName: string | undefined;
+  let tokenSymbol: string | undefined;
 
-  const metadataAccount = metaplex
-    .nfts()
-    .pdas()
-    .metadata({ mint: mintAddress });
-
+  const metadataAccount = metaplex.nfts().pdas().metadata({ mint: mintAddress });
   const metadataAccountInfo = await connection.getAccountInfo(metadataAccount);
 
   if (metadataAccountInfo) {
-    const token = await metaplex
-      .nfts()
-      .findByMint({ mintAddress: mintAddress });
+    const token = await metaplex.nfts().findByMint({ mintAddress });
     tokenName = token.name;
     tokenSymbol = token.symbol;
   }
   return { tokenName, tokenSymbol };
 }
+
 /**
  * Sends multiple transactions to the Solana blockchain.
- * @param {Connection} connection - The Solana connection object.
- * @param {Account} payer - The payer account for signing the transactions.
- * @param {Array<Transaction>} txs - An array of transactions to be sent.
- * @param {TransactionSendOptions} options - The options for sending the transactions.
- * @returns {Promise<Array<string>>} - A promise that resolves to an array of transaction IDs.
  */
-export async function sendTx(connection:Connection, payer:Keypair, txs:any, options:any) {
-  const txids = [];
-  try {
-    for (const iTx of txs) {
+export async function sendTx(
+  connection: Connection,
+  payer: Keypair,
+  txs: (VersionedTransaction | any)[],
+  options?: { skipPreflight?: boolean; maxRetries?: number }
+): Promise<string[]> {
+  const txids: string[] = [];
+  for (const iTx of txs) {
+    try {
       if (iTx instanceof VersionedTransaction) {
         iTx.sign([payer]);
-
-        txids.push(
-          await connection.sendRawTransaction(iTx.serialize(), options)
-        );
+        txids.push(await connection.sendRawTransaction(iTx.serialize(), options));
       } else {
         txids.push(await connection.sendTransaction(iTx, [payer], options));
       }
+    } catch (e) {
+      console.error("sendTx error on transaction:", e);
+      // Continue with remaining transactions but surface the error
+      throw e;
     }
-  } catch (e) {
-    console.log(e);
-    return txids;
   }
   return txids;
 }
 
 /**
  * Retrieves the token account associated with a wallet.
- * @param {Connection} localconnection - The connection object.
- * @param {Wallet} localwallet - The wallet object.
- * @returns {Array} An array of token account objects.
  */
-export async function getWalletTokenAccount(localconnection:Connection, localwallet:PublicKey) {
-  const walletTokenAccount = await localconnection.getTokenAccountsByOwner(
-    localwallet,
-    {
-      programId: TOKEN_PROGRAM_ID,
-    }
-  );
+export async function getWalletTokenAccount(localconnection: Connection, localwallet: PublicKey) {
+  const walletTokenAccount = await localconnection.getTokenAccountsByOwner(localwallet, {
+    programId: TOKEN_PROGRAM_ID,
+  });
   return walletTokenAccount.value.map((i) => ({
     pubkey: i.pubkey,
     programId: i.account.owner,
@@ -101,140 +83,126 @@ export async function getWalletTokenAccount(localconnection:Connection, localwal
 }
 
 /**
- * Builds and sends a transaction using the provided innerSimpleV0Transaction and options.
- * @param {Object} innerSimpleV0Transaction - The inner transaction object.
- * @param {Object} options - The options for the transaction.
- * @returns {Promise} - A promise that resolves with the result of the transaction.
+ * Builds and sends a transaction with configurable compute budget.
  */
-export async function buildAndSendTx(innerSimpleV0Transaction:any, options:any) {
+export async function buildAndSendTx(
+  innerSimpleV0Transaction: any[],
+  options?: { skipPreflight?: boolean; maxRetries?: number },
+  computeUnits: number = 101337,
+  priorityFeeMicroLamports: number = 421197
+): Promise<string[] | undefined> {
+  const connection = getConnection();
+  const wallet = getWallet();
   try {
     const recentBlockhash = await connection.getLatestBlockhash("confirmed");
     const priority_fee_arr = [
-      ComputeBudgetProgram.setComputeUnitLimit({
-        units: 101337,
-      }),
-      ComputeBudgetProgram.setComputeUnitPrice({
-        microLamports: 421197,
-      }),
+      ComputeBudgetProgram.setComputeUnitLimit({ units: computeUnits }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFeeMicroLamports }),
     ];
-    console.log(innerSimpleV0Transaction);
-    const original_inner_instructions =
-      innerSimpleV0Transaction[0].instructions;
-    innerSimpleV0Transaction[0].instructions = [
-      ...priority_fee_arr,
-      ...original_inner_instructions,
-    ];
-    console.log("innerSimpleV0Transaction: ", innerSimpleV0Transaction);
+    const original_inner_instructions = innerSimpleV0Transaction[0].instructions;
+    innerSimpleV0Transaction[0].instructions = [...priority_fee_arr, ...original_inner_instructions];
+
     const willSendTx = await buildSimpleTransaction({
-      connection: connection,
-      makeTxVersion: makeTxVersion,
+      connection,
+      makeTxVersion,
       payer: wallet.publicKey,
       innerTransactions: innerSimpleV0Transaction,
-      addLookupTableInfo: addLookupTableInfo,
+      addLookupTableInfo,
     });
-    console.log("willSendTx", willSendTx);
 
     return await sendTx(connection, wallet, willSendTx, options);
   } catch (e) {
-    console.log(e);
+    console.error("buildAndSendTx error:", e);
+    return undefined;
   }
 }
 
 /**
  * Sleeps for a specified amount of time.
- * @param {number} ms - The duration to sleep in milliseconds.
- * @returns {Promise<void>} - A promise that resolves after the specified duration.
  */
-export async function sleepTime(ms:any) {
-  console.log(new Date().toLocaleString(), "sleepTime", ms);
+export async function sleepTime(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
  * Loads or creates a Solana keypair from a file.
- * If the file exists, it reads the keypair from the file and returns it.
- * If the file does not exist, it generates a new keypair, saves it to the file, and returns it.
- *
- * @param {string} filepath - The path to the file where the keypair is stored or will be stored.
- * @returns {Promise<Keypair>} The loaded or newly created keypair.
  */
-export async function loadOrCreateKeypair_wallet(filepath:string) {
+export async function loadOrCreateKeypair_wallet(filepath: string): Promise<Keypair> {
   try {
     const keypairString = fs.readFileSync(filepath, { encoding: "utf8" });
     return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(keypairString)));
   } catch (error) {
     const newKeypair = Keypair.generate();
-    fs.writeFileSync(
-      filepath,
-      JSON.stringify(Array.from(newKeypair.secretKey))
-    );
+    fs.writeFileSync(filepath, JSON.stringify(Array.from(newKeypair.secretKey)), { mode: 0o600 });
     console.log(`New keypair created and saved to ${filepath}`);
     return newKeypair;
   }
 }
-export async function isBlockhashExpired(lastValidBlockHeight:number) {
-  let currentBlockHeight = await connection.getBlockHeight("finalized");
-  console.log("                           ");
-  console.log("Current Block height:             ", currentBlockHeight);
-  console.log(
-    "Last Valid Block height - 150:     ",
-    lastValidBlockHeight - 150
-  );
-  console.log("--------------------------------------------");
-  console.log(
-    "Difference:                      ",
-    currentBlockHeight - (lastValidBlockHeight - 150)
-  ); // If Difference is positive, blockhash has expired.
-  console.log("                           ");
 
+export async function isBlockhashExpired(lastValidBlockHeight: number): Promise<boolean> {
+  const connection = getConnection();
+  const currentBlockHeight = await connection.getBlockHeight("finalized");
   return currentBlockHeight > lastValidBlockHeight - 150;
 }
-export const sleep = (ms:number) => {
+
+export const sleep = (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };
-export async function checkTx(txId:string) {
-  const blockhashResponse = await connection.getLatestBlockhashAndContext(
-    "finalized"
-  );
+
+/**
+ * Polls transaction status until confirmed or blockhash expires.
+ */
+export async function checkTx(txId: string): Promise<boolean> {
+  const connection = getConnection();
+  const blockhashResponse = await connection.getLatestBlockhashAndContext("finalized");
   const lastValidHeight = blockhashResponse.value.lastValidBlockHeight;
-  console.log("Last Valid Height: ", lastValidHeight);
-  const START_TIME = new Date();
-  // Check transaction status and blockhash status until the transaction succeeds or blockhash expires
+
   let hashExpired = false;
   let txSuccess = false;
-  while (!hashExpired && !txSuccess) {
+  const maxPolls = 60;
+  let polls = 0;
+
+  while (!hashExpired && !txSuccess && polls < maxPolls) {
+    polls++;
     const { value: status } = await connection.getSignatureStatus(txId);
 
-    // Break loop if transaction has succeeded
     if (
       status &&
-      (status.confirmationStatus === "confirmed" ||
-        status.confirmationStatus === "finalized")
+      (status.confirmationStatus === "confirmed" || status.confirmationStatus === "finalized")
     ) {
       txSuccess = true;
-      const endTime = new Date();
-      const elapsed = (endTime.getTime() - START_TIME.getTime()) / 1000;
-      console.log(`Transaction Success. Elapsed time: ${elapsed} seconds.`);
+      console.log(`Transaction confirmed.`);
       return true;
     }
 
     hashExpired = await isBlockhashExpired(lastValidHeight);
 
-    // Break loop if blockhash has expired
     if (hashExpired) {
-      const endTime = new Date();
-      const elapsed = (endTime.getTime() - START_TIME.getTime()) / 1000;
-      console.log(`Blockhash has expired. Elapsed time: ${elapsed} seconds.`);
+      console.log(`Blockhash has expired.`);
       return false;
     }
 
-    // Check again after 2.5 sec
     await sleep(2500);
   }
+
+  if (polls >= maxPolls) {
+    console.log(`Transaction status polling timed out after ${maxPolls} attempts.`);
+  }
+  return false;
 }
 
+/**
+ * Gets the decimals for a given SPL token mint.
+ */
 export async function getDecimals(mintAddress: PublicKey): Promise<number> {
-  const info: any = await connection.getParsedAccountInfo(mintAddress);
-  const result = (info.value?.data).parsed.info.decimals || 0;
-  return result;
+  const connection = getConnection();
+  const info = await connection.getParsedAccountInfo(mintAddress);
+  if (!info.value || !info.value.data) {
+    throw new Error(`Could not find mint account: ${mintAddress.toBase58()}`);
+  }
+  const parsed = info.value.data as any;
+  if (!parsed.parsed?.info?.decimals && parsed.parsed?.info?.decimals !== 0) {
+    throw new Error(`Could not parse decimals for mint: ${mintAddress.toBase58()}`);
+  }
+  return parsed.parsed.info.decimals;
 }

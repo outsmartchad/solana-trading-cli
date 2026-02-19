@@ -4,26 +4,35 @@ import {
   MAINNET_API_UK_HTTP,
   MAINNET_API_NY_HTTP,
 } from "@bloxroute/solana-trader-client-ts";
-import { private_key, bloXRoute_auth_header, bloXroute_fee } from "../helpers/config";
+import { bloXRoute_auth_header, bloXroute_fee } from "../helpers/config";
 import {
-  Connection,
   LAMPORTS_PER_SOL,
   PublicKey,
   Keypair,
   SystemProgram,
+  Transaction,
 } from "@solana/web3.js";
 import base58 from "bs58";
-import { Transaction } from "@solana/web3.js";
+
 const TRADER_API_TIP_WALLET = "HWEoBxYs7ssKuudEjzjmpfJVX7Dvi7wescFsVx2L5yoY";
-const provider = new HttpProvider(
-  bloXRoute_auth_header||"",
-  private_key,
-  MAINNET_API_UK_HTTP // or MAINNET_API_NY_HTTP
-);
+
+// Lazy provider initialization
+let _provider: HttpProvider | null = null;
+function getProvider(): HttpProvider {
+  if (!_provider) {
+    if (!bloXRoute_auth_header) {
+      throw new Error("BLOXROUTE_AUTH_HEADER not set. Configure via 'outsmart init' or .env");
+    }
+    const privateKey = process.env.PRIVATE_KEY || "";
+    _provider = new HttpProvider(bloXRoute_auth_header, privateKey, MAINNET_API_UK_HTTP);
+  }
+  return _provider;
+}
+
 export async function CreateTraderAPITipTransaction(
-  senderAddress:any,
-  tipAmountInLamports:any
-) {
+  senderAddress: PublicKey,
+  tipAmountInLamports: number
+): Promise<Transaction> {
   const tipAddress = new PublicKey(TRADER_API_TIP_WALLET);
   return new Transaction().add(
     SystemProgram.transfer({
@@ -33,54 +42,48 @@ export async function CreateTraderAPITipTransaction(
     })
   );
 }
-export async function bloXroute_executeAndConfirm(transaction:any, signers:any) {
-  const memo = createTraderAPIMemoInstruction(
-    "Powered by bloXroute Trader Api"
-  ); // why not use empty string? see https://docs.bloxroute.com/solana/trader-api-v2/achieve-best-performance-for-landing-a-transaction
-  const wallet = Keypair.fromSecretKey(base58.decode(private_key||""));
+
+export async function bloXroute_executeAndConfirm(
+  transaction: Transaction,
+  signers: Keypair[]
+): Promise<void> {
+  const provider = getProvider();
+
+  const memo = createTraderAPIMemoInstruction("Powered by bloXroute Trader Api");
+
+  const privateKey = process.env.PRIVATE_KEY || "";
+  const wallet = Keypair.fromSecretKey(base58.decode(privateKey));
   const recentBlockhash = await provider.getRecentBlockHash({});
+
   let tx = new Transaction({
     recentBlockhash: recentBlockhash.blockHash,
     feePayer: wallet.publicKey,
   });
-  const fee:number = parseFloat(bloXroute_fee||"0.001");
+
+  const fee = Math.round(bloXroute_fee * LAMPORTS_PER_SOL);
   tx.add(transaction);
   tx.add(memo);
-  tx.add(
-    await CreateTraderAPITipTransaction(
-      wallet.publicKey,
-      (fee) * LAMPORTS_PER_SOL
-    )
-  ); // why 0.001 SOL?
+  tx.add(await CreateTraderAPITipTransaction(wallet.publicKey, fee));
   tx.sign(wallet);
+
   const serializeTxBytes = tx.serialize();
   const buffTx = Buffer.from(serializeTxBytes);
-  const encodedTx:any = buffTx.toString("base64");
+  const encodedTx = buffTx.toString("base64");
   console.log("Submitting transaction to bloXroute...");
 
-  const request:any= {
-    transaction: { content: encodedTx, isCleanup: false },
-    frontRunningProtection: false,
-    useStakedRPCs: true, // comment this line if you don't want to directly send txn to current blockleader
-  }
-  const response = await provider.postSubmit(request);
-  /**
-   * For better performance,
-   * you could include a high enough tip and set useStakedRPCs to True
-   * await provider.postSubmit({
-   * transaction: { content: encodedTxn, isCleanup: false },
-   * frontRunningProtection: false,
-   * useStakedRPCs: true,
-   * });
-   */
+  try {
+    const response = await provider.postSubmit({
+      transaction: { content: encodedTx, isCleanup: false },
+      frontRunningProtection: false,
+      useStakedRPCs: true,
+    });
 
-  if (response.signature) {
-    console.log(
-      `✅ txn landed successfully\nSignature: https://solscan.io/tx/${response.signature}`
-    );
-  } else {
-    console.log("❌ Transaction failed");
+    if (response.signature) {
+      console.log(`txn landed successfully\nSignature: https://solscan.io/tx/${response.signature}`);
+    } else {
+      console.log("Transaction failed");
+    }
+  } catch (e: any) {
+    console.error("bloXroute submission error:", e?.message || e);
   }
 }
-
-module.exports = { bloXroute_executeAndConfirm };
