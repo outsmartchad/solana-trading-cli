@@ -110,6 +110,7 @@ function getFundingRecordAddr(
 const LAUNCHPAD_IDL: any = {
   version: "0.7.0",
   name: "launchpad_v7",
+  address: LAUNCHPAD_PROGRAM_ID.toBase58(),
   instructions: [
     {
       name: "fund",
@@ -224,7 +225,6 @@ class LaunchpadSDK {
     this.connection = provider.connection;
     this.program = new Program<Idl>(
       LAUNCHPAD_IDL as Idl,
-      LAUNCHPAD_PROGRAM_ID,
       provider,
     );
   }

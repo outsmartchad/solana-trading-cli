@@ -75,8 +75,8 @@ Object.defineProperty(module.exports, "wallet", {
   },
   enumerable: true,
 });
-// Also export for TypeScript consumers that use the named export directly
-export const wallet: Keypair = null as unknown as Keypair; // Overridden by defineProperty above
+// TypeScript consumers: use getWallet() directly.
+// The defineProperty above provides `require("...").wallet` for JS callers.
 
 // --- Validated config values ---
 export const jito_fee: number = parseFloat(process.env.JITO_FEE || "0.0001");

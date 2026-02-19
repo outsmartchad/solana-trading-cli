@@ -74,6 +74,7 @@ export async function bloXroute_executeAndConfirm(
   try {
     const response = await provider.postSubmit({
       transaction: { content: encodedTx, isCleanup: false },
+      skipPreFlight: false,
       frontRunningProtection: false,
       useStakedRPCs: true,
     });

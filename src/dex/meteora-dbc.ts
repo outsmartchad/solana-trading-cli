@@ -30,7 +30,7 @@ import {
 } from "@solana/web3.js";
 import {
   DynamicBondingCurveClient,
-  Swap2Param,
+  Swap2Params,
   SwapMode,
   getCurrentPoint,
 } from "@meteora-ag/dynamic-bonding-curve-sdk";
@@ -180,11 +180,12 @@ export class MeteoraDbcAdapter implements IDexAdapter {
       amountIn,
       slippageBps,
       hasReferral: false,
+      eligibleForFirstSwapWithMinFee: false,
       currentPoint,
       swapMode: SwapMode.ExactIn,
     });
 
-    const swap2Param: Swap2Param = {
+    const swap2Params: Swap2Params = {
       swapMode: SwapMode.ExactIn,
       swapBaseForQuote: false,
       amountIn,
@@ -195,7 +196,7 @@ export class MeteoraDbcAdapter implements IDexAdapter {
       payer: wallet.publicKey,
     };
 
-    const tx = await dbcClient.pool.swap2(swap2Param);
+    const tx = await dbcClient.pool.swap2(swap2Params);
     const filteredIxs = filterSdkSetupIxs(tx.instructions);
 
     // Build WSOL wrapping or direct swap instructions
@@ -269,6 +270,7 @@ export class MeteoraDbcAdapter implements IDexAdapter {
       amountIn: sellAmount,
       slippageBps,
       hasReferral: false,
+      eligibleForFirstSwapWithMinFee: false,
       currentPoint,
       swapMode: SwapMode.ExactIn,
     });
@@ -336,7 +338,7 @@ export class MeteoraDbcAdapter implements IDexAdapter {
     const poolState = await dbcClient.state.getPool(poolPk);
     if (!poolState) throw new Error(`Pool not found: ${poolAddress}`);
 
-    const swap2Param: Swap2Param = {
+    const swap2Params: Swap2Params = {
       swapMode: SwapMode.ExactIn,
       swapBaseForQuote: false,
       amountIn,
@@ -347,7 +349,7 @@ export class MeteoraDbcAdapter implements IDexAdapter {
       payer: wallet.publicKey,
     };
 
-    const tx = await dbcClient.pool.swap2(swap2Param);
+    const tx = await dbcClient.pool.swap2(swap2Params);
     const filteredIxs = filterSdkSetupIxs(tx.instructions);
 
     const computeLimit = opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT;
@@ -456,10 +458,14 @@ export class MeteoraDbcAdapter implements IDexAdapter {
     const poolState = await dbcClient.state.getPool(poolPk);
     if (!poolState) throw new Error(`Pool not found: ${poolAddress}`);
 
+    // Fetch pool config to get quoteMint (quoteMint lives on PoolConfig, not VirtualPool)
+    const poolConfigState = await dbcClient.state.getPoolConfig(poolState.config);
+    if (!poolConfigState) throw new Error(`Pool config not found: ${poolState.config.toString()}`);
+
     // Fetch actual mint decimals for accurate price calculation
     const [baseMintBal, quoteMintBal] = await Promise.all([
       connection.getTokenSupply(poolState.baseMint),
-      connection.getTokenSupply(poolState.quoteMint),
+      connection.getTokenSupply(poolConfigState.quoteMint),
     ]);
     const tokenADecimal = baseMintBal.value.decimals;
     const tokenBDecimal = quoteMintBal.value.decimals;
@@ -468,7 +474,7 @@ export class MeteoraDbcAdapter implements IDexAdapter {
     return {
       price,
       baseMint: poolState.baseMint.toBase58(),
-      quoteMint: poolState.quoteMint.toBase58(),
+      quoteMint: poolConfigState.quoteMint.toBase58(),
       source: "on-chain",
       poolAddress,
       timestamp: Date.now(),
