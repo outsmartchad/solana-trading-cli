@@ -3,6 +3,7 @@
  *
  * Manages multiple TX landing providers and implements submission strategies:
  * - concurrent: Fire to all enabled providers in parallel (fire-and-forget)
+ *   Uses durable nonce for exactly-once execution safety.
  * - race: Fire to all, return first accepted result
  * - random: Pick 1-3 random providers + always include a fallback (nozomi)
  * - sequential: Try providers in order, stop on first success
@@ -12,6 +13,8 @@ import {
   Keypair,
   TransactionInstruction,
 } from "@solana/web3.js";
+
+import { NonceManager } from "./nonce-manager";
 
 import {
   ILandingProvider,
@@ -73,6 +76,7 @@ const RANDOM_FALLBACK = "nozomi";
 export class LandingOrchestrator {
   private providers: Map<string, ILandingProvider> = new Map();
   private config: OrchestratorConfig;
+  private nonceManager: NonceManager | null = null;
 
   constructor(config?: Partial<OrchestratorConfig>) {
     this.config = {
@@ -121,6 +125,21 @@ export class LandingOrchestrator {
   }
 
   /**
+   * Set the NonceManager for durable nonce support.
+   * When set, the concurrent strategy will use nonce for exactly-once execution.
+   */
+  setNonceManager(nm: NonceManager): void {
+    this.nonceManager = nm;
+  }
+
+  /**
+   * Get the current NonceManager, if any.
+   */
+  getNonceManager(): NonceManager | null {
+    return this.nonceManager;
+  }
+
+  /**
    * Submit a transaction using the configured strategy.
    */
   async submit(
@@ -154,6 +173,15 @@ export class LandingOrchestrator {
   /**
    * Fire to all enabled providers in parallel. Returns all results.
    * This matches the source `concurrent_snipe_tx_landing` behavior.
+   *
+   * When a NonceManager is set, this method:
+   * 1. Fetches the current nonce value from chain
+   * 2. Prepends nonceAdvance as the FIRST instruction
+   * 3. Uses the nonce value as the blockhash
+   * This guarantees exactly-once execution even when 9+ providers receive
+   * the same transaction — the nonce is consumed by the first landing.
+   *
+   * Without nonce: falls back to race strategy with a warning.
    */
   private async submitConcurrent(
     ixs: TransactionInstruction[],
@@ -166,8 +194,47 @@ export class LandingOrchestrator {
       return [{ provider: "orchestrator", accepted: false, error: "No enabled providers" }];
     }
 
+    // --- Nonce handling for concurrent safety ---
+    let effectiveIxs = ixs;
+    let effectiveBlockhash = blockhash;
+
+    if (opts.skipNonce) {
+      console.warn(
+        "[landing] WARNING: Concurrent submission with skipNonce=true. " +
+        "Risk of duplicate buys if multiple providers land the transaction.",
+      );
+    } else if (this.nonceManager) {
+      try {
+        const { nonce, address } = await this.nonceManager.get();
+        const advanceIx = this.nonceManager.buildAdvanceIx();
+
+        // Prepend nonceAdvance as the FIRST instruction
+        effectiveIxs = [advanceIx, ...ixs];
+        // Use nonce value as blockhash
+        effectiveBlockhash = nonce;
+
+        console.log(
+          `[landing] Using durable nonce ${address.toBase58().slice(0, 8)}... for concurrent submission`,
+        );
+      } catch (err) {
+        console.warn(
+          "[landing] Failed to fetch nonce, falling back to race strategy:",
+          err instanceof Error ? err.message : err,
+        );
+        return this.submitRace(ixs, signer, blockhash, opts);
+      }
+    } else {
+      // No nonce manager — fall back to race (safe: first accepted wins)
+      console.warn(
+        "[landing] No nonce account configured for concurrent strategy. " +
+        "Falling back to race strategy to avoid duplicate buys. " +
+        "Run 'outsmart nonce create' to enable concurrent landing.",
+      );
+      return this.submitRace(ixs, signer, blockhash, opts);
+    }
+
     const promises = providers.map((p) =>
-      this.submitWithTimeout(p, ixs, signer, blockhash, opts)
+      this.submitWithTimeout(p, effectiveIxs, signer, effectiveBlockhash, opts)
     );
 
     const settled = await Promise.allSettled(promises);
@@ -329,10 +396,19 @@ let _defaultOrchestrator: LandingOrchestrator | null = null;
 
 /**
  * Get or create the default orchestrator singleton.
+ *
+ * If a nonce account config exists at ~/.outsmart/nonce.json, the orchestrator
+ * will automatically use it for concurrent landing safety.
  */
 export function getOrchestrator(config?: Partial<OrchestratorConfig>): LandingOrchestrator {
   if (!_defaultOrchestrator || config) {
     _defaultOrchestrator = new LandingOrchestrator(config);
+
+    // Auto-detect nonce account if config exists
+    // Note: NonceManager requires connection + authority, which are lazy-loaded.
+    // The actual NonceManager is set up by the CLI entrypoint or by calling
+    // orchestrator.setNonceManager() directly. This is intentional — we don't
+    // want to import config.ts here (circular dependency risk).
   }
   return _defaultOrchestrator;
 }

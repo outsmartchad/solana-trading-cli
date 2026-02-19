@@ -31,6 +31,9 @@ export {
   landTransaction,
 } from "./orchestrator";
 
+// Nonce manager for durable nonce accounts (concurrent strategy safety)
+export { NonceManager } from "./nonce-manager";
+
 // Tip account registry
 export {
   TIP_ACCOUNTS,
