@@ -1,229 +1,239 @@
-![Solana Trading CLI Logo](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/assets/sol-repo.jpg)
+# outsmart
 
-# Solana Trading CLI
-A simple, fast, powerful Library for building custom trading strategies on Solana. It's built for speed, variety, and real-time data, using Cutting-edge Tech. Here's what you get:
+The most powerful Solana trading CLI. 17 DEXes, 12 TX landing providers, one unified interface.
 
-- Uses low-latency systems like Jito, BloXroute, and Nozomi to execute trades,
-
-- Read/write Pumpfun data in a local postgreSQL db.
-
-- Supports DEXs like Raydium, Orca, Meteora, and Pump.fun for more trading options.
-
-- Streams transactions and/or accounts state from a third-party's geyser gRPC node.
-
-- Fetches account state info via optimized RPC methods.
-
-This bot fits into your trading system, perfect for newbies.
-
-# Core Components
-
-## Token Creation and Multi-DEX Support
-Create your own Solana SPL tokens on mainnet via Pump.fun and swap tokens across multiple decentralized exchanges:
-
-| Exchange | Documentation |
-|----------|---------------|
-| Jupiter  | [CLI & trading functions guide](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/jupiter/README.md) |
-| Raydium   | [CLI & trading functions guide](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/raydium/README.md) |
-| Orca      | [CLI & trading functions guide](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/orca/README.md) |
-| Meteora   | [CLI & trading functions guide](https://github.com/outsmartchad/solana-trading-cli/blob/typescript-main/src/meteora/README.md) |
-| Pump.fun  | Integrated support |
-
-
-## Local Database Setup (In Development)
-
-The project includes a PostgreSQL database for storing Pump.fun trading data and market analysis. For detailed setup instructions, see [Database Documentation](docker_postgres_db/README.md).
-
-Quick setup:
 ```bash
-# Navigate to database directory
-cd docker_postgres_db
-
-# Create environment file
-cp .env.example .env
-
-# Start database
-docker-compose up -d
+outsmart buy  --dex raydium-cpmm --token <MINT> --amount 0.1
+outsmart sell --dex jupiter-ultra --token <MINT> --pct 100
+outsmart snipe --dex meteora-dlmm --token <MINT> --pool <POOL> --amount 0.5 --tip 0.01
 ```
 
+## DEX Adapters
 
-## Low-Latency Infrastructure
-Accelerate transaction finality using Jito and bloXroute for lightning-fast trades. Both capable of pushing your trasaction faster then any other service provider on the market
+| Adapter | Protocol | Buy | Sell | Snipe | Pool Discovery | Price |
+|---------|----------|-----|------|-------|----------------|-------|
+| raydium-amm-v4 | AMM v4 | x | | x | x | x |
+| raydium-cpmm | CPMM | x | x | x | x | x |
+| raydium-clmm | CLMM | x | x | x | x | x |
+| raydium-launchlab | Launchlab | x | | | x | x |
+| meteora-damm-v1 | Dynamic AMM | x | | x | x | x |
+| meteora-damm-v2 | CpAmm | x | x | x | x | x |
+| meteora-dlmm | DLMM | x | | x | | x |
+| meteora-dbc | DBC | x | x | x | | x |
+| meteora-lp-dlmm | DLMM LP | | | | | | Add/remove liquidity |
+| orca | Whirlpool | x | | x | | x |
+| byreal-clmm | CLMM | x | | x | | x |
+| pancakeswap-clmm | CLMM | x | | x | | x |
+| fusion-amm | Fusion | x | | x | | x |
+| futarchy-amm | Futarchy | x | | x | | x |
+| futarchy-launchpad | Launchpad | | | | | | Fund/claim |
+| jupiter-ultra | Ultra API | x | x | | | |
+| dflow | Intent | x | x | | | |
 
-| Provider | Description |
-|----------|---------------|
-| Jito      | Fast trascation and optimizes transaction ordering and execution specifically |
-| Bloxroute | Fast trascation and accelerates transaction propagation |
-| Nozomi    | Optimzed tx submission to current blockleader |
+## TX Landing Providers
 
+12 providers with concurrent, race, random, and sequential submission strategies:
 
-The database stores:
-- Trading history and limit orders
-- Token tracking and pool migrations
-- Market analysis and transaction data
+0slot, nozomi, helius-sender, blockrazor, node1.me, soyas, bloXroute, astralane, stellium, flashblock, jito, nextblock
 
+Each provider is enabled by setting its API key in the environment. The orchestrator sends transactions through multiple providers simultaneously for fastest landing.
 
-## Open-Source Geyser gRPC Bots
-Leverage our cutting-edge, open-source gRPC trading bots:
+## Installation
 
-| Bot Name | Features | Source |
-|----------|----------|--------|
-| gRPC Pump.fun Sniper Bot | Ultra-low latency (0.4-2 seconds) | [View source](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-pf-sniper) |
-| gRPC Copy Bot | Replicate successful trading strategies | [View source](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-copy-bot) |
-| gRPC Raydium Sniper Bot | Optimized for Raydium DEX | [View source](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main/src/grpc_streaming_dev/grpc-raydium-sniper) |
+```bash
+git clone https://github.com/outsmartchad/solana-trading-cli.git
+cd solana-trading-cli
+nvm install && nvm use
+npm install --legacy-peer-deps
+npm run build
+```
 
+Or install globally (when published to npm):
 
-## Real-Time Market Data
-Fetch critical metrics for any liquidity pool in real-time with RPC calls:
-- Price
-- LP-burn percentage
-- Pool reserve
-- Market cap
+```bash
+npm install -g outsmart
+```
 
+## Configuration
 
-### Extensibility
-Our comprehensive toolkit provides everything you need to create your own custom trading bot, tailored to your unique strategies and requirements.
+Create a `.env` file in the project root:
 
-## 🛠️ Installation
-Follow these steps to get your development environment set up:
+```bash
+outsmart config env > .env
+# Edit .env with your values
+```
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/outsmartchad/solana-trading-cli.git
-   ```
+Required:
+- `MAINNET_ENDPOINT` — Solana RPC URL
+- `PRIVATE_KEY` — Base58-encoded wallet secret key
 
-2. **Navigate to the project directory**
-   ```bash
-   cd solana-trading-cli
-   ```
+Optional (enable TX landing providers):
+- `HELIUS_API_KEY`, `JITO_API_KEY`, `BLOXROUTE_AUTH_HEADER`, `NOZOMI_API_KEY`
+- `BLOCKRAZOR_API_KEY`, `NEXTBLOCK_API_KEY`, `ZERO_SLOT_API_KEY`, `SOYAS_API_KEY`
+- `ASTRALANE_API_KEY`, `STELLIUM_API_KEY`, `FLASHBLOCK_API_KEY`, `NODE1_API_KEY`
 
-3. **Install the correct Node.js version**
-   ```bash
-   nvm install
-   nvm use
-   ```
+Trading defaults:
+- `TX_LANDING_MODE` — `concurrent` | `race` | `random` | `sequential` (default: `concurrent`)
+- `DEFAULT_TIP_SOL` — MEV tip in SOL (default: `0.001`)
+- `DEFAULT_SLIPPAGE_BPS` — Slippage in basis points (default: `300` = 3%)
 
-4. **Install dependencies**
-   ```bash
-   npm install
-   ```
+View current config:
+```bash
+outsmart config show
+```
 
-5. **Run the test script**
-   ```bash
-   ts-node test.ts
-   ```
+## CLI Commands
 
-### Installation Prerequisites
+### Buy
 
-- [Node Version Manager (nvm)](https://github.com/nvm-sh/nvm)
-- [Node.js](https://nodejs.org/) (version specified in `.nvmrc`)
-- [npm](https://www.npmjs.com/) (comes with Node.js)
+```bash
+outsmart buy --dex raydium-cpmm --token <MINT> --amount 0.1
+outsmart buy --dex jupiter-ultra --token <MINT> --amount 0.5 --slippage 500
+outsmart buy --dex meteora-damm-v2 --token <MINT> --amount 1 --pool <POOL> --tip 0.001
+```
 
-### Troubleshooting
+### Sell
 
-If you encounter any issues during installation, please check our [FAQ](link-to-faq) or [open an issue](https://github.com/outsmartchad/solana-trading-cli/issues).
+```bash
+outsmart sell --dex raydium-cpmm --token <MINT> --pct 100
+outsmart sell --dex jupiter-ultra --token <MINT> --pct 50
+outsmart sell --dex dflow --token <MINT> --pct 100 --slippage 300
+```
 
-## 🚨 Set Up 
+### Snipe
 
-Before you begin, ensure you have completed the following steps:
+Snipe requires a known pool address and MEV tip:
 
-### 1. Environment Configuration
+```bash
+outsmart snipe --dex raydium-cpmm --token <MINT> --pool <POOL> --amount 0.5 --tip 0.01
+outsmart snipe --dex meteora-dlmm --token <MINT> --pool <POOL> --amount 1 --tip 0.02 --jito
+```
 
-1. Locate the template file:
-   ```
-   src/helpers/.env.example
-   ```
+Uses durable nonce accounts for concurrent TX landing to avoid duplicate buys.
 
-2. Copy this file and rename it to `.env` in the same directory.
+### Quote
 
-3. Open the `.env` file and add the following required information:
-   - Mainnet wallet secret key (required)
-   - RPC endpoint (required)
-   - Custom Jito fee (if needed)
+```bash
+outsmart quote --dex raydium-cpmm --pool <POOL>
+outsmart quote --dex meteora-dlmm --pool <POOL>
+```
 
-4. Optional configurations:
-   - Devnet wallet secret key
-   - Helius RPC url + key (e.g. getting latest price from dexes)
-   - Shyft geyser gRPC token (for grpc trading bots development) (Link to Shyft: https://shyft.to/)
+### Find Pool
 
-### 2. API Keys and Wallet Setup
+```bash
+outsmart find-pool --dex raydium-cpmm --token <MINT>
+outsmart find-pool --dex raydium-amm-v4 --token <MINT> --quote <USDC_MINT>
+```
 
-- **Solana Wallet**: Ensure you have a funded Solana mainnet wallet. The secret key is required for mainnet transactions.
-- **RPC Endpoint**: Obtain a RPC endpoint from reliable node operator like Helius to connect to Solana
-- **Jito Integration**: If uses Jito, prepare your custom fee configuration.
-- **Shyft Geyser gRPC** (Optional): If you are developing algo trading bot, buy a grpc token from reliable operator like Shyft.
+### List DEX Adapters
 
-### 3. Final Check
+```bash
+outsmart list-dex
+outsmart list-dex --cap canSell
+outsmart list-dex --cap canSnipe --json
+```
 
-- Confirm that your `.env` file is properly configured and saved.
-- Ensure the `.env` file is in the correct location: `src/helpers/.env`
-- Verify that you haven't accidentally committed your `.env` file to version control.
+### Token Info
 
-> ⚠️ **Security Note**: Never share or commit your `.env` file or any private keys. The `.env` file is included in `.gitignore` for your safety.
+```bash
+outsmart info --token <MINT>
+```
 
-For any issues with configuration, please refer to our [Troubleshooting Guide](link-to-troubleshooting) or [open an issue](https://github.com/yourusername/your-repo-name/issues).
+Fetches market data from DexScreener: price, market cap, volume, liquidity, socials.
 
-## 🤝 Feedback and Contributions
-We've made every effort to implement all the main aspects of solana trading in the best possible way. However, the development journey doesn't end here, and your input is crucial for our continuous improvement.
+### Swap Options
 
-> [!IMPORTANT]
-> Whether you have feedback on features, have encountered any bugs, or have suggestions for enhancements, we're eager to hear from you. Your insights help us make the Solana Trading Client library more robust and user-friendly.
+All swap commands (buy, sell, snipe) share these options:
 
-Please feel free to contribute by submitting an issue, joining the discussions, or joining our discord. Each contribution helps us grow and improve.
+| Option | Description |
+|--------|-------------|
+| `--slippage <bps>` | Slippage tolerance in basis points (default: 300) |
+| `--priority <microLamports>` | Priority fee per compute unit |
+| `--tip <sol>` | MEV tip in SOL |
+| `--cu <units>` | Compute unit limit |
+| `--jito` | Use Jito bundle submission |
+| `--strategy <mode>` | TX landing strategy override |
+| `--quote <mint>` | Quote token mint (default: WSOL) |
 
-We appreciate your support and look forward to making our product even better with your help!
+## Programmatic API
 
-### How to Contribute
+Use outsmart as a library in your own bots:
 
-- Contributions is wellcome!!!
-- Fork it
-- `git checkout -b feature/YourNewFeature`
-- `git commit -m 'bug Fixed/added new feature'`
-- `git push origin feature/YourNewFeature`
-- And Please open a pull request
+```typescript
+import { getDexAdapter, listDexAdapters } from "outsmart";
 
-### Apply Latest Changes from remote repo
+// Import adapters to register them
+import "outsmart/dist/dex/raydium-cpmm";
+import "outsmart/dist/dex/jupiter-ultra";
 
-- `git stash -u  # Stash your changes`
-- `git pull --rebase # Pull the latest changes`
-- `git stash pop # Apply Your stashed changes`
+// Buy
+const adapter = getDexAdapter("raydium-cpmm");
+const result = await adapter.buy({
+  tokenMint: "So11111111111111111111111111111111111111112",
+  amountSol: 0.1,
+  opts: { slippageBps: 300 },
+});
 
-## ✅ Credits
+console.log(result.txSignature);
 
-- https://github.com/raydium-io/raydium-sdk-V2
-- https://github.com/rckprtr/pumpdotfun-sdk
-- https://github.com/rpcpool/yellowstone-grpc
-- https://github.com/Al366io/solana-transactions-wrapper
+// List all adapters
+const adapters = listDexAdapters();
+console.log(adapters.map(a => `${a.name}: ${a.protocol}`));
+```
 
-## ‼️ Disclaimer
+## Architecture
 
-This software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability, whether in an action of contract, tort, or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software.
+```
+src/
+├── cli.ts              # CLI entry point (Commander.js)
+├── index.ts            # Library entry point (programmatic API)
+├── dex/
+│   ├── types.ts        # IDexAdapter interface, BuyParams, SwapResult, etc.
+│   ├── index.ts        # DexRegistry singleton
+│   ├── shared/
+│   │   └── clmm-base.ts   # Shared CLMM base class
+│   └── 17 adapter files
+├── dexscreener/        # DexScreener market data
+├── helpers/            # Config, wallet, connection, utilities
+└── transactions/
+    ├── landing/
+    │   ├── orchestrator.ts    # Multi-provider TX submission
+    │   ├── nonce-manager.ts   # Durable nonce for concurrent landing
+    │   ├── tip-accounts.ts    # Tip account registry
+    │   └── providers/         # 12 provider implementations
+    └── legacy executors
+```
 
-**Use at your own risk.** The authors take no responsibility for any harm or damage caused by the use of this software. Users are responsible for ensuring the suitability and safety of this software for their specific use cases.
+Each DEX adapter implements `IDexAdapter` and self-registers with the `DexRegistry` on import. The CLI imports all adapters at startup; the library API lets you import only what you need.
 
-By using this software, you acknowledge that you have read, understood, and agree to this disclaimer.
+## Credits
 
-### Discord channel: https://discord.gg/dc3Kh3Y3yJ
+- [Raydium SDK v2](https://github.com/raydium-io/raydium-sdk-V2)
+- [pumpdotfun-sdk](https://github.com/rckprtr/pumpdotfun-sdk)
+- [yellowstone-grpc](https://github.com/rpcpool/yellowstone-grpc)
+- [Meteora SDKs](https://github.com/MeteoraAg)
+- [Orca Whirlpools](https://github.com/orca-so/whirlpools)
 
-### If you think this will steal your keys, i have no time to convince you to use it.
+## Disclaimer
 
-## 🤖 Plans
+This software is provided "as is", without warranty of any kind. Use at your own risk. The authors take no responsibility for any financial loss caused by the use of this software. Users are responsible for ensuring compliance with applicable laws and regulations.
 
-- A local-based db to store your limit orders ✅
+Never share your private keys. The `.env` file is in `.gitignore` for your safety.
 
-- Smart scripts to help you detect potential rug pulls on pump.fun, e.g. dev sold, master wallet, similar past rug patterns
+## Contributing
 
-- More gRPC bots to come ✅
+Contributions welcome. Fork it, branch off, open a PR.
 
-- More algos to trade on raydium/Pump.fun
+```bash
+git checkout -b feature/your-feature
+git commit -m 'add your feature'
+git push origin feature/your-feature
+```
 
-- Make it more easier to install, deploy the bot using docker ✅
+## Discord
 
-## 🪙 Final State of this repo
+https://discord.gg/dc3Kh3Y3yJ
 
-- Best trading framework on Solana
+## License
 
-- Best package/library for trading development on solana, e.g.(we could make it easy to like Raydium.buy("token", 0.01sol, 1%slippage))
-
-- Best open-soured trading bot
-
-- Succeed with Solana dev!
+ISC
