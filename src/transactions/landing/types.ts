@@ -51,6 +51,12 @@ export interface SubmitOptions {
   extraSigners?: Keypair[];
   /** Address lookup table accounts for V0 message compilation */
   addressLookupTables?: AddressLookupTableAccount[];
+  /**
+   * Skip durable nonce for concurrent strategy.
+   * WARNING: Without nonce, concurrent submission risks duplicate buys.
+   * Only set this if you understand the risks.
+   */
+  skipNonce?: boolean;
 }
 
 // ---------------------------------------------------------------------------
