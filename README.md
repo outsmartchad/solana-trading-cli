@@ -2,6 +2,8 @@
 
 The most powerful Solana trading CLI. 17 DEXes, 12 TX landing providers, one unified interface.
 
+> **This branch (`agent-trading-infra`) is under active development.** If you want the stable, battle-tested version, use the [`typescript-main`](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main) branch instead.
+
 ```bash
 outsmart buy  --dex raydium-cpmm --token <MINT> --amount 0.1
 outsmart sell --dex jupiter-ultra --token <MINT> --pct 100
@@ -229,8 +231,8 @@ Each DEX adapter implements `IDexAdapter` and self-registers with the `DexRegist
 
 ## Roadmap
 
+- [x] DAMM v2 add/remove liquidity + fee claiming
 - [ ] gRPC-powered snipe streaming (`outsmart snipe-stream` with background monitoring)
-- [ ] DAMM v2 add/remove liquidity + fee claiming
 - [ ] OpenClaw AI agent plugin wrapper
 - [ ] More DEX adapters as new protocols launch
 
