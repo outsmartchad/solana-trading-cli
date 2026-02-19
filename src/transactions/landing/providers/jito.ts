@@ -84,7 +84,7 @@ function createProvider(): ILandingProvider {
               error: `Failed to fetch Jito tip accounts: ${tipAccountsResult}`,
             };
           }
-          cachedTipAccounts = tipAccountsResult as string[];
+          cachedTipAccounts = tipAccountsResult as unknown as string[];
         }
 
         if (!cachedTipAccounts || cachedTipAccounts.length === 0) {
@@ -93,12 +93,11 @@ function createProvider(): ILandingProvider {
 
         // Build the main V0 transaction (without tip — tip is a separate bundle tx)
         const mainIxs = [...ixs]; // never mutate input
-        const messageV0 = TransactionMessage.compile({
+        const messageV0 = new TransactionMessage({
           payerKey: signer.publicKey,
           recentBlockhash: bh,
           instructions: mainIxs,
-          addressLookupTableAccounts: opts.addressLookupTables,
-        });
+        }).compileToV0Message(opts.addressLookupTables);
 
         const mainTx = new VersionedTransaction(messageV0);
         const signers: Keypair[] = [signer, ...(opts.extraSigners ?? [])];
@@ -131,7 +130,7 @@ function createProvider(): ILandingProvider {
         }
 
         // result is the bundle ID on success
-        const bundleId = result as string;
+        const bundleId = result as unknown as string;
         return {
           provider,
           accepted: true,

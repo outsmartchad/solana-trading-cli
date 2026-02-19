@@ -158,7 +158,7 @@ export class MeteoraDlmmAdapter implements IDexAdapter {
       inAmount: inputAmount,
       lbPair: dlmmPool.pubkey,
       user: wallet.publicKey,
-      minOutAmount: swapQuote.minSwapOutAmount ?? new BN(0),
+      minOutAmount: swapQuote.minOutAmount ?? new BN(0),
       outToken,
     });
 

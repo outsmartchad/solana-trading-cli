@@ -229,9 +229,11 @@ export class MeteoraLpDlmmAdapter implements IDexAdapter {
     });
 
     // Send all removal transactions
+    // removeLiquidity returns Transaction | Transaction[], normalize to array
+    const txArray = Array.isArray(removeTxs) ? removeTxs : [removeTxs];
     let lastSignature = "";
     try {
-      for (const removeTx of removeTxs) {
+      for (const removeTx of txArray) {
         lastSignature = await sendAndConfirmTransaction(
           connection,
           removeTx,

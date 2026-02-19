@@ -304,15 +304,17 @@ async function discoverAmmV4Pool(
   tokenMint: string,
   quoteMint: string,
 ): Promise<{ poolId: string } | null> {
-  // Try fetching via Raydium API (initSdk from legacy raydium_config)
+  // Try fetching via Raydium API
   try {
-    const { initSdk } = await import("../raydium/raydium_config");
-    const raydium = await initSdk();
-    const data = await raydium.api.fetchPoolByMints({
+    const { Raydium } = await import("@raydium-io/raydium-sdk-v2");
+    const raydium = await Raydium.load({
+      connection,
+      disableLoadToken: true,
+    });
+    const listOfPools = await raydium.api.fetchPoolByMints({
       mint1: quoteMint,
       mint2: tokenMint,
     });
-    const listOfPools = data.data;
     for (const obj of listOfPools) {
       if (obj.type === "Standard" && obj.programId === RAYDIUM_AMM_V4_PROGRAM_ID.toBase58()) {
         return { poolId: obj.id };

@@ -62,12 +62,11 @@ function buildTx(
 
   const allIxs = [...ixs, tipIx];
 
-  const messageV0 = TransactionMessage.compile({
+  const messageV0 = new TransactionMessage({
     payerKey: signer.publicKey,
     recentBlockhash: blockhash,
     instructions: allIxs,
-    addressLookupTableAccounts: opts.addressLookupTables,
-  });
+  }).compileToV0Message(opts.addressLookupTables);
 
   const tx = new VersionedTransaction(messageV0);
   const signers: Keypair[] = [signer, ...(opts.extraSigners ?? [])];

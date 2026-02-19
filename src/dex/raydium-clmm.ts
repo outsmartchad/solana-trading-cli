@@ -393,13 +393,16 @@ async function discoverClmmPool(
 
   // Try via Raydium API as fallback
   try {
-    const { initSdk } = await import("../raydium/raydium_config");
-    const raydium = await initSdk();
-    const data = await raydium.api.fetchPoolByMints({
+    const { Raydium } = await import("@raydium-io/raydium-sdk-v2");
+    const raydium = await Raydium.load({
+      connection,
+      disableLoadToken: true,
+    });
+    const pools = await raydium.api.fetchPoolByMints({
       mint1: quoteMint.toBase58(),
       mint2: baseMint.toBase58(),
     });
-    for (const obj of data.data) {
+    for (const obj of pools) {
       if (obj.type === "Concentrated") {
         return new PublicKey(obj.id);
       }

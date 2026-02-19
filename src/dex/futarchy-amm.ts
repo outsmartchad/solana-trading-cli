@@ -86,6 +86,7 @@ const PRICE_SCALE = 1_000_000_000_000;
 const FUTARCHY_IDL: any = {
   version: "0.6.1",
   name: "futarchy",
+  address: FUTARCHY_PROGRAM_ID.toBase58(),
   instructions: [
     {
       name: "spotSwap",
@@ -245,7 +246,6 @@ class FutarchyAmmSDK {
     this.connection = provider.connection;
     this.program = new Program<Idl>(
       FUTARCHY_IDL as Idl,
-      FUTARCHY_PROGRAM_ID,
       provider,
     );
   }
