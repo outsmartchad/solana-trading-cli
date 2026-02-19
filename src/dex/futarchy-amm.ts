@@ -25,7 +25,6 @@ import {
   LAMPORTS_PER_SOL,
   TransactionInstruction,
   SystemProgram,
-  Keypair,
   Connection,
 } from "@solana/web3.js";
 import { AnchorProvider, Program, Idl } from "@coral-xyz/anchor";
@@ -34,6 +33,8 @@ import {
   createSyncNativeInstruction,
   createCloseAccountInstruction,
   getAssociatedTokenAddress,
+  getAssociatedTokenAddressSync,
+  createAssociatedTokenAccountIdempotentInstruction,
   getMint,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -262,9 +263,6 @@ class FutarchyAmmSDK {
     minOutputAmount: bigint = BigInt(0),
     trader: PublicKey,
   ): Promise<TransactionInstruction[]> {
-    const { getAssociatedTokenAddressSync, createAssociatedTokenAccountIdempotentInstruction } =
-      await import("@solana/spl-token");
-
     const userBaseAccount = getAssociatedTokenAddressSync(baseMint, trader, true);
     const userQuoteAccount = getAssociatedTokenAddressSync(quoteMint, trader, true);
     const ammBaseVault = getAssociatedTokenAddressSync(baseMint, dao, true);

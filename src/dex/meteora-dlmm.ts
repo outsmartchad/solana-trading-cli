@@ -115,7 +115,7 @@ export class MeteoraDlmmAdapter implements IDexAdapter {
   readonly capabilities: DexCapabilities = defaultCapabilities({
     canBuy: true,
     canSnipe: true,
-    canFindPool: true,
+    canFindPool: false, // DLMM has no simple PDA derivation
     canGetPrice: true,
     // canSell: false — source sell.ts is empty
   });
@@ -237,6 +237,7 @@ export class MeteoraDlmmAdapter implements IDexAdapter {
     const priorityFee = opts?.priorityFeeMicroLamports ?? 40_000_000;
 
     const ixs: TransactionInstruction[] = [
+      ComputeBudgetProgram.setComputeUnitLimit({ units: computeLimit }),
       ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
       ...swapTx.instructions,
     ];

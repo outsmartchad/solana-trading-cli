@@ -114,6 +114,10 @@ export class MeteoraLpDlmmAdapter implements IDexAdapter {
     const isOneSidedSol = (amountA === 0 || amountA === undefined) && amountB && amountB > 0;
     const isOneSidedToken = amountA > 0 && (!amountB || amountB === 0);
 
+    // Fetch actual mint decimals from the pool
+    const tokenXDecimals = Number(dlmmPool.tokenX.mint.decimals);
+    const tokenYDecimals = Number(dlmmPool.tokenY.mint.decimals);
+
     let minBinId: number;
     let maxBinId: number;
     let totalXAmount: BN; // tokenX (usually the non-SOL token)
@@ -125,20 +129,20 @@ export class MeteoraLpDlmmAdapter implements IDexAdapter {
       minBinId = activeBin.binId - DEFAULT_NUM_BINS;
       maxBinId = activeBin.binId;
       totalXAmount = new BN(0);
-      totalYAmount = new BN(Math.floor(amountB! * 1e9)); // SOL has 9 decimals
+      totalYAmount = new BN(Math.floor(amountB! * Math.pow(10, tokenYDecimals)));
     } else if (isOneSidedToken) {
       // One-sided token: place liquidity above active bin
       minBinId = activeBin.binId;
       maxBinId = activeBin.binId + DEFAULT_NUM_BINS;
-      totalXAmount = new BN(Math.floor(amountA * 1e6)); // assume 6 decimals for token
+      totalXAmount = new BN(Math.floor(amountA * Math.pow(10, tokenXDecimals)));
       totalYAmount = new BN(0);
     } else {
       // Balanced: center around active bin
       const halfBins = Math.floor(DEFAULT_NUM_BINS / 2);
       minBinId = activeBin.binId - halfBins;
       maxBinId = activeBin.binId + halfBins;
-      totalXAmount = new BN(Math.floor(amountA * 1e6)); // assume 6 decimals
-      totalYAmount = new BN(Math.floor((amountB ?? 0) * 1e9)); // SOL 9 decimals
+      totalXAmount = new BN(Math.floor(amountA * Math.pow(10, tokenXDecimals)));
+      totalYAmount = new BN(Math.floor((amountB ?? 0) * Math.pow(10, tokenYDecimals)));
     }
 
     const newPosition = new Keypair();

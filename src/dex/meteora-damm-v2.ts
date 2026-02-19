@@ -19,7 +19,6 @@ import Decimal from "decimal.js";
 import {
   PublicKey,
   ComputeBudgetProgram,
-  Keypair,
   TransactionInstruction,
 } from "@solana/web3.js";
 import { CpAmm, SwapParams } from "@meteora-ag/cp-amm-sdk";
@@ -187,13 +186,29 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
     const quoteMintPk = new PublicKey(quoteMintStr);
     const inputAmount = amountToLamports(amountSol, quoteMintStr);
 
+    // Calculate minimumAmountOut with slippage protection
+    const slippageBps = opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
+    // Estimate output from vault balances (simple constant-product approximation)
+    const [balA, balB] = await Promise.all([
+      connection.getTokenAccountBalance(poolState.tokenAVault),
+      connection.getTokenAccountBalance(poolState.tokenBVault),
+    ]);
+    const isInputA = quoteMintPk.equals(poolState.tokenAMint);
+    const reserveIn = new BN(isInputA ? balA.value.amount : balB.value.amount);
+    const reserveOut = new BN(isInputA ? balB.value.amount : balA.value.amount);
+    let estimatedOut = new BN(0);
+    if (!reserveIn.isZero() && !reserveOut.isZero()) {
+      estimatedOut = inputAmount.mul(reserveOut).div(reserveIn.add(inputAmount));
+    }
+    const minimumAmountOut = estimatedOut.muln(10000 - slippageBps).divn(10000);
+
     const swapParams: SwapParams = {
       payer: wallet.publicKey,
       pool: poolPk,
       inputTokenMint: quoteMintPk,
       outputTokenMint: baseMintPk,
       amountIn: inputAmount,
-      minimumAmountOut: new BN(0), // adapter uses slippage-adjusted min-out below
+      minimumAmountOut,
       tokenAMint: poolState.tokenAMint,
       tokenBMint: poolState.tokenBMint,
       tokenAVault: poolState.tokenAVault,
@@ -310,7 +325,16 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
     });
 
     const accepted = results.find((r) => r.accepted);
-    const humanAmount = Number(sellAmount.toString()) / Math.pow(10, 6); // approximate
+    // Get actual token decimals for human-readable amount
+    const baseMintInfo = await connection.getAccountInfo(baseMintPk);
+    const baseTokenProgramId = baseMintInfo?.owner.equals(TOKEN_2022_PROGRAM_ID)
+      ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
+    let tokenDecimals = 9; // default
+    try {
+      const mintData = await connection.getTokenSupply(baseMintPk);
+      tokenDecimals = mintData.value.decimals;
+    } catch { /* fallback to 9 */ }
+    const humanAmount = Number(sellAmount.toString()) / Math.pow(10, tokenDecimals);
     return {
       txSignature: accepted?.signature ?? "",
       confirmed: !!accepted?.accepted,

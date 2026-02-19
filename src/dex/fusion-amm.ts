@@ -383,7 +383,7 @@ export class FusionAmmAdapter implements IDexAdapter {
   readonly capabilities: DexCapabilities = defaultCapabilities({
     canBuy: true,
     canSnipe: true,
-    canFindPool: true,
+    canFindPool: false, // Requires off-chain indexing
     canGetPrice: true,
   });
 

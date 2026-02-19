@@ -17,7 +17,6 @@ import Decimal from "decimal.js";
 import {
   PublicKey,
   ComputeBudgetProgram,
-  Keypair,
   TransactionInstruction,
 } from "@solana/web3.js";
 import AmmImpl from "@meteora-ag/dynamic-amm-sdk";

@@ -145,7 +145,7 @@ export class MeteoraDbcAdapter implements IDexAdapter {
     canBuy: true,
     canSell: true,
     canSnipe: true,
-    canFindPool: true,
+    canFindPool: false,
     canGetPrice: true,
   });
 
@@ -303,10 +303,17 @@ export class MeteoraDbcAdapter implements IDexAdapter {
     });
 
     const accepted = results.find((r) => r.accepted);
+    // Convert raw amount to human-readable using actual token decimals
+    let tokenDecimals = 9;
+    try {
+      const mintData = await connection.getTokenSupply(baseMintPk);
+      tokenDecimals = mintData.value.decimals;
+    } catch { /* fallback to 9 */ }
+    const humanAmount = Number(sellAmount.toString()) / Math.pow(10, tokenDecimals);
     return {
       txSignature: accepted?.signature ?? "",
       confirmed: !!accepted?.accepted,
-      amountIn: Number(sellAmount.toString()),
+      amountIn: humanAmount,
       amountInToken: tokenMint,
       dex: this.name,
       poolAddress,
@@ -449,10 +456,14 @@ export class MeteoraDbcAdapter implements IDexAdapter {
     const poolState = await dbcClient.state.getPool(poolPk);
     if (!poolState) throw new Error(`Pool not found: ${poolAddress}`);
 
-    // DBC pools store sqrtPrice — we need decimals to compute price
-    // We assume 9/6 decimal split based on common patterns, but for
-    // accuracy callers should use the price with knowledge of the mints.
-    const price = getPriceFromSqrtPrice(poolState.sqrtPrice, 9, 6);
+    // Fetch actual mint decimals for accurate price calculation
+    const [baseMintBal, quoteMintBal] = await Promise.all([
+      connection.getTokenSupply(poolState.baseMint),
+      connection.getTokenSupply(poolState.quoteMint),
+    ]);
+    const tokenADecimal = baseMintBal.value.decimals;
+    const tokenBDecimal = quoteMintBal.value.decimals;
+    const price = getPriceFromSqrtPrice(poolState.sqrtPrice, tokenADecimal, tokenBDecimal);
 
     return {
       price,
