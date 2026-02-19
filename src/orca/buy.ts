@@ -22,17 +22,19 @@ program
     token = options.token;
     sol = options.sol;
   });
-program.parse();
-
 /**
- * Buy function to perform a swap on the Meteora DEX.
+ * Buy function to perform a swap on the Orca DEX.
  *
  * @param {string} side - The side of the trade (buy/sell).
  * @param {string} token_address - The address of the token to trade.
  * @param {number} no_of_sol - The amount of SOL to trade.
  * @returns {Promise<void>} - A promise that resolves when the swap is completed.
  */
-async function buy(side:string, token_address:string, no_of_sol:number) {
+export async function buy(side:string, token_address:string, no_of_sol:number) {
   await swap(side, token_address, no_of_sol, -1);
 }
-buy("buy", token, sol);
+
+if (require.main === module) {
+  program.parse();
+  buy("buy", token, sol);
+}

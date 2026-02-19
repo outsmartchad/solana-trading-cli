@@ -151,8 +151,8 @@ export async function sell(
           units: 71999,
         }),
         ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: 0.0004 * LAMPORTS_PER_SOL,
-        }),
+            microLamports: 400, // FIXED: was 0.0004 * LAMPORTS_PER_SOL = 400_000 (way too high)
+          }),
       ],
       ...sellInstruction.instructions,
     ],
@@ -167,12 +167,8 @@ export async function sell(
   if (isJito) {
     sendBundle(latestBlockhash.blockhash, transaction, mintPublicKey, wallet); // with jito
     await new Promise((r) => setTimeout(r, 1000));
-    sendBundle(
-      latestBlockhash.blockhash,
-      transaction,
-      mintPublicKey,
-      dev_wallet
-    ); // with jito
+    // FIXED: removed dev_wallet sendBundle — dev_wallet is undefined at runtime
+    // sendBundle(latestBlockhash.blockhash, transaction, mintPublicKey, dev_wallet);
   } else simple_executeAndConfirm(transaction); // without jito
 }
 
@@ -285,7 +281,7 @@ export async function createAndBuy(
             units: 250000,
           }),
           ComputeBudgetProgram.setComputeUnitPrice({
-            microLamports: 0.004 * LAMPORTS_PER_SOL,
+            microLamports: 4000, // FIXED: was 0.004 * LAMPORTS_PER_SOL = 4_000_000 (absurdly high)
           }),
         ],
         ...createAndBuyInstruction.instructions,
@@ -330,8 +326,17 @@ export async function createAndBuy(
 }
 
 async function main() {
-  const pathToMintKeypair =
-    "/Users/chiwangso/Desktop/beta-memecoin-cli/src/Trading/Sniper_dev/grpc-pump.fun-bot/test-token-keypairs/soC5qgyb82XUQiEPEYsHspNtiKYcYsQiKeNSoiihyG9.json";
+  // FIXED: removed hardcoded local paths — use env vars or CLI args instead
+  const pathToMintKeypair = process.env.MINT_KEYPAIR_PATH || "";
+  if (!pathToMintKeypair) {
+    logger.error("MINT_KEYPAIR_PATH env var is required");
+    return;
+  }
+  const tokenImagePath = process.env.TOKEN_IMAGE_PATH || "";
+  if (!tokenImagePath) {
+    logger.error("TOKEN_IMAGE_PATH env var is required");
+    return;
+  }
   let tokenMetadata = {
     name: "Juice Wrld",
     symbol: "JW",
@@ -339,9 +344,7 @@ async function main() {
     telegram: "",
     twitter: "",
     website: "",
-    file: await fs.openAsBlob(
-      "/Users/chiwangso/Desktop/beta-memecoin-cli/src/Trading/pumpfun-bundler-cli/pumpfunsdk-js/pumpdotfun-sdk/images/999.jpg" // change your own path
-    ),
+    file: await fs.openAsBlob(tokenImagePath),
   };
   let initialBuySolAmount = 0.02;
   await init();

@@ -59,23 +59,23 @@ export async function fetchAMMPoolIdByMintPair(mint1:string, mint2:string) {
   return ""; // return empty string if no AMM pool ID is found
 }
 export async function fetchLPToken(tokenAddress:string) {
+  const MAX_RETRIES = 10;
   try {
     const poolId = await fetchAMMPoolId(tokenAddress);
-    let response = await (
-      await fetch(`https://api-v3.raydium.io/pools/info/ids?ids=${poolId}`)
-    ).json();
     let lpToken = "";
-    response.success = false;
-    console.log(response.data);
-    while (!response.success) {
-      console.log(
-        "The response was not successful when getting LP token, trying again"
-      );
-      response = await (
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const response = await (
         await fetch(`https://api-v3.raydium.io/pools/info/ids?ids=${poolId}`)
       ).json();
-      if (response.success) lpToken = response.data[0].lpMint.address;
+      if (response.success && response.data?.[0]?.lpMint?.address) {
+        lpToken = response.data[0].lpMint.address;
+        return lpToken;
+      }
+      console.log(
+        `The response was not successful when getting LP token, trying again (${attempt + 1}/${MAX_RETRIES})`
+      );
     }
+    console.log("Failed to get LP token after maximum retries");
     return lpToken;
   } catch (e) {
     console.log("Error getting LP token: ", e);

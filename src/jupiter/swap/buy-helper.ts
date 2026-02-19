@@ -13,36 +13,40 @@ const wsol = "So11111111111111111111111111111111111111112";
  * @returns {Promise<void>} - A promise that resolves when the buy operation is completed.
  * @throws {Error} - If an error occurs during the buy operation.
  */
-export async function buy(tokenToBuy:string, amountTokenOut:number, slippage:any) {
-  try {
-    const convertedAmountOfTokenOut = await convertToInteger(
-      amountTokenOut,
-      9
-    );
-    const quoteResponse = await getQuote(
-      wsol,
-      tokenToBuy,
-      convertedAmountOfTokenOut,
-      slippage
-    );
-    console.log(quoteResponse);
-    const wallet_PubKey = wallet.publicKey.toBase58();
-    const swapTransaction = await getSwapTransaction(
-      quoteResponse,
-      wallet_PubKey
-    );
-    const { confirmed, signature } =
-      await finalizeTransaction(swapTransaction);
-    if (confirmed) {
-      console.log("http://solscan.io/tx/" + signature);
-    } else {
-      console.log("Transaction failed");
-      console.log("retrying transaction...");
-      await buy(tokenToBuy, amountTokenOut, slippage);
+export async function buy(tokenToBuy:string, amountTokenOut:number, slippage:any, maxRetries: number = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const convertedAmountOfTokenOut = await convertToInteger(
+        amountTokenOut,
+        9
+      );
+      const quoteResponse = await getQuote(
+        wsol,
+        tokenToBuy,
+        convertedAmountOfTokenOut,
+        slippage
+      );
+      console.log(quoteResponse);
+      const wallet_PubKey = wallet.publicKey.toBase58();
+      const swapTransaction = await getSwapTransaction(
+        quoteResponse,
+        wallet_PubKey
+      );
+      const { confirmed, signature } =
+        await finalizeTransaction(swapTransaction);
+      if (confirmed) {
+        console.log("http://solscan.io/tx/" + signature);
+        return;
+      }
+      console.log(`Transaction failed (attempt ${attempt + 1}/${maxRetries})`);
+      if (attempt < maxRetries - 1) {
+        console.log("retrying transaction...");
+      }
+    } catch (error) {
+      console.error(error);
     }
-  } catch (error) {
-    console.error(error);
   }
+  console.log("Buy failed after maximum retry attempts");
 }
 
 async function main() {

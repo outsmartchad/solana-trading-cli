@@ -156,8 +156,15 @@ export async function formatAmmKeysById_swap_1(id: PublicKey):Promise<any> {
       sdkCache.sdk = raydium;
   }
 
+  const MAX_RETRIES = 10;
   let poolKeys2 = await raydium.liquidity.getAmmPoolKeys(id.toBase58());
-  while(poolKeys2 === null || poolKeys2===undefined){poolKeys2 = await raydium.liquidity.getAmmPoolKeys(id.toBase58());}
+  for (let attempt = 0; (poolKeys2 === null || poolKeys2 === undefined) && attempt < MAX_RETRIES; attempt++) {
+    poolKeys2 = await raydium.liquidity.getAmmPoolKeys(id.toBase58());
+  }
+  if (poolKeys2 === null || poolKeys2 === undefined) {
+    console.log("Failed to get AMM pool keys after maximum retries");
+    return null;
+  }
   if(poolKeys2.programId !== '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8') return null;
   return {
     id: new PublicKey(poolKeys2.id),
@@ -200,8 +207,15 @@ export async function fetchPoolInfo(poolKeys: any, poolId: PublicKey){
       sdkCache.sdk = raydium;
   }
   
+  const MAX_RETRIES_RPC = 10;
   let rpcData = await raydium.liquidity.getRpcPoolInfo(poolId.toBase58());
-  while(rpcData === null || rpcData===undefined) {rpcData = await raydium.liquidity.getRpcPoolInfo(poolId.toBase58());}
+  for (let attempt = 0; (rpcData === null || rpcData === undefined) && attempt < MAX_RETRIES_RPC; attempt++) {
+    rpcData = await raydium.liquidity.getRpcPoolInfo(poolId.toBase58());
+  }
+  if (rpcData === null || rpcData === undefined) {
+    console.log("Failed to get RPC pool info after maximum retries");
+    return null;
+  }
   return {
     status: rpcData.status,
     baseDecimals: rpcData.baseDecimal.toNumber(),

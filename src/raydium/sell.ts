@@ -33,8 +33,6 @@ program
     percentage = options.percentage;
     cluster = options.cluster;
   });
-program.parse();
-
 /**
  * Sell function that executes a swap transaction.
  *
@@ -51,9 +49,13 @@ export async function main() {
   let payer_wallet = null;
   if (payer_keypair !== null) {
     payer_wallet = await loadOrCreateKeypair_wallet(payer_keypair); // specified wallet by user in command
-    sell("sell", token_address, percentage, payer_wallet);
+    await sell("sell", token_address, percentage, payer_wallet);
   } else {
-    sell("sell", token_address, percentage, wallet); // default pre-defined wallet
+    await sell("sell", token_address, percentage, wallet); // default pre-defined wallet
   }
 }
-main();
+
+if (require.main === module) {
+  program.parse();
+  main();
+}

@@ -26,16 +26,18 @@ export async function getInfoFromDexscreener(tokenAddress: string) {
     poolId: "",
   };
   try {
+    const MAX_RETRIES = 10;
     let response: any = await fetch(url);
-    while (
-      response === undefined ||
-      response === null ||
-      response.status !== 200
-    ) {
-      console.log("retrying");
-      response = await fetch(url);
-      if (response.Response.statusText === "Too Many Requests")
+    for (let attempt = 0; (response === undefined || response === null || response.status !== 200) && attempt < MAX_RETRIES; attempt++) {
+      console.log(`retrying (${attempt + 1}/${MAX_RETRIES})`);
+      if (response?.status === 429) {
         await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+      response = await fetch(url);
+    }
+    if (!response || response.status !== 200) {
+      console.log("Failed to fetch from dexscreener after maximum retries");
+      return res;
     }
     data = await response.json();
     //console.log(data);

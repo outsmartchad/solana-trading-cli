@@ -74,9 +74,10 @@ export async function streamNewTokens(snipeTokenType:string, targetToken:string)
         const tokenAccount = new PublicKey(data.account.account.pubkey);
         logger.info(`Token Account: ${tokenAccount}`);
         let TokenToBuy = (snipeTokenType==="pump")?poolstate.quoteMint:poolstate.baseMint;
-        let Attempt = 0;
+        let attempt = 0;
         const maxAttempts = 3;
         const intervalId = setInterval(async () => {
+          attempt++; // FIXED: was never incremented
           const marketDetails = bufferRing.findPattern(poolstate.baseMint);
           console.log("Token incoming: ", TokenToBuy);
           console.log("Market Details: ", marketDetails)
@@ -94,7 +95,7 @@ export async function streamNewTokens(snipeTokenType:string, targetToken:string)
               if(targetToken === "") buy(latestBlockHash, tokenAccount, poolstate, marketDetailsDecoded, snipeTokenType);
             }
             clearInterval(intervalId);
-          } else if(Attempt>=maxAttempts){
+          } else if(attempt>=maxAttempts){
             logger.error("Invalid market details")
             clearInterval(intervalId)
           }

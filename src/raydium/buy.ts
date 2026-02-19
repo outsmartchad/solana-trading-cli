@@ -33,8 +33,6 @@ program
     sol = options.sol;
     cluster = options.cluster;
   });
-program.parse();
-
 /**
  * Buy function to perform a swap on the Raydium DEX.
  *
@@ -44,7 +42,7 @@ program.parse();
  * @param {string} payer - The payer's keypair for the transaction.
  * @returns {Promise<void>} - A promise that resolves when the swap is completed.
  */
-async function buy(side:string, address:string, no_of_sol:number, payer:Keypair) {
+export async function buy(side:string, address:string, no_of_sol:number, payer:Keypair) {
   let payer_wallet = null;
   if (payer_keypair !== null) {
     payer_wallet = await loadOrCreateKeypair_wallet(payer_keypair);
@@ -54,4 +52,7 @@ async function buy(side:string, address:string, no_of_sol:number, payer:Keypair)
   }
 }
 
-buy("buy", token_address, sol, payer_keypair);
+if (require.main === module) {
+  program.parse();
+  buy("buy", token_address, sol, payer_keypair);
+}

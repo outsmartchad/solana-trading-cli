@@ -48,15 +48,22 @@ import {
   
   // Get Tip Accounts
   
+  // FIXED: tip accounts are now fetched lazily and awaited properly (was a race condition)
   let tipAccounts: string[] = [];
-  (async () => {
-  try {
-      tipAccounts = await c.getTipAccounts();
-      // console.log('Result:', tipAccounts);
-  } catch (error) {
-      console.error('Error:', error);
+  let tipAccountsPromise: Promise<string[]> | null = null;
+
+  async function ensureTipAccounts(): Promise<string[]> {
+    if (tipAccounts.length > 0) return tipAccounts;
+    if (!tipAccountsPromise) {
+      tipAccountsPromise = c.getTipAccounts().catch((error: any) => {
+        console.error('Error fetching tip accounts:', error);
+        tipAccountsPromise = null;
+        return [];
+      });
+    }
+    tipAccounts = await tipAccountsPromise;
+    return tipAccounts;
   }
-  })();
   
   
   
@@ -64,7 +71,12 @@ import {
   
   try {
     logger.info(`Fetching and adding tip`);
-    const _tipAccount = tipAccounts[Math.floor(Math.random() * 6)];
+    const resolvedTipAccounts = await ensureTipAccounts();
+    if (resolvedTipAccounts.length === 0) {
+      logger.error("No tip accounts available, cannot send bundle");
+      return;
+    }
+    const _tipAccount = resolvedTipAccounts[Math.floor(Math.random() * resolvedTipAccounts.length)];
     const tipAccount = new PublicKey(_tipAccount);
     const b = new Bundle([transaction], 3);
     const jito_tips = parseFloat(JITO_TIPS);

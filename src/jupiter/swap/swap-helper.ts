@@ -111,34 +111,39 @@ export async function swap(
   tokenToSell: string,
   tokenToBuy: string,
   amountTokenOut: number,
-  slippage: any
+  slippage: any,
+  maxRetries: number = 3
 ) {
-  try {
-    const decimals = await getDecimals(new PublicKey(tokenToSell));
-    const convertedAmountOfTokenOut = await convertToInteger(
-      amountTokenOut,
-      decimals
-    );
-    const quoteResponse = await getQuote(
-      tokenToSell,
-      tokenToBuy,
-      convertedAmountOfTokenOut,
-      slippage
-    );
-    const wallet_PubKey = wallet.publicKey.toBase58();
-    const swapTransaction = await getSwapTransaction(
-      quoteResponse,
-      wallet_PubKey
-    );
-    const { confirmed, signature } = await finalizeTransaction(swapTransaction);
-    if (confirmed) {
-      console.log("http://solscan.io/tx/" + signature);
-    } else {
-      console.log("Transaction failed");
-      console.log("retrying transaction...");
-      await swap(tokenToSell, tokenToBuy, amountTokenOut, slippage);
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const decimals = await getDecimals(new PublicKey(tokenToSell));
+      const convertedAmountOfTokenOut = await convertToInteger(
+        amountTokenOut,
+        decimals
+      );
+      const quoteResponse = await getQuote(
+        tokenToSell,
+        tokenToBuy,
+        convertedAmountOfTokenOut,
+        slippage
+      );
+      const wallet_PubKey = wallet.publicKey.toBase58();
+      const swapTransaction = await getSwapTransaction(
+        quoteResponse,
+        wallet_PubKey
+      );
+      const { confirmed, signature } = await finalizeTransaction(swapTransaction);
+      if (confirmed) {
+        console.log("http://solscan.io/tx/" + signature);
+        return;
+      }
+      console.log(`Transaction failed (attempt ${attempt + 1}/${maxRetries})`);
+      if (attempt < maxRetries - 1) {
+        console.log("retrying transaction...");
+      }
+    } catch (error) {
+      console.error(error);
     }
-  } catch (error) {
-    console.error(error);
   }
+  console.log("Swap failed after maximum retry attempts");
 }

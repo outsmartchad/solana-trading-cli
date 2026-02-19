@@ -22,8 +22,6 @@ program
     token = options.token;
     sol = options.sol;
   });
-program.parse();
-
 /**
  * Buy function to perform a swap on Jupiter.
  *
@@ -32,7 +30,11 @@ program.parse();
  * @param {number} no_of_sol - The amount of SOL to trade.
  * @returns {Promise<void>} - A promise that resolves when the swap is completed.
  */
-async function buy_cli(side:string, token_address:string, no_of_sol:number) {
+export async function buy_cli(side:string, token_address:string, no_of_sol:number) {
   await buy(token_address, no_of_sol, 1); // using 1% slippage
 }
-buy_cli("buy", token, sol);
+
+if (require.main === module) {
+  program.parse();
+  buy_cli("buy", token, sol);
+}
