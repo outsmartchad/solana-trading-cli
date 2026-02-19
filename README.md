@@ -5,30 +5,32 @@ The most powerful Solana trading CLI. 17 DEXes, 12 TX landing providers, one uni
 ```bash
 outsmart buy  --dex raydium-cpmm --token <MINT> --amount 0.1
 outsmart sell --dex jupiter-ultra --token <MINT> --pct 100
-outsmart snipe --dex meteora-dlmm --token <MINT> --pool <POOL> --amount 0.5 --tip 0.01
+outsmart add-liq --dex meteora-lp-dlmm --pool <POOL> --amount-a 1.0
 ```
 
 ## DEX Adapters
 
-| Adapter | Protocol | Buy | Sell | Snipe | Pool Discovery | Price |
-|---------|----------|-----|------|-------|----------------|-------|
-| raydium-amm-v4 | AMM v4 | x | | x | x | x |
-| raydium-cpmm | CPMM | x | x | x | x | x |
-| raydium-clmm | CLMM | x | x | x | x | x |
-| raydium-launchlab | Launchlab | x | | | x | x |
-| meteora-damm-v1 | Dynamic AMM | x | | x | x | x |
-| meteora-damm-v2 | CpAmm | x | x | x | x | x |
-| meteora-dlmm | DLMM | x | | x | | x |
-| meteora-dbc | DBC | x | x | x | | x |
-| meteora-lp-dlmm | DLMM LP | | | | | | Add/remove liquidity |
-| orca | Whirlpool | x | | x | | x |
-| byreal-clmm | CLMM | x | | x | | x |
-| pancakeswap-clmm | CLMM | x | | x | | x |
-| fusion-amm | Fusion | x | | x | | x |
-| futarchy-amm | Futarchy | x | | x | | x |
-| futarchy-launchpad | Launchpad | | | | | | Fund/claim |
-| jupiter-ultra | Ultra API | x | x | | | |
-| dflow | Intent | x | x | | | |
+| Adapter | Protocol | Buy | Sell | Snipe | Pool Discovery | Price | LP |
+|---------|----------|-----|------|-------|----------------|-------|----|
+| raydium-amm-v4 | AMM v4 | x | | x | x | x | |
+| raydium-cpmm | CPMM | x | x | x | x | x | |
+| raydium-clmm | CLMM | x | x | x | x | x | |
+| raydium-launchlab | Launchlab | x | | | x | x | |
+| meteora-damm-v1 | Dynamic AMM | x | | x | x | x | |
+| meteora-damm-v2 | CpAmm | x | x | x | x | x | |
+| meteora-dlmm | DLMM | x | | x | | x | |
+| meteora-dbc | DBC | x | x | x | | x | |
+| meteora-lp-dlmm | DLMM LP | | | | | | add/remove |
+| orca | Whirlpool | x | | x | | x | |
+| byreal-clmm | CLMM | x | | x | | x | |
+| pancakeswap-clmm | CLMM | x | | x | | x | |
+| fusion-amm | Fusion | x | | x | | x | |
+| futarchy-amm | Futarchy | x | | x | | x | |
+| futarchy-launchpad | Launchpad | | | | | | fund/claim |
+| jupiter-ultra | Ultra API | x | x | | | | |
+| dflow | Intent | x | x | | | | |
+
+> **Note on snipe:** The `snipe` command currently builds and submits a swap transaction to a known pool with MEV tip and concurrent TX landing. Full sniping (gRPC pool creation streaming + background monitoring) requires a gRPC key and will be added in a future update with a dedicated `outsmart snipe-stream` command.
 
 ## TX Landing Providers
 
@@ -102,14 +104,32 @@ outsmart sell --dex dflow --token <MINT> --pct 100 --slippage 300
 
 ### Snipe
 
-Snipe requires a known pool address and MEV tip:
+Submits a swap transaction to a known pool with MEV tip and concurrent TX landing:
 
 ```bash
 outsmart snipe --dex raydium-cpmm --token <MINT> --pool <POOL> --amount 0.5 --tip 0.01
 outsmart snipe --dex meteora-dlmm --token <MINT> --pool <POOL> --amount 1 --tip 0.02 --jito
 ```
 
-Uses durable nonce accounts for concurrent TX landing to avoid duplicate buys.
+Uses durable nonce accounts for concurrent TX landing to avoid duplicate buys. Full gRPC-powered sniping (pool creation streaming + background monitoring) is coming in a future update.
+
+### Add Liquidity
+
+```bash
+outsmart add-liq --dex meteora-lp-dlmm --pool <POOL> --amount-a 1.0
+outsmart add-liq --dex meteora-lp-dlmm --pool <POOL> --amount-a 1.0 --amount-b 500
+```
+
+Currently supported by: `meteora-lp-dlmm` (DLMM positions with one-sided or balanced liquidity).
+
+### Remove Liquidity
+
+```bash
+outsmart remove-liq --dex meteora-lp-dlmm --pool <POOL> --pct 100
+outsmart remove-liq --dex meteora-lp-dlmm --pool <POOL> --pct 50
+```
+
+Currently supported by: `meteora-lp-dlmm` (removes liquidity from existing DLMM positions with claim-and-close).
 
 ### Quote
 
@@ -131,6 +151,7 @@ outsmart find-pool --dex raydium-amm-v4 --token <MINT> --quote <USDC_MINT>
 outsmart list-dex
 outsmart list-dex --cap canSell
 outsmart list-dex --cap canSnipe --json
+outsmart list-dex --cap canAddLiquidity
 ```
 
 ### Token Info
@@ -205,6 +226,13 @@ src/
 ```
 
 Each DEX adapter implements `IDexAdapter` and self-registers with the `DexRegistry` on import. The CLI imports all adapters at startup; the library API lets you import only what you need.
+
+## Roadmap
+
+- [ ] gRPC-powered snipe streaming (`outsmart snipe-stream` with background monitoring)
+- [ ] DAMM v2 add/remove liquidity + fee claiming
+- [ ] OpenClaw AI agent plugin wrapper
+- [ ] More DEX adapters as new protocols launch
 
 ## Credits
 

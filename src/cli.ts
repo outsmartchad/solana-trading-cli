@@ -320,6 +320,86 @@ program
   });
 
 // ---------------------------------------------------------------------------
+// outsmart add-liq
+// ---------------------------------------------------------------------------
+
+program
+  .command("add-liq")
+  .description("Add liquidity to a pool")
+  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-lp-dlmm)")
+  .requiredOption("-p, --pool <address>", "pool address")
+  .requiredOption("--amount-a <amount>", "amount of token A (or SOL) to deposit")
+  .option("--amount-b <amount>", "amount of token B to deposit (if required)")
+  .option("--slippage <bps>", "slippage tolerance in basis points")
+  .option("--priority <microLamports>", "priority fee in microLamports per CU")
+  .option("--tip <sol>", "MEV tip in SOL")
+  .action(async (cmdOpts) => {
+    const adapter = getDexAdapter(cmdOpts.dex);
+    if (!adapter.capabilities.canAddLiquidity) {
+      die(`${adapter.name} does not support addLiquidity`);
+    }
+    if (!adapter.addLiquidity) {
+      die(`${adapter.name} declares canAddLiquidity but has no addLiquidity() implementation`);
+    }
+
+    const params = {
+      poolAddress: cmdOpts.pool,
+      amountA: Number(cmdOpts.amountA),
+      amountB: cmdOpts.amountB != null ? Number(cmdOpts.amountB) : undefined,
+      opts: buildSwapOpts(cmdOpts),
+    };
+
+    console.log(`\n  adding liquidity on ${adapter.name} (pool: ${params.poolAddress})...`);
+    const result = await adapter.addLiquidity(params);
+    console.log();
+    console.log(`  tx:        ${result.txSignature}`);
+    console.log(`  confirmed: ${result.confirmed}`);
+    if (result.error) {
+      console.log(`  error:     ${result.error}`);
+    }
+    console.log();
+  });
+
+// ---------------------------------------------------------------------------
+// outsmart remove-liq
+// ---------------------------------------------------------------------------
+
+program
+  .command("remove-liq")
+  .description("Remove liquidity from a pool")
+  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-lp-dlmm)")
+  .requiredOption("-p, --pool <address>", "pool address")
+  .requiredOption("--pct <percentage>", "percentage of LP position to remove (0-100)")
+  .option("--slippage <bps>", "slippage tolerance in basis points")
+  .option("--priority <microLamports>", "priority fee in microLamports per CU")
+  .option("--tip <sol>", "MEV tip in SOL")
+  .action(async (cmdOpts) => {
+    const adapter = getDexAdapter(cmdOpts.dex);
+    if (!adapter.capabilities.canRemoveLiquidity) {
+      die(`${adapter.name} does not support removeLiquidity`);
+    }
+    if (!adapter.removeLiquidity) {
+      die(`${adapter.name} declares canRemoveLiquidity but has no removeLiquidity() implementation`);
+    }
+
+    const params = {
+      poolAddress: cmdOpts.pool,
+      percentage: Number(cmdOpts.pct),
+      opts: buildSwapOpts(cmdOpts),
+    };
+
+    console.log(`\n  removing ${params.percentage}% liquidity on ${adapter.name} (pool: ${params.poolAddress})...`);
+    const result = await adapter.removeLiquidity(params);
+    console.log();
+    console.log(`  tx:        ${result.txSignature}`);
+    console.log(`  confirmed: ${result.confirmed}`);
+    if (result.error) {
+      console.log(`  error:     ${result.error}`);
+    }
+    console.log();
+  });
+
+// ---------------------------------------------------------------------------
 // outsmart list-dex
 // ---------------------------------------------------------------------------
 
