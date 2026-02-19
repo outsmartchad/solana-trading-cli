@@ -1,1 +1,0 @@
-ts-node src/streaming/snipe-create.ts --auto-sell --jito --n 3

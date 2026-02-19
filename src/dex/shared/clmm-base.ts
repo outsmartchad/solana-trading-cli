@@ -679,7 +679,7 @@ export class ClmmBaseAdapter implements IDexAdapter {
   readonly capabilities: DexCapabilities = defaultCapabilities({
     canBuy: true,
     canSnipe: true,
-    canFindPool: true,
+    canFindPool: false, // Requires off-chain indexing or Raydium API
     canGetPrice: true,
   });
 

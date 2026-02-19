@@ -11,7 +11,6 @@
 import {
   PublicKey,
   TransactionInstruction,
-  Keypair,
   SystemProgram,
   ComputeBudgetProgram,
   LAMPORTS_PER_SOL,

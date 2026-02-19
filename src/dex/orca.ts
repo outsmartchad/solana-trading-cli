@@ -22,7 +22,6 @@ import {
   TransactionInstruction,
   SystemProgram,
   ComputeBudgetProgram,
-  Keypair,
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import {
@@ -316,7 +315,7 @@ export class OrcaAdapter implements IDexAdapter {
   readonly capabilities: DexCapabilities = defaultCapabilities({
     canBuy: true,
     canSnipe: true,
-    canFindPool: true,
+    canFindPool: false, // Requires off-chain indexing or Orca API
     canGetPrice: true,
   });
 

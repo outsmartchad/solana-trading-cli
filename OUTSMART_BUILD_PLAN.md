@@ -60,7 +60,7 @@ Understanding which modules share SDKs informs agent groupings:
 | **Raydium** | `@raydium-io/raydium-sdk-v2` or raw IX building | raydium-amm-v4, raydium-cpmm, raydium-clmm, raydium-launchlab, raydium (tx-parser) |
 | **Meteora** | `@meteora-ag/*` SDKs (each different) | meteora-damm-v1, meteora-damm-v2, meteora-dlmm, meteora-dbc, meteora-lp/dlmm |
 | **CLMM forks** | ~90% identical code (different program IDs) | raydium-clmm, byreal-clmm, pancakeswap-clmm |
-| **Orca** | `@orca-so/whirlpools` v5 + `@solana/kit` | orca, orca-wavebreak |
+| **Orca** | `@orca-so/whirlpools` v5 + `@solana/kit` | orca |
 | **Anchor-based** | `@coral-xyz/anchor` | futarchy-amm, futarchy-launchpad |
 | **API-driven** | REST APIs (no on-chain IX building) | jupiter-ultra, DFlow |
 | **Cross-cutting** | `@raydium-io/raydium-sdk-v2` MathUtil | meteora-damm-v2, meteora-dlmm, byreal-clmm, pancakeswap-clmm |
@@ -75,7 +75,7 @@ Understanding which modules share SDKs informs agent groupings:
 |------|----------|---------|
 | **XL (10k+)** | 10k-25k | meteora-lp/dlmm (25.4k), futarchy-launchpad (13.9k), futarchy-amm (11.9k) |
 | **L (3k-10k)** | 3k-10k | meteora-damm-v2 (7.9k), raydium-clmm (4.6k), byreal-clmm (3.2k), pancakeswap-clmm (3.2k) |
-| **M (1k-3k)** | 1k-3k | raydium/ (2.8k), orca (2.1k), raydium-amm-v4 (1.7k), orca-wavebreak (1.5k), raydium-cpmm (1.3k), raydium-launchlab (1.3k), meteora-dbc (1.1k), fusion-amm (1.0k) |
+| **M (1k-3k)** | 1k-3k | raydium/ (2.8k), orca (2.1k), raydium-amm-v4 (1.7k), raydium-cpmm (1.3k), raydium-launchlab (1.3k), meteora-dbc (1.1k), fusion-amm (1.0k) |
 | **S (<1k)** | <1k | DFlow (771), jupiter-ultra (701), meteora-dlmm (452), meteora-damm-v1 (443) |
 
 ---
@@ -154,16 +154,15 @@ Each module becomes a class implementing `IDexAdapter`:
 - `src/dex/meteora-dbc.ts` — buy, sell, snipe, findPool, getPrice
 - `src/dex/meteora-lp-dlmm.ts` — addLiquidity, removeLiquidity (LP management, 25k LOC)
 
-### [ ] Phase 4 — CLMMs + Orca + Fusion (Agent 4, 5 modules)
+### [ ] Phase 4 — CLMMs + Orca + Fusion (Agent 4, 4 modules)
 
-**Modules:** byreal-clmm, pancakeswap-clmm, orca, orca-wavebreak, fusion-amm
+**Modules:** byreal-clmm, pancakeswap-clmm, orca, fusion-amm
 
 CLMM fork optimization: Generic CLMM adapter parameterized by program ID covers byreal-clmm and pancakeswap-clmm (they share ~90% code with raydium-clmm).
 
 - `src/dex/byreal-clmm.ts` — buy, snipe, findPool, getPrice, buildSwapIxs
 - `src/dex/pancakeswap-clmm.ts` — buy, snipe, findPool, getPrice, buildSwapIxs
 - `src/dex/orca.ts` — buy, snipe, findPool, getPrice, buildSwapIxs
-- `src/dex/orca-wavebreak.ts` — buy, snipe
 - `src/dex/fusion-amm.ts` — buy, snipe, findPool, getPrice, buildSwapIxs
 
 ### [ ] Phase 5 — Futarchy + API Adapters + Shared Infra (Agent 5, 4 modules)
@@ -210,7 +209,7 @@ Shared infra:
 | **Agent 1** (Foundation) | Phase 0, Phase 1, Phase 1.5 (types/registry/nonce) | Shared infrastructure | **DONE** |
 | **Agent 2** (Raydium) | Phase 2 — all Raydium programs | raydium-amm-v4, raydium-cpmm, raydium-clmm, raydium-launchlab, raydium (tx-parser), legacy raydium wrapper | Unblocked |
 | **Agent 3** (Meteora) | Phase 3 — all Meteora programs | meteora-damm-v1, meteora-damm-v2, meteora-dlmm, meteora-dbc, meteora-lp/dlmm | Unblocked |
-| **Agent 4** (CLMMs+Orca) | Phase 4 — CLMM forks + Orca + Fusion | byreal-clmm, pancakeswap-clmm, orca, orca-wavebreak, fusion-amm | Unblocked |
+| **Agent 4** (CLMMs+Orca) | Phase 4 — CLMM forks + Orca + Fusion | byreal-clmm, pancakeswap-clmm, orca, fusion-amm | Unblocked |
 | **Agent 5** (Anchor+API) | Phase 5 — Futarchy + API adapters + shared infra | futarchy-amm, futarchy-launchpad, jupiter-ultra, DFlow + shared utils | Unblocked |
 | **Agent 6** (CLI+Packaging) | Phase 6 — CLI, packaging, distribution | CLI entry point, npm/Homebrew/binary distribution | Unblocked |
 
@@ -263,7 +262,7 @@ Shared infra:
 - `src/dex/byreal-clmm.ts` — Agent 4
 - `src/dex/pancakeswap-clmm.ts` — Agent 4
 - `src/dex/orca.ts` — Agent 4
-- `src/dex/orca-wavebreak.ts` — Agent 4
+
 - `src/dex/fusion-amm.ts` — Agent 4
 - `src/dex/futarchy-amm.ts` — Agent 5
 - `src/dex/futarchy-launchpad.ts` — Agent 5

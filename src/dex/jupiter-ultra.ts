@@ -22,7 +22,7 @@ import {
   Transaction,
   VersionedTransaction,
 } from "@solana/web3.js";
-import { getMint, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { getMint, getAssociatedTokenAddress, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 import { getWallet, getConnection } from "../helpers/config";
 
@@ -432,12 +432,11 @@ export class JupiterUltraAdapter implements IDexAdapter {
       slippageBps,
     );
 
-    // Parse output amount if available
+    // Parse output amount — convert from raw to human-readable
     let amountOut: number | undefined;
     if (executeResponse.outputAmountResult) {
-      // outputAmountResult is in raw units — need token decimals to convert
-      // For simplicity, return raw value; caller can convert using mint decimals
-      amountOut = Number(executeResponse.outputAmountResult);
+      const outDecimals = await getTokenDecimals(new PublicKey(tokenMint));
+      amountOut = Number(executeResponse.outputAmountResult) / Math.pow(10, outDecimals);
     }
 
     return {
@@ -479,7 +478,6 @@ export class JupiterUltraAdapter implements IDexAdapter {
         ? TOKEN_2022_PROGRAM_ID
         : TOKEN_PROGRAM_ID;
 
-    const { getAssociatedTokenAddress } = await import("@solana/spl-token");
     const tokenAccount = await getAssociatedTokenAddress(
       mintPk,
       wallet.publicKey,
@@ -510,9 +508,11 @@ export class JupiterUltraAdapter implements IDexAdapter {
       slippageBps,
     );
 
+    // Convert raw output to human-readable (SOL = 9 decimals)
     let amountOut: number | undefined;
     if (executeResponse.outputAmountResult) {
-      amountOut = Number(executeResponse.outputAmountResult);
+      const outDecimals = outputMint === SOL_MINT ? 9 : await getTokenDecimals(new PublicKey(outputMint));
+      amountOut = Number(executeResponse.outputAmountResult) / Math.pow(10, outDecimals);
     }
 
     return {
