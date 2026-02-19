@@ -60,6 +60,39 @@ Listen (events)     gRPC/WebSocket → stream → react     Browser → poll pag
 
 An agent using both can do things neither could alone: snipe a new pool via gRPC stream (outsmart), then go to the project's website to verify the token metadata (OpenClaw), then provide liquidity on the optimal DEX (outsmart), then monitor the position through a dashboard (OpenClaw).
 
+### The Trencher's Toolkit
+
+Real on-chain traders don't just use DEXes. They live on a handful of sites that aggregate token intelligence, LP analytics, and market data. An agent that can actually trade needs to know these sites and use them the way a human trencher would:
+
+| Site | What trenchers use it for | How the agent uses it |
+|------|--------------------------|----------------------|
+| [GMGN](https://gmgn.ai) | Smart money tracking, wallet profiling, new token discovery, insider activity detection | OpenClaw browses GMGN to check who's buying, spot smart money wallets accumulating, and flag insider-heavy tokens before outsmart executes |
+| [Axiom](https://axiom.trade) | Fast trading terminal, real-time charts, quick snipe UI | OpenClaw reads Axiom's token pages for sentiment, holder distribution, and recent trade flow. For tokens that only list on Axiom first, OpenClaw can interact with the UI directly |
+| [LPAgent](https://lpagent.ai) | LP position management, fee analytics, pool selection, yield tracking | OpenClaw monitors LP positions via LPAgent dashboards, checks fee APR across pools, and feeds that data back so outsmart can rebalance or exit positions |
+| [DexScreener](https://dexscreener.com) | Price charts, liquidity depth, market cap, volume, social links | outsmart queries DexScreener API directly (`outsmart info --token`). OpenClaw reads the social links and project pages that DexScreener surfaces |
+| [Birdeye](https://birdeye.so) | Portfolio tracking, token analytics, holder analysis | OpenClaw monitors portfolio performance and token holder trends that aren't available via RPC alone |
+
+The pattern: **outsmart reads the chain, OpenClaw reads the internet.** outsmart executes trades at the code level, OpenClaw gathers the intelligence that informs those trades. Neither is complete without the other.
+
+### Integration: MCP Tool Server
+
+outsmart exposes itself to AI agents via [MCP (Model Context Protocol)](https://modelcontextprotocol.io) — the standard way AI agents call external tools. Every `IDexAdapter` method maps to an MCP tool:
+
+```
+MCP Tools exposed by outsmart:
+  buy         → adapter.buy({ dex, token, amount, ... })
+  sell        → adapter.sell({ dex, token, percentage, ... })
+  snipe       → adapter.snipe({ dex, token, pool, tip, ... })
+  add_liq     → adapter.addLiquidity({ dex, pool, amountA, ... })
+  remove_liq  → adapter.removeLiquidity({ dex, pool, percentage, ... })
+  get_price   → adapter.getPrice({ dex, pool })
+  find_pool   → adapter.findPool({ dex, token, quote })
+  list_dex    → registry.listDexAdapters()
+  claim_fees  → adapter.claimFees({ dex, pool })
+```
+
+Any MCP-compatible agent — OpenClaw, Claude, or your own — can call these tools without knowing anything about Solana internals. The agent says "buy 0.1 SOL of token X on raydium-cpmm", outsmart handles the rest: pool discovery, slippage calculation, instruction building, TX landing through 12 providers.
+
 ---
 
 ## DEX Adapters
@@ -312,8 +345,10 @@ Requires `PRIVATE_KEY` and `RPC_URL` env vars. Tests execute real transactions o
 - [x] 12 TX landing providers with concurrent submission
 - [x] DAMM v2 full LP lifecycle (add/remove/claim fees)
 - [x] Mainnet integration test suite
-- [ ] gRPC-powered snipe streaming (`outsmart snipe-stream`)
-- [ ] OpenClaw AI agent plugin wrapper
+- [ ] MCP tool server — expose all adapter methods to AI agents
+- [ ] OpenClaw integration — browser intelligence from GMGN, Axiom, LPAgent, DexScreener, Birdeye
+- [ ] gRPC-powered snipe streaming (`outsmart snipe-stream`) — completes the Listen layer
+- [ ] Hybrid agent workflows — snipe-with-verification, LP management with APR tracking
 - [ ] More DEX adapters as new protocols launch
 
 ## Credits

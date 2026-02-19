@@ -187,17 +187,63 @@ Shared infra:
 - Output formatting, --json, --verbose, --dry-run flags
 - npm publish, Homebrew formula, standalone binaries, shell completion
 
-### [ ] Phase 7 — OpenClaw Plugin Wrapper (deferred)
+### [ ] Phase 7 — MCP Tool Server + OpenClaw Integration
 
-- Thin `openclaw-outsmart-plugin` wrapping IDexAdapter/DexRegistry as OpenClaw tools
-- ~200-300 lines: each adapter.buy() becomes an OpenClaw tool handler
-- Depends on outsmart being 100% functional first
+outsmart becomes a tool server that any AI agent can call via MCP (Model Context Protocol).
+
+**7a. MCP Tool Server (~200-300 lines)**
+- Wrap every IDexAdapter method as an MCP tool
+- Tools: buy, sell, snipe, add_liq, remove_liq, get_price, find_pool, list_dex, claim_fees
+- Each tool takes JSON params, calls the adapter, returns JSON result
+- Agent doesn't need to know Solana internals — just "buy 0.1 SOL of token X on raydium-cpmm"
+- Compatible with any MCP client: OpenClaw, Claude, custom agents
+
+**7b. OpenClaw Browser Intelligence**
+
+OpenClaw provides the browser layer — navigating the same sites human trenchers use to gather intelligence that isn't available via RPC:
+
+| Site | What the agent does there |
+|------|--------------------------|
+| [GMGN](https://gmgn.ai) | Smart money tracking, wallet profiling, insider activity detection. Check who's buying before outsmart executes. |
+| [Axiom](https://axiom.trade) | Token sentiment, holder distribution, trade flow. For tokens that list on Axiom first, interact with the UI directly. |
+| [LPAgent](https://lpagent.ai) | LP position analytics, fee APR comparison, pool selection. Feed data back so outsmart can rebalance/exit positions. |
+| [DexScreener](https://dexscreener.com) | Price charts, liquidity depth, social links. outsmart queries the API directly; OpenClaw reads the linked project pages. |
+| [Birdeye](https://birdeye.so) | Portfolio tracking, token analytics, holder analysis beyond what RPC provides. |
+
+The pattern: **outsmart reads the chain, OpenClaw reads the internet.** outsmart executes at the code level, OpenClaw gathers the intelligence that informs those executions.
+
+**7c. Hybrid Agent Workflows**
+
+Example: snipe-with-verification flow
+1. outsmart (Listen): gRPC stream detects new pool creation on Raydium
+2. outsmart (Read): Fetch pool state, token mint, initial liquidity
+3. OpenClaw (Browse): Navigate to GMGN — check smart money wallets, insider flags
+4. OpenClaw (Browse): Navigate to project website — verify team page, audit links
+5. OpenClaw (Decide): "Looks legit, proceed" / "Red flags, skip"
+6. outsmart (Write): Execute snipe with MEV tip through 12 providers
+7. OpenClaw (Browse): Monitor token chart on Birdeye/DexScreener
+8. outsmart (Write): Sell at target or stop-loss
+
+Example: LP management flow
+1. OpenClaw (Browse): Check LPAgent for best fee APR pools
+2. outsmart (Write): Add liquidity on Meteora DAMM v2 via `add_liq`
+3. OpenClaw (Browse): Monitor position performance on LPAgent dashboard
+4. outsmart (Read): Check unclaimed fees via on-chain math
+5. outsmart (Write): Claim fees via `claim_fees`
+6. OpenClaw (Browse): Compare APR with competing pools on LPAgent
+7. outsmart (Write): Rebalance — remove from underperforming pool, add to better one
+
+**7d. Shared Wallet**
+- outsmart holds the private key (env var) for direct RPC signing
+- OpenClaw controls the same wallet via browser extension (Phantom/Backpack)
+- Both can sign transactions; outsmart for speed (raw RPC), OpenClaw for UI-only protocols
 
 ### [ ] gRPC Bot Integration (deferred)
 
 - gRPC snipers from `100x-algo-bots` will be integrated into CLI repo separately
 - Reconnection, heartbeat, clean shutdown hardening
 - Wire to new landing layer
+- This completes the **Listen** layer of the three-layer architecture
 - Timing: after user provides instructions for 100x-algo-bots integration
 
 ---
