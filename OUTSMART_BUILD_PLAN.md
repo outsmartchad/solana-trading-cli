@@ -206,9 +206,8 @@ OpenClaw provides the browser layer — navigating the same sites human trencher
 |------|--------------------------|
 | [GMGN](https://gmgn.ai) | Smart money tracking, wallet profiling, insider activity detection. Check who's buying before outsmart executes. |
 | [Axiom](https://axiom.trade) | Token sentiment, holder distribution, trade flow. For tokens that list on Axiom first, interact with the UI directly. |
-| [LPAgent](https://lpagent.ai) | LP position analytics, fee APR comparison, pool selection. Feed data back so outsmart can rebalance/exit positions. |
+| [LPAgent](https://app.lpagent.io/) | LP position analytics, fee APR comparison, pool selection. Feed data back so outsmart can rebalance/exit positions. |
 | [DexScreener](https://dexscreener.com) | Price charts, liquidity depth, social links. outsmart queries the API directly; OpenClaw reads the linked project pages. |
-| [Birdeye](https://birdeye.so) | Portfolio tracking, token analytics, holder analysis beyond what RPC provides. |
 
 The pattern: **outsmart reads the chain, OpenClaw reads the internet.** outsmart executes at the code level, OpenClaw gathers the intelligence that informs those executions.
 

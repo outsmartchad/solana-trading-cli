@@ -68,9 +68,8 @@ Real on-chain traders don't just use DEXes. They live on a handful of sites that
 |------|--------------------------|----------------------|
 | [GMGN](https://gmgn.ai) | Smart money tracking, wallet profiling, new token discovery, insider activity detection | OpenClaw browses GMGN to check who's buying, spot smart money wallets accumulating, and flag insider-heavy tokens before outsmart executes |
 | [Axiom](https://axiom.trade) | Fast trading terminal, real-time charts, quick snipe UI | OpenClaw reads Axiom's token pages for sentiment, holder distribution, and recent trade flow. For tokens that only list on Axiom first, OpenClaw can interact with the UI directly |
-| [LPAgent](https://lpagent.ai) | LP position management, fee analytics, pool selection, yield tracking | OpenClaw monitors LP positions via LPAgent dashboards, checks fee APR across pools, and feeds that data back so outsmart can rebalance or exit positions |
+| [LPAgent](https://app.lpagent.io/) | LP position management, fee analytics, pool selection, yield tracking | OpenClaw monitors LP positions via LPAgent dashboards, checks fee APR across pools, and feeds that data back so outsmart can rebalance or exit positions |
 | [DexScreener](https://dexscreener.com) | Price charts, liquidity depth, market cap, volume, social links | outsmart queries DexScreener API directly (`outsmart info --token`). OpenClaw reads the social links and project pages that DexScreener surfaces |
-| [Birdeye](https://birdeye.so) | Portfolio tracking, token analytics, holder analysis | OpenClaw monitors portfolio performance and token holder trends that aren't available via RPC alone |
 
 The pattern: **outsmart reads the chain, OpenClaw reads the internet.** outsmart executes trades at the code level, OpenClaw gathers the intelligence that informs those trades. Neither is complete without the other.
 
