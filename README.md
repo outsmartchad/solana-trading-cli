@@ -1,14 +1,66 @@
 # outsmart
 
-The most powerful Solana trading CLI. 17 DEXes, 12 TX landing providers, one unified interface.
+**Trading infrastructure for AI agents and humans on Solana.**
+
+17 DEX adapters. 12 TX landing providers. Full on-chain read/write/listen stack. One interface.
 
 > **This branch (`agent-trading-infra`) is under active development.** If you want the stable, battle-tested version, use the [`typescript-main`](https://github.com/outsmartchad/solana-trading-cli/tree/typescript-main) branch instead.
 
 ```bash
 outsmart buy  --dex raydium-cpmm --token <MINT> --amount 0.1
 outsmart sell --dex jupiter-ultra --token <MINT> --pct 100
-outsmart add-liq --dex meteora-lp-dlmm --pool <POOL> --amount-a 1.0
+outsmart add-liq --dex meteora-damm-v2 --pool <POOL> --amount-a 1.0
 ```
+
+---
+
+## Vision
+
+Most AI agents that claim to "trade on Solana" are wrappers around a single API endpoint. They can't choose which DEX to route through, can't provide liquidity, can't snipe new pools, and can't land transactions competitively. They delegate everything to a third-party aggregator and hope for the best.
+
+**outsmart** is different. It's a complete on-chain trading infrastructure — a CLI for humans and a programmatic SDK for AI agents — that gives direct, low-level access to every major Solana DEX protocol.
+
+### The Three Layers
+
+An agent that actually operates on-chain needs three capabilities:
+
+| Layer | What it does | How outsmart implements it |
+|-------|-------------|---------------------------|
+| **Write** | Submit transactions — swaps, LP, sniping | 17 DEX adapters build raw instructions, 12 TX landing providers race to land them on-chain |
+| **Read** | Query on-chain state — pool prices, positions, balances | Direct RPC calls to decode pool accounts, vault balances, position states. No API middleman. |
+| **Listen** | React to real-time events — new pools, price moves | gRPC streams (Yellowstone) + WebSocket subscriptions for pool creation monitoring *(coming soon)* |
+
+Most tools give you **Write** through an aggregator. outsmart gives you all three, with the code-level control to choose exactly which DEX, which pool, which landing provider, and which submission strategy to use.
+
+### Why This Matters for Agents
+
+When an AI agent (OpenClaw, or your own) needs to execute a trade, it shouldn't be a black box. The agent should be able to:
+
+- **Pick the DEX** — Route through Raydium CPMM for deep liquidity, or hit a Meteora DLMM pool for tighter spreads, or use Jupiter Ultra for aggregated routing. The agent decides based on the situation, not a hardcoded default.
+- **Control execution** — Set slippage, compute budget, MEV tips. Send through Jito bundles or blast through 12 providers concurrently. Use durable nonces to prevent duplicate buys.
+- **Provide liquidity** — Not just swap. Create LP positions on Meteora DAMM v2 or DLMM pools, collect fees, rebalance. Agents that can LP are agents that can earn yield.
+- **Read the chain directly** — Decode pool state from raw account data. Calculate prices from on-chain reserves, not from a cached API. Know the real price at the moment of execution.
+- **Listen and react** — Subscribe to pool creation events via gRPC. Snipe new tokens the moment liquidity appears. React to on-chain events in real time, not on a polling interval.
+
+### outsmart + OpenClaw
+
+outsmart handles the **code layer** — raw RPC writes, on-chain reads, gRPC listeners. It's the muscle.
+
+[OpenClaw](https://github.com/AnomalyCo/OpenClaw) handles the **browser layer** — it has a hand and eye that can navigate DeFi frontends, click buttons, sign transactions through wallet extensions, and interact with dApps that don't expose APIs. It's the hands.
+
+Together, they cover the full surface area of Solana DeFi:
+
+```
+                    outsmart (code layer)              OpenClaw (browser layer)
+                    ─────────────────────              ────────────────────────
+Write (txns)        RPC → raw instructions → land      Browser → wallet → sign → submit
+Read (state)        RPC → decode accounts → parse       Browser → scrape UI → extract
+Listen (events)     gRPC/WebSocket → stream → react     Browser → poll pages → detect
+```
+
+An agent using both can do things neither could alone: snipe a new pool via gRPC stream (outsmart), then go to the project's website to verify the token metadata (OpenClaw), then provide liquidity on the optimal DEX (outsmart), then monitor the position through a dashboard (OpenClaw).
+
+---
 
 ## DEX Adapters
 
@@ -32,15 +84,15 @@ outsmart add-liq --dex meteora-lp-dlmm --pool <POOL> --amount-a 1.0
 | jupiter-ultra | Ultra API | x | x | | | | |
 | dflow | Intent | x | x | | | | |
 
-> **Note on snipe:** The `snipe` command currently builds and submits a swap transaction to a known pool with MEV tip and concurrent TX landing. Full sniping (gRPC pool creation streaming + background monitoring) requires a gRPC key and will be added in a future update with a dedicated `outsmart snipe-stream` command.
+> **Note on snipe:** The `snipe` command builds and submits a swap transaction to a known pool with MEV tip and concurrent TX landing. Full sniping (gRPC pool creation streaming + background monitoring) requires a gRPC key and will be added in a future update with `outsmart snipe-stream`.
 
 ## TX Landing Providers
 
 12 providers with concurrent, race, random, and sequential submission strategies:
 
-0slot, nozomi, helius-sender, blockrazor, node1.me, soyas, bloXroute, astralane, stellium, flashblock, jito, nextblock
+**0slot, nozomi, helius-sender, blockrazor, node1.me, soyas, bloXroute, astralane, stellium, flashblock, jito, nextblock**
 
-Each provider is enabled by setting its API key in the environment. The orchestrator sends transactions through multiple providers simultaneously for fastest landing.
+Each provider is enabled by setting its API key in the environment. The orchestrator sends transactions through multiple providers simultaneously for fastest landing. Durable nonce accounts prevent duplicate executions when the same transaction hits multiple providers.
 
 ## Installation
 
@@ -106,32 +158,30 @@ outsmart sell --dex dflow --token <MINT> --pct 100 --slippage 300
 
 ### Snipe
 
-Submits a swap transaction to a known pool with MEV tip and concurrent TX landing:
-
 ```bash
 outsmart snipe --dex raydium-cpmm --token <MINT> --pool <POOL> --amount 0.5 --tip 0.01
 outsmart snipe --dex meteora-dlmm --token <MINT> --pool <POOL> --amount 1 --tip 0.02 --jito
 ```
 
-Uses durable nonce accounts for concurrent TX landing to avoid duplicate buys. Full gRPC-powered sniping (pool creation streaming + background monitoring) is coming in a future update.
+Uses durable nonce accounts for concurrent TX landing to avoid duplicate buys.
 
 ### Add Liquidity
 
 ```bash
-outsmart add-liq --dex meteora-lp-dlmm --pool <POOL> --amount-a 1.0
+outsmart add-liq --dex meteora-damm-v2 --pool <POOL> --amount-a 1.0
 outsmart add-liq --dex meteora-lp-dlmm --pool <POOL> --amount-a 1.0 --amount-b 500
 ```
 
-Currently supported by: `meteora-lp-dlmm` (DLMM positions with one-sided or balanced liquidity).
+Supported by: `meteora-damm-v2` (full-range positions with Token-2022 support), `meteora-lp-dlmm` (DLMM bin positions).
 
 ### Remove Liquidity
 
 ```bash
-outsmart remove-liq --dex meteora-lp-dlmm --pool <POOL> --pct 100
+outsmart remove-liq --dex meteora-damm-v2 --pool <POOL> --pct 100
 outsmart remove-liq --dex meteora-lp-dlmm --pool <POOL> --pct 50
 ```
 
-Currently supported by: `meteora-lp-dlmm` (removes liquidity from existing DLMM positions with claim-and-close).
+Supported by: `meteora-damm-v2` (full/partial removal + close position), `meteora-lp-dlmm` (remove with claim-and-close).
 
 ### Quote
 
@@ -180,7 +230,7 @@ All swap commands (buy, sell, snipe) share these options:
 
 ## Programmatic API
 
-Use outsmart as a library in your own bots:
+Use outsmart as a library in your own bots or agents:
 
 ```typescript
 import { getDexAdapter, listDexAdapters } from "outsmart";
@@ -188,18 +238,30 @@ import { getDexAdapter, listDexAdapters } from "outsmart";
 // Import adapters to register them
 import "outsmart/dist/dex/raydium-cpmm";
 import "outsmart/dist/dex/jupiter-ultra";
+import "outsmart/dist/dex/meteora-damm-v2";
 
-// Buy
-const adapter = getDexAdapter("raydium-cpmm");
-const result = await adapter.buy({
-  tokenMint: "So11111111111111111111111111111111111111112",
+// Buy tokens
+const cpmm = getDexAdapter("raydium-cpmm");
+const buyResult = await cpmm.buy({
+  tokenMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
   amountSol: 0.1,
-  opts: { slippageBps: 300 },
+  opts: { slippageBps: 300, tipSol: 0.001 },
 });
+console.log("Buy TX:", buyResult.txSignature);
 
-console.log(result.txSignature);
+// Add liquidity
+const damm = getDexAdapter("meteora-damm-v2");
+const lpResult = await damm.addLiquidity!({
+  poolAddress: "POOL_ADDRESS",
+  amountA: 1.0,
+});
+console.log("LP TX:", lpResult.txSignature);
 
-// List all adapters
+// Read on-chain price
+const price = await cpmm.getPrice!("POOL_ADDRESS");
+console.log("Price:", price.price);
+
+// List what's available
 const adapters = listDexAdapters();
 console.log(adapters.map(a => `${a.name}: ${a.protocol}`));
 ```
@@ -208,41 +270,58 @@ console.log(adapters.map(a => `${a.name}: ${a.protocol}`));
 
 ```
 src/
-├── cli.ts              # CLI entry point (Commander.js)
-├── index.ts            # Library entry point (programmatic API)
+├── cli.ts                 # CLI entry point (Commander.js)
+├── index.ts               # Library entry point (programmatic API)
 ├── dex/
-│   ├── types.ts        # IDexAdapter interface, BuyParams, SwapResult, etc.
-│   ├── index.ts        # DexRegistry singleton
+│   ├── types.ts           # IDexAdapter interface, params, results
+│   ├── index.ts           # DexRegistry singleton
 │   ├── shared/
-│   │   └── clmm-base.ts   # Shared CLMM base class
-│   └── 17 adapter files
-├── dexscreener/        # DexScreener market data
-├── helpers/            # Config, wallet, connection, utilities
+│   │   └── clmm-base.ts  # Shared CLMM base (1049 lines)
+│   └── 17 adapter files   # One per DEX protocol
+├── dexscreener/           # Market data utility
+├── helpers/               # Config, wallet, connection, Token-2022 utils
 └── transactions/
     ├── landing/
-    │   ├── orchestrator.ts    # Multi-provider TX submission
-    │   ├── nonce-manager.ts   # Durable nonce for concurrent landing
-    │   ├── tip-accounts.ts    # Tip account registry
+    │   ├── orchestrator.ts    # Multi-provider concurrent submission
+    │   ├── nonce-manager.ts   # Durable nonce for dedup
+    │   ├── tip-accounts.ts    # 100+ tip accounts registry
     │   └── providers/         # 12 provider implementations
     └── legacy executors
 ```
 
 Each DEX adapter implements `IDexAdapter` and self-registers with the `DexRegistry` on import. The CLI imports all adapters at startup; the library API lets you import only what you need.
 
+## Testing
+
+Mainnet integration tests for all 17 adapters:
+
+```bash
+npm test                 # Run all tests
+npm run test:registry    # Registry smoke test (no RPC needed)
+npm run test:raydium     # Raydium adapters
+npm run test:meteora     # Meteora adapters
+npm run test:orca        # Orca Whirlpool
+npm run test:api         # Jupiter Ultra + DFlow
+```
+
+Requires `PRIVATE_KEY` and `RPC_URL` env vars. Tests execute real transactions on mainnet with tiny amounts (0.001 SOL).
+
 ## Roadmap
 
-- [x] DAMM v2 add/remove liquidity + fee claiming
-- [ ] gRPC-powered snipe streaming (`outsmart snipe-stream` with background monitoring)
+- [x] 17 DEX adapters with unified IDexAdapter interface
+- [x] 12 TX landing providers with concurrent submission
+- [x] DAMM v2 full LP lifecycle (add/remove/claim fees)
+- [x] Mainnet integration test suite
+- [ ] gRPC-powered snipe streaming (`outsmart snipe-stream`)
 - [ ] OpenClaw AI agent plugin wrapper
 - [ ] More DEX adapters as new protocols launch
 
 ## Credits
 
 - [Raydium SDK v2](https://github.com/raydium-io/raydium-sdk-V2)
-- [pumpdotfun-sdk](https://github.com/rckprtr/pumpdotfun-sdk)
-- [yellowstone-grpc](https://github.com/rpcpool/yellowstone-grpc)
 - [Meteora SDKs](https://github.com/MeteoraAg)
 - [Orca Whirlpools](https://github.com/orca-so/whirlpools)
+- [yellowstone-grpc](https://github.com/rpcpool/yellowstone-grpc)
 
 ## Disclaimer
 
