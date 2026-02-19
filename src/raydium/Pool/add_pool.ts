@@ -71,7 +71,9 @@ program
 
     // Handle the logic for the create command
   });
-program.parse();
+if (require.main === module) {
+  program.parse();
+}
 /**
  * Adds liquidity to a target pool.
  * @param {Object} input - The input parameters.
@@ -148,17 +150,21 @@ export async function ammAddLiquidity(input:any) {
  * @param {Object} input - The input parameters for adding liquidity.
  * @returns {Promise<void>} - A promise that resolves when the liquidity is added.
  */
-export async function ammAddLiquidityHelper(input:any) {
-  const res:any = await ammAddLiquidity(input);
-  console.log("txids:", res?.txids);
-  const response = await checkTx(res?.txids[0]);
-  if (response) {
-    console.log(`https://explorer.solana.com/tx/${res?.txids}?cluster=mainnet`);
-  } else {
-    console.log("Transaction failed");
-    console.log("trying to send the transaction again");
-    ammAddLiquidityHelper(input);
+export async function ammAddLiquidityHelper(input:any, maxRetries: number = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const res:any = await ammAddLiquidity(input);
+    console.log("txids:", res?.txids);
+    const response = await checkTx(res?.txids[0]);
+    if (response) {
+      console.log(`https://explorer.solana.com/tx/${res?.txids}?cluster=mainnet`);
+      return;
+    }
+    console.log(`Transaction failed (attempt ${attempt + 1}/${maxRetries})`);
+    if (attempt < maxRetries - 1) {
+      console.log("trying to send the transaction again");
+    }
   }
+  console.log("Transaction failed after maximum retry attempts");
 }
 
 /**
@@ -214,4 +220,6 @@ async function main() {
   });
 }
 
-main();
+if (require.main === module) {
+  main();
+}

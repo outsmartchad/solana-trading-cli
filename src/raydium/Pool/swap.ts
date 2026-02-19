@@ -280,7 +280,7 @@ export async function swapForVolume(tokenAddr: string, sol_per_order: number) {
   let signature = null,
     confirmed = null;
   try {
-    const res: any = simple_executeAndConfirm(
+    const res: any = await simple_executeAndConfirm(
       transaction,
       wallet,
       latestBlockhash
@@ -388,8 +388,8 @@ export async function swap(
     if (usage == "volume") {
       return await swapOnlyAmm(input);
     }
-    swapOnlyAmmHelper(input); // using jito
-    //swapOnlyAmmUsingBloXRoute(input); // using bloXroute
+    await swapOnlyAmmHelper(input); // using jito
+    //await swapOnlyAmmUsingBloXRoute(input); // using bloXroute
   } else {
     // sell
     const { tokenName, tokenSymbol } = await getTokenMetadata(tokenAddress);
@@ -443,7 +443,7 @@ export async function swap(
     if (usage == "volume") {
       return await swapOnlyAmm(input);
     }
-    swapOnlyAmmHelper(input); // using Jito
-    //swapOnlyAmmUsingBloXRoute(input); // using bloXroute
+    await swapOnlyAmmHelper(input); // using Jito
+    //await swapOnlyAmmUsingBloXRoute(input); // using bloXroute
   }
 }

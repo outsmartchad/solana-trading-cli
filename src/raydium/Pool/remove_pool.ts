@@ -71,7 +71,9 @@ program
     percentage = options.percentage;
     cluster = options.cluster;
   });
-program.parse();
+if (require.main === module) {
+  program.parse();
+}
 /**
  * Removes liquidity from a target pool.
  * @param {Object} input - The input parameters.
@@ -133,17 +135,21 @@ export async function findLPTokenAddress(tokenAddress:string) {
  * @param {Object} input - The input parameters for removing liquidity.
  * @returns {Promise<void>} - A promise that resolves when the liquidity is removed.
  */
-export async function ammRemoveLiquidityHelper(input:any) {
-  const res:any = await ammRemoveLiquidity(input);
-  console.log("txids:", res?.txids);
-  const response = await checkTx(res?.txids[0]);
-  if (response) {
-    console.log(`https://explorer.solana.com/tx/${res.txids}?cluster=mainnet`);
-  } else {
-    console.log("Transaction failed");
-    console.log("trying to send the transaction again");
-    ammRemoveLiquidityHelper(input);
+export async function ammRemoveLiquidityHelper(input:any, maxRetries: number = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const res:any = await ammRemoveLiquidity(input);
+    console.log("txids:", res?.txids);
+    const response = await checkTx(res?.txids[0]);
+    if (response) {
+      console.log(`https://explorer.solana.com/tx/${res.txids}?cluster=mainnet`);
+      return;
+    }
+    console.log(`Transaction failed (attempt ${attempt + 1}/${maxRetries})`);
+    if (attempt < maxRetries - 1) {
+      console.log("trying to send the transaction again");
+    }
   }
+  console.log("Transaction failed after maximum retry attempts");
 }
 /**
  * Main function for removing a pool's liquidity.
@@ -203,4 +209,6 @@ async function main() {
   });
 }
 
-main();
+if (require.main === module) {
+  main();
+}

@@ -36,7 +36,7 @@ export async function swap(
   buyAmountInSOL: number = 0.1,
   sellPercentage: number = 100
 ) {
-  let swapYtoX = true,
+  let swapYtoX: boolean,
     decimalY: number,
     decimalX: number,
     inToken: PublicKey,
@@ -50,15 +50,18 @@ export async function swap(
     if (dlmmPool.tokenY.publicKey.toBase58() === wsol) {
       inToken = dlmmPool.tokenY.publicKey;
       outToken = dlmmPool.tokenX.publicKey;
+      swapYtoX = true; // swapping Y (WSOL) to X (token)
     } else {
       inToken = dlmmPool.tokenX.publicKey;
       outToken = dlmmPool.tokenY.publicKey;
+      swapYtoX = false; // swapping X (WSOL) to Y (token)
     }
     swapAmount = new BN(buyAmountInSOL * 10 ** 9); // convert to lamports
   } else {
     if (dlmmPool.tokenY.publicKey.toBase58() === wsol) {
       inToken = dlmmPool.tokenX.publicKey;
       outToken = dlmmPool.tokenY.publicKey;
+      swapYtoX = false; // swapping X (token) to Y (WSOL)
       const balance = await getSPLTokenBalance(
         connection,
         inToken,
@@ -69,6 +72,7 @@ export async function swap(
     } else {
       inToken = dlmmPool.tokenY.publicKey;
       outToken = dlmmPool.tokenX.publicKey;
+      swapYtoX = true; // swapping Y (token) to X (WSOL)
       const balance = await getSPLTokenBalance(
         connection,
         inToken,
@@ -80,11 +84,12 @@ export async function swap(
   }
 
   const binArrays = await dlmmPool.getBinArrayForSwap(swapYtoX); // list of pools
+  const DEFAULT_SLIPPAGE_BPS = 100; // 1% default slippage (was 0.1% = 10 bps, way too tight for memecoins)
   const swapQuote = await dlmmPool.swapQuote(
     // get the swap quote
     swapAmount,
     swapYtoX,
-    new BN(10),
+    new BN(DEFAULT_SLIPPAGE_BPS),
     binArrays
   );
   const swapTx: any = await dlmmPool.swap({

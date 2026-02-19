@@ -19,38 +19,43 @@ const wsol = "So11111111111111111111111111111111111111112";
 export async function sell(
   tokenToSell: string,
   amountOfTokenToSell: number,
-  slippage: any
+  slippage: any,
+  maxRetries: number = 3
 ) {
-  try {
-    const decimals = await getDecimals(new PublicKey(tokenToSell));
-    console.log(decimals);
-    const convertedAmountOfTokenOut = await convertToInteger(
-      amountOfTokenToSell,
-      decimals
-    );
-    console.log(convertedAmountOfTokenOut);
-    const quoteResponse = await getQuote(
-      tokenToSell,
-      wsol,
-      convertedAmountOfTokenOut,
-      slippage
-    );
-    const wallet_PubKey = wallet.publicKey.toBase58();
-    const swapTransaction = await getSwapTransaction(
-      quoteResponse,
-      wallet_PubKey
-    );
-    const { confirmed, signature } = await finalizeTransaction(swapTransaction);
-    if (confirmed) {
-      console.log("http://solscan.io/tx/" + signature);
-    } else {
-      console.log("Transaction failed");
-      console.log("retrying transaction...");
-      await sell(tokenToSell, amountOfTokenToSell, slippage);
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const decimals = await getDecimals(new PublicKey(tokenToSell));
+      console.log(decimals);
+      const convertedAmountOfTokenOut = await convertToInteger(
+        amountOfTokenToSell,
+        decimals
+      );
+      console.log(convertedAmountOfTokenOut);
+      const quoteResponse = await getQuote(
+        tokenToSell,
+        wsol,
+        convertedAmountOfTokenOut,
+        slippage
+      );
+      const wallet_PubKey = wallet.publicKey.toBase58();
+      const swapTransaction = await getSwapTransaction(
+        quoteResponse,
+        wallet_PubKey
+      );
+      const { confirmed, signature } = await finalizeTransaction(swapTransaction);
+      if (confirmed) {
+        console.log("http://solscan.io/tx/" + signature);
+        return;
+      }
+      console.log(`Transaction failed (attempt ${attempt + 1}/${maxRetries})`);
+      if (attempt < maxRetries - 1) {
+        console.log("retrying transaction...");
+      }
+    } catch (error) {
+      console.error(error);
     }
-  } catch (error) {
-    console.error(error);
   }
+  console.log("Sell failed after maximum retry attempts");
 }
 
 async function main() {

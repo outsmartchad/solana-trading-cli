@@ -22,8 +22,6 @@ program
     token = options.token;
     percentage = options.percentage;
   });
-program.parse();
-
 /**
  * Sell function to perform a swap on the Meteora DEX.
  *
@@ -32,7 +30,11 @@ program.parse();
  * @param {number} sell_percentage - The sell percentage.
  * @returns {Promise<void>} - A promise that resolves when the swap is completed.
  */
-async function sell(side:string, token_address:string, sell_percentage:number) {
+export async function sell(side:string, token_address:string, sell_percentage:number) {
   await swap(side, token_address, -1, sell_percentage);
 }
-sell("sell", token, percentage);
+
+if (require.main === module) {
+  program.parse();
+  sell("sell", token, percentage);
+}

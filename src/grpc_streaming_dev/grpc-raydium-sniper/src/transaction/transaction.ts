@@ -193,86 +193,78 @@ export async function buy(
     const exists = await boughtCache.get(target_token);
     if(exists) {  logger.debug("Skipping buy because token is already bought");return;}
     await mutexForSnipe.acquire(); // one token at a time
-    const poolKeys = createPoolKeys(newTokenAccount, poolState, marketDetails!);
-    const { innerTransaction } = Liquidity.makeSwapFixedInInstruction(
-      {
-        poolKeys: poolKeys,
-        userKeys: {
-          tokenAccountIn: quoteTokenAssociatedAddress,
-          tokenAccountOut: ata,
-          owner: wallet.publicKey,
+    try {
+      const poolKeys = createPoolKeys(newTokenAccount, poolState, marketDetails!);
+      const { innerTransaction } = Liquidity.makeSwapFixedInInstruction(
+        {
+          poolKeys: poolKeys,
+          userKeys: {
+            tokenAccountIn: quoteTokenAssociatedAddress,
+            tokenAccountOut: ata,
+            owner: wallet.publicKey,
+          },
+          amountIn: quoteAmount.raw,
+          minAmountOut: 1, // FIXED: was 0 (trivially MEV-sandwichable)
         },
-        amountIn: quoteAmount.raw,
-        minAmountOut: 0,
-      },
-      poolKeys.version
-    );
-
-    const ix_list = [
-      ...[
-        ComputeBudgetProgram.setComputeUnitLimit({
-          units: 80000,
-        }),
-        ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: 0.004 * LAMPORTS_PER_SOL,
-        }),
-      ],
-      createAssociatedTokenAccountIdempotentInstruction(
-        wallet.publicKey,
-        ata,
-        wallet.publicKey,
-        tokenType == "pump" ? poolState.quoteMint : poolState.baseMint
-      ),
-      ...innerTransaction.instructions,
-    ];
-
-    const messageV0 = new TransactionMessage({
-      payerKey: wallet.publicKey,
-      recentBlockhash: latestBlockhash,
-      instructions: ix_list,
-    }).compileToV0Message();
-
-    let commitment: Commitment = retrieveEnvVariable(
-      "COMMITMENT_LEVEL",
-      logger
-    ) as Commitment;
-
-    const transaction = new VersionedTransaction(messageV0);
-
-    transaction.sign([wallet, ...innerTransaction.signers]);
-
-    // uncomment if you want to land ur buy though nozomi
-    //sendNozomiTx(ix_list, wallet, latestBlockhash, "RAY", "Buy");
-
-    //await sleep(30000);
-
-    /*const signature = await solanaConnection.sendRawTransaction(transaction.serialize(), {
-        preflightCommitment: commitment,
-      });
-*/
-    //logger.info(`Sending bundle transaction with mint - ${signature}`);
-    // //
-    // if(tokenType==="pump") sendBundle(latestBlockhash, messageV0, poolState.quoteMint);
-    // else sendBundle(latestBlockhash, messageV0, poolState.baseMint);
-
-    if (tokenType === "pump"){
-      simple_executeAndConfirm(
-        transaction,
-        wallet,
-        latestBlockhash,
-        poolState.quoteMint.toBase58()
+        poolKeys.version
       );
+
+      const ix_list = [
+        ...[
+          ComputeBudgetProgram.setComputeUnitLimit({
+            units: 80000,
+          }),
+          ComputeBudgetProgram.setComputeUnitPrice({
+            microLamports: 4000, // FIXED: was 0.004 * LAMPORTS_PER_SOL = 4_000_000 (absurdly high ~4 SOL/CU)
+          }),
+        ],
+        createAssociatedTokenAccountIdempotentInstruction(
+          wallet.publicKey,
+          ata,
+          wallet.publicKey,
+          tokenType == "pump" ? poolState.quoteMint : poolState.baseMint
+        ),
+        ...innerTransaction.instructions,
+      ];
+
+      const messageV0 = new TransactionMessage({
+        payerKey: wallet.publicKey,
+        recentBlockhash: latestBlockhash,
+        instructions: ix_list,
+      }).compileToV0Message();
+
+      let commitment: Commitment = retrieveEnvVariable(
+        "COMMITMENT_LEVEL",
+        logger
+      ) as Commitment;
+
+      const transaction = new VersionedTransaction(messageV0);
+
+      transaction.sign([wallet, ...innerTransaction.signers]);
+
+      // uncomment if you want to land ur buy though nozomi
+      //sendNozomiTx(ix_list, wallet, latestBlockhash, "RAY", "Buy");
+
+      if (tokenType === "pump"){
+        simple_executeAndConfirm(
+          transaction,
+          wallet,
+          latestBlockhash,
+          poolState.quoteMint.toBase58()
+        );
+      }
+      else{
+        simple_executeAndConfirm(
+          transaction,
+          wallet,
+          latestBlockhash,
+          poolState.baseMint.toBase58()
+        );
+      }
+      boughtCache.save(target_token, true);
+    } finally {
+      mutexForSnipe.release(); // FIXED: mutex always released, even on error
     }
-    else{
-      simple_executeAndConfirm(
-        transaction,
-        wallet,
-        latestBlockhash,
-        poolState.baseMint.toBase58()
-      );
-    }
-    boughtCache.save(target_token, true);
-    mutexForSnipe.release();
   } catch (error) {
     logger.error(error);
   }

@@ -25,18 +25,20 @@ program
     token = options.token;
     percentage = options.percentage;
   });
-program.parse();
-
 /**
- * Sell function to perform a swap on the Meteora DEX.
+ * Sell function to perform a swap on Jupiter.
  *
  * @param {string} side - The side of the trade (buy/sell).
  * @param {string} token_address - The address of the token to trade.
  * @param {number} sell_percentage - The sell percentage.
  * @returns {Promise<void>} - A promise that resolves when the swap is completed.
  */
-async function sell_cli(side:string, token_address:string, sell_percentage:number) {
+export async function sell_cli(side:string, token_address:string, sell_percentage:number) {
   const balance = await getSPLTokenBalance(connection, new PublicKey(token_address), wallet.publicKey);
-  await sell(token_address, balance*percentage/100, 1); // using 1% slippage
+  await sell(token_address, balance*sell_percentage/100, 1); // using 1% slippage
 }
-sell_cli("sell", token, percentage);
+
+if (require.main === module) {
+  program.parse();
+  sell_cli("sell", token, percentage);
+}
