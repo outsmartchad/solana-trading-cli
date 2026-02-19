@@ -21,7 +21,14 @@
     "dev": "ts-node src/cli.ts",
     "prepublishOnly": "npm run build",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"No tests yet\" && exit 0"
+    "test": "jest",
+    "test:registry": "jest --testPathPattern=registry",
+    "test:raydium": "jest --testPathPattern=raydium",
+    "test:meteora": "jest --testPathPattern=meteora",
+    "test:orca": "jest --testPathPattern=orca",
+    "test:clmm": "jest --testPathPattern=clmm",
+    "test:fusion": "jest --testPathPattern=fusion-futarchy",
+    "test:api": "jest --testPathPattern=api-adapters"
   },
   "keywords": [
     "solana",
@@ -94,7 +101,10 @@
   },
   "devDependencies": {
     "@types/bn.js": "^5.2.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.6",
     "typescript": "^5.5.4"
   }
 }
