@@ -11,17 +11,17 @@ const _origWarn = process.stderr.write.bind(process.stderr);
 /**
  * outsmart CLI — The Solana trading command-line interface.
  *
- * 18 DEX adapters, 12 TX landing providers, one unified interface.
+ * 17 DEX adapters, 12 TX landing providers, one unified interface.
  *
  * Usage:
  *   outsmart buy  --dex raydium-cpmm --token <MINT> --amount 0.1
  *   outsmart sell --dex raydium-cpmm --token <MINT> --pct 100
- *   outsmart snipe --dex raydium-cpmm --token <MINT> --pool <POOL> --amount 0.5 --tip 0.01
+ *   outsmart buy  --dex raydium-cpmm --token <MINT> --amount 0.5 --pool <POOL> --tip 0.01
  *   outsmart quote --dex meteora-dlmm --pool <POOL>
  *   outsmart list-dex
  *   outsmart list-dex --cap canSell
  *   outsmart config show
- *   outsmart config set RPC_URL https://...
+ *   outsmart init
  */
 
 import "dotenv/config";
@@ -63,7 +63,6 @@ import {
 import type {
   BuyParams,
   SellParams,
-  SnipeParams,
   SwapOpts,
   SwapResult,
 } from "./dex/types";
@@ -145,7 +144,7 @@ function addSwapOptions(cmd: Command, includeTip = true): Command {
 
 const program = new Command()
   .name("outsmart")
-  .description("The Solana trading CLI — 18 DEXes, 12 TX landing providers.")
+  .description("The Solana trading CLI — 17 DEX adapters, 12 TX landing providers.")
   .version(pkg.version);
 
 // ---------------------------------------------------------------------------
@@ -213,41 +212,19 @@ addSwapOptions(sellCmd);
 program.addCommand(sellCmd);
 
 // ---------------------------------------------------------------------------
-// outsmart snipe
+// outsmart snipe — NOT YET IMPLEMENTED
+//
+// Real sniping requires a gRPC (Geyser/Yellowstone) listener that monitors
+// pool creation events in real time. When a new pool is created where the
+// base or quote token matches the target, it fires an instant buy through
+// concurrent multi-provider TX landing.
+//
+// This needs the user's own Geyser gRPC key and runs as a background
+// process (cronjob/tmux). Will be added when gRPC integration is built.
+//
+// For now, use `outsmart buy --pool <POOL> --tip <SOL>` to execute a
+// competitive buy on a known pool.
 // ---------------------------------------------------------------------------
-
-const snipeCmd = new Command("snipe")
-  .description("Snipe a token on a known pool with concurrent TX landing")
-  .requiredOption("-d, --dex <name>", "DEX adapter name")
-  .requiredOption("-t, --token <mint>", "token mint address to snipe")
-  .requiredOption("-p, --pool <address>", "pool address (required for sniping)")
-  .requiredOption("-a, --amount <sol>", "amount of SOL to spend")
-  .requiredOption("--tip <sol>", "MEV tip in SOL (required for competitive sniping)")
-  .action(async (cmdOpts) => {
-    const adapter = getDexAdapter(cmdOpts.dex);
-    if (!adapter.capabilities.canSnipe) {
-      die(`${adapter.name} does not support snipe`);
-    }
-    if (!adapter.snipe) {
-      die(`${adapter.name} declares canSnipe but has no snipe() implementation`);
-    }
-
-    const params: SnipeParams = {
-      tokenMint: cmdOpts.token,
-      amountSol: Number(cmdOpts.amount),
-      poolAddress: cmdOpts.pool,
-      tipSol: Number(cmdOpts.tip),
-      quoteMint: cmdOpts.quote,
-      opts: buildSwapOpts(cmdOpts),
-    };
-
-    console.log(`\n  sniping on ${adapter.name} (pool: ${params.poolAddress})...`);
-    const result = await adapter.snipe(params);
-    printResult(result);
-  });
-
-addSwapOptions(snipeCmd, false); // --tip already defined as required option
-program.addCommand(snipeCmd);
 
 // ---------------------------------------------------------------------------
 // outsmart quote

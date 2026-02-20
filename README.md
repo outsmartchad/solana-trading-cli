@@ -1,6 +1,6 @@
 # outsmart
 
-**Solana trading CLI — buy, sell, snipe, and LP across 17 DEXes with 12 TX landing providers.**
+**Solana trading CLI — buy, sell, and LP across 17 DEXes with 12 TX landing providers.**
 
 ```bash
 npm install -g outsmart
@@ -103,26 +103,6 @@ outsmart sell --dex dflow --token <MINT> --pct 50 --slippage 300
 | `--pct <percentage>` | Percentage of balance to sell, 0-100 (required) |
 | `-p, --pool <address>` | Pool address (auto-discovered if omitted) |
 
-### snipe
-
-Snipe a token on a known pool with MEV tip and concurrent TX landing. Requires a pool address.
-
-```bash
-outsmart snipe --dex <name> --token <MINT> --pool <POOL> --amount <SOL> --tip <SOL>
-outsmart snipe --dex raydium-cpmm --token <MINT> --pool <POOL> --amount 0.5 --tip 0.01
-outsmart snipe --dex meteora-dlmm --token <MINT> --pool <POOL> --amount 1 --tip 0.02 --jito
-```
-
-| Flag | Description |
-|------|-------------|
-| `-d, --dex <name>` | DEX adapter name (required) |
-| `-t, --token <mint>` | Token mint address (required) |
-| `-p, --pool <address>` | Pool address (required) |
-| `-a, --amount <sol>` | SOL amount to spend (required) |
-| `--tip <sol>` | MEV tip in SOL (required) |
-
-> **Note:** This is a one-shot snipe to a known pool. Full sniping with gRPC pool creation streaming will be available via `outsmart snipe-stream` in a future update.
-
 ### add-liq
 
 Add liquidity to a pool.
@@ -179,8 +159,7 @@ List all registered DEX adapters and their capabilities.
 ```bash
 outsmart list-dex
 outsmart list-dex --cap canSell
-outsmart list-dex --cap canSnipe --json
-outsmart list-dex --cap canAddLiquidity
+outsmart list-dex --cap canAddLiquidity --json
 ```
 
 ### info
@@ -217,7 +196,7 @@ outsmart config env > .env  # Generate .env file
 
 ## Shared Swap Options
 
-All swap commands (`buy`, `sell`, `snipe`) accept these options:
+All swap commands (`buy`, `sell`) accept these options:
 
 | Option | Description | Default |
 |--------|-------------|---------|
@@ -235,25 +214,25 @@ All swap commands (`buy`, `sell`, `snipe`) accept these options:
 
 17 adapters covering every major Solana DEX protocol:
 
-| Adapter | Protocol | Buy | Sell | Snipe | Pool | Price | LP |
-|---------|----------|:---:|:----:|:-----:|:----:|:-----:|:--:|
-| raydium-amm-v4 | AMM v4 | x | x | x | x | x | |
-| raydium-cpmm | CPMM | x | x | x | x | x | |
-| raydium-clmm | CLMM | x | x | x | x | x | |
-| raydium-launchlab | Launchlab | x | | | x | x | |
-| meteora-damm-v1 | Dynamic AMM | x | x | x | x | x | |
-| meteora-damm-v2 | CpAmm | x | x | x | x | x | add/remove/claim |
-| meteora-dlmm | DLMM | x | x | x | | x | |
-| meteora-dbc | DBC | x | x | x | | x | |
-| meteora-lp-dlmm | DLMM LP | | | | | | add/remove |
-| orca | Whirlpool | x | x | x | | x | |
-| byreal-clmm | CLMM | x | x | x | | x | |
-| pancakeswap-clmm | CLMM | x | x | x | | x | |
-| fusion-amm | Fusion | x | x | x | | x | |
-| futarchy-amm | Futarchy | x | x | x | | x | |
-| futarchy-launchpad | Launchpad | | | | | | fund/claim |
-| jupiter-ultra | Ultra API | x | x | | | | |
-| dflow | Intent | x | x | | | | |
+| Adapter | Protocol | Buy | Sell | Pool | Price | LP |
+|---------|----------|:---:|:----:|:----:|:-----:|:--:|
+| raydium-amm-v4 | AMM v4 | x | x | x | x | |
+| raydium-cpmm | CPMM | x | x | x | x | |
+| raydium-clmm | CLMM | x | x | x | x | |
+| raydium-launchlab | Launchlab | x | | x | x | |
+| meteora-damm-v1 | Dynamic AMM | x | x | x | x | |
+| meteora-damm-v2 | CpAmm | x | x | x | x | add/remove/claim |
+| meteora-dlmm | DLMM | x | x | | x | |
+| meteora-dbc | DBC | x | x | | x | |
+| meteora-lp-dlmm | DLMM LP | | | | | add/remove |
+| orca | Whirlpool | x | x | | x | |
+| byreal-clmm | CLMM | x | x | | x | |
+| pancakeswap-clmm | CLMM | x | x | | x | |
+| fusion-amm | Fusion | x | x | | x | |
+| futarchy-amm | Futarchy | x | x | | x | |
+| futarchy-launchpad | Launchpad | | | | | fund/claim |
+| jupiter-ultra | Ultra API | x | x | | | |
+| dflow | Intent | x | x | | | |
 
 ## TX Landing Providers
 
@@ -277,6 +256,27 @@ All swap commands (`buy`, `sell`, `snipe`) accept these options:
 Set any provider's API key in your `.env` and it's automatically enabled. The orchestrator sends your transaction through all enabled providers simultaneously for the fastest possible landing.
 
 Durable nonce accounts prevent duplicate executions when the same transaction hits multiple providers concurrently.
+
+---
+
+## Snipe (Coming Soon)
+
+The `outsmart snipe` command is not yet available. Real sniping is not just a buy with a tip — it's a background process that:
+
+1. Connects to a **Geyser gRPC stream** (Yellowstone) using your own gRPC key
+2. Listens for **new pool creation events** on the DEX(es) you select
+3. When a new pool is created where the base or quote token matches your target token, it **instantly fires a buy** through concurrent multi-provider TX landing
+4. Runs as a **background process** (cronjob/tmux) on your machine
+
+This requires your own Geyser gRPC key (from Helius, Triton, or another provider). It will be added in a future update.
+
+**In the meantime**, you can achieve a competitive buy on a known pool with:
+
+```bash
+outsmart buy --dex raydium-cpmm --token <MINT> --pool <POOL> --amount 0.5 --tip 0.01 --priority 12000000
+```
+
+This sends your buy transaction with a high priority fee and MEV tip through the TX landing layer.
 
 ---
 
