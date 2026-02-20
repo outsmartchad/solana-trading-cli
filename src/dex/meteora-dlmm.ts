@@ -24,6 +24,7 @@ import {
   ComputeBudgetProgram,
   TransactionInstruction,
 } from "@solana/web3.js";
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, getAccount, getAssociatedTokenAddress } from "@solana/spl-token";
 
 import { getWallet, getConnection } from "../helpers/config";
 import { landTransaction } from "../transactions/landing";
@@ -114,10 +115,10 @@ export class MeteoraDlmmAdapter implements IDexAdapter {
   readonly protocol = "dlmm";
   readonly capabilities: DexCapabilities = defaultCapabilities({
     canBuy: true,
+    canSell: true,
     canSnipe: true,
     canFindPool: false, // DLMM has no simple PDA derivation
     canGetPrice: true,
-    // canSell: false — source sell.ts is empty
   });
 
   // ----- Core: buy -----
@@ -190,10 +191,106 @@ export class MeteoraDlmmAdapter implements IDexAdapter {
     };
   }
 
-  // ----- Core: sell (not supported — source sell.ts is empty) -----
+  // ----- Core: sell -----
 
-  async sell(_params: SellParams): Promise<SwapResult> {
-    throw new UnsupportedOperationError(this.name, "sell");
+  async sell(params: SellParams): Promise<SwapResult> {
+    const { tokenMint, percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const connection = getConnection();
+    const wallet = getWallet();
+    const quoteMintStr = quoteMintParam ?? WSOL_MINT;
+
+    const poolPk = poolAddress
+      ? new PublicKey(poolAddress)
+      : await this.resolvePool(tokenMint, quoteMintStr);
+
+    const dlmmPool = await DLMM.create(connection, poolPk);
+    const baseMintPk = new PublicKey(tokenMint);
+
+    // Detect base token program
+    const baseMintAccInfo = await connection.getAccountInfo(baseMintPk);
+    if (!baseMintAccInfo) {
+      throw new Error(`Token mint not found: ${tokenMint}`);
+    }
+    const baseTokenProgram = baseMintAccInfo.owner.equals(TOKEN_2022_PROGRAM_ID)
+      ? TOKEN_2022_PROGRAM_ID
+      : TOKEN_PROGRAM_ID;
+
+    // Get token balance
+    const ata = await getAssociatedTokenAddress(baseMintPk, wallet.publicKey, false, baseTokenProgram);
+    const tokenAccount = await getAccount(connection, ata, "confirmed", baseTokenProgram);
+    const balance = tokenAccount.amount;
+
+    // Calculate sell amount based on percentage
+    const sellAmount = new BN(
+      Math.floor((Number(balance) * percentage) / 100).toString(),
+    );
+
+    if (sellAmount.isZero()) {
+      throw new Error(`No balance to sell for ${tokenMint}`);
+    }
+
+    // Determine swap direction using the base token (being sold) as input
+    const { swapYtoX, inToken, outToken } = determineSwapDirection(
+      tokenMint,
+      dlmmPool.tokenX.publicKey,
+      dlmmPool.tokenY.publicKey,
+    );
+
+    const binArrays = await dlmmPool.getBinArrayForSwap(swapYtoX);
+    const slippageBps = opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
+
+    const swapQuote = await dlmmPool.swapQuote(
+      sellAmount,
+      swapYtoX,
+      new BN(slippageBps),
+      binArrays,
+    );
+
+    const swapTx = await dlmmPool.swap({
+      inToken,
+      binArraysPubkey: swapQuote.binArraysPubkey,
+      inAmount: sellAmount,
+      lbPair: dlmmPool.pubkey,
+      user: wallet.publicKey,
+      minOutAmount: swapQuote.minOutAmount ?? new BN(0),
+      outToken,
+    });
+
+    const computeLimit = opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT;
+    const priorityFee = opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
+
+    const ixs: TransactionInstruction[] = [
+      ComputeBudgetProgram.setComputeUnitLimit({ units: computeLimit }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
+      ...swapTx.instructions,
+    ];
+
+    const blockhash = await connection.getLatestBlockhash();
+    const results = await landTransaction(ixs, wallet, blockhash, {
+      dex: this.name,
+      operation: "sell",
+      tipSol: opts?.tipSol,
+      addressLookupTables: opts?.addressLookupTables,
+    });
+
+    const accepted = results.find((r) => r.accepted);
+
+    // Human-readable sell amount
+    let tokenDecimals = 9;
+    try {
+      const mintData = await connection.getTokenSupply(baseMintPk);
+      tokenDecimals = mintData.value.decimals;
+    } catch { /* fallback to 9 */ }
+    const humanAmount = Number(sellAmount.toString()) / Math.pow(10, tokenDecimals);
+
+    return {
+      txSignature: accepted?.signature ?? "",
+      confirmed: !!accepted?.accepted,
+      amountIn: humanAmount,
+      amountInToken: tokenMint,
+      dex: this.name,
+      poolAddress: poolPk.toBase58(),
+    };
   }
 
   // ----- Snipe -----

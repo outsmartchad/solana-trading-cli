@@ -34,6 +34,7 @@ import {
   createCloseAccountInstruction,
   getAssociatedTokenAddress,
   getAssociatedTokenAddressSync,
+  getAccount,
   createAssociatedTokenAccountIdempotentInstruction,
   getMint,
   TOKEN_PROGRAM_ID,
@@ -353,6 +354,7 @@ export class FutarchyAmmAdapter implements IDexAdapter {
   readonly protocol = "futarchy";
   readonly capabilities: DexCapabilities = defaultCapabilities({
     canBuy: true,
+    canSell: true,
     canSnipe: true,
     canGetPrice: true,
   });
@@ -457,10 +459,101 @@ export class FutarchyAmmAdapter implements IDexAdapter {
     };
   }
 
-  // ----- Core: sell (not supported) -----
+  // ----- Core: sell -----
 
-  async sell(_params: SellParams): Promise<SwapResult> {
-    throw new UnsupportedOperationError(this.name, "sell");
+  async sell(params: SellParams): Promise<SwapResult> {
+    const { tokenMint, percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const connection = getConnection();
+    const wallet = getWallet();
+
+    if (!poolAddress) {
+      throw new Error(
+        "futarchy-amm sell() requires poolAddress (DAO address). " +
+          "Futarchy DAOs cannot be auto-discovered by mint alone.",
+      );
+    }
+
+    const dao = new PublicKey(poolAddress);
+    const baseMint = new PublicKey(tokenMint);
+    const quoteMintStr = quoteMintParam ?? WSOL_MINT;
+    const quoteMint = new PublicKey(quoteMintStr);
+
+    const provider = createProvider();
+    const sdk = new FutarchyAmmSDK(provider);
+
+    // Get token balance (Futarchy uses standard SPL tokens)
+    const ata = await getAssociatedTokenAddress(baseMint, wallet.publicKey, false, TOKEN_PROGRAM_ID);
+    const tokenAccount = await getAccount(connection, ata, "confirmed", TOKEN_PROGRAM_ID);
+    const balance = tokenAccount.amount;
+
+    // Calculate sell amount based on percentage
+    const sellAmount = BigInt(Math.floor((Number(balance) * percentage) / 100));
+
+    if (sellAmount === 0n) {
+      throw new Error(`No balance to sell for ${tokenMint}`);
+    }
+
+    // Build swap instructions — "sell" direction (base → quote)
+    const swapIxs = await sdk.createSpotSwapInstructions(
+      dao, baseMint, quoteMint, "sell",
+      sellAmount, BigInt(0), wallet.publicKey,
+    );
+
+    const computeLimit = opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT;
+    const priorityFee = opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
+
+    let ixs: TransactionInstruction[];
+
+    // Handle WSOL output wrapping (receive SOL → need WSOL ATA creation + close)
+    if (quoteMint.equals(WSOL_MINT_PK)) {
+      const quoteAta = await getAssociatedTokenAddress(
+        quoteMint, wallet.publicKey, false, TOKEN_PROGRAM_ID,
+      );
+      ixs = [
+        ComputeBudgetProgram.setComputeUnitLimit({ units: computeLimit }),
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
+        createAssociatedTokenAccountIdempotentInstruction(
+          wallet.publicKey, quoteAta, wallet.publicKey, quoteMint,
+        ),
+        ...swapIxs,
+        createCloseAccountInstruction(
+          quoteAta, wallet.publicKey, wallet.publicKey, [], TOKEN_PROGRAM_ID,
+        ),
+      ];
+    } else {
+      ixs = [
+        ComputeBudgetProgram.setComputeUnitLimit({ units: computeLimit }),
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
+        ...swapIxs,
+      ];
+    }
+
+    const blockhash = await connection.getLatestBlockhash();
+    const results = await landTransaction(ixs, wallet, blockhash, {
+      dex: this.name,
+      operation: "sell",
+      tipSol: opts?.tipSol,
+      addressLookupTables: opts?.addressLookupTables,
+    });
+
+    const accepted = results.find((r) => r.accepted);
+
+    // Human-readable sell amount
+    let tokenDecimals = 9;
+    try {
+      const mintData = await connection.getTokenSupply(baseMint);
+      tokenDecimals = mintData.value.decimals;
+    } catch { /* fallback to 9 */ }
+    const humanAmount = Number(sellAmount) / Math.pow(10, tokenDecimals);
+
+    return {
+      txSignature: accepted?.signature ?? "",
+      confirmed: !!accepted?.accepted,
+      amountIn: humanAmount,
+      amountInToken: tokenMint,
+      dex: this.name,
+      poolAddress,
+    };
   }
 
   // ----- Snipe -----

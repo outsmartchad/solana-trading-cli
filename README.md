@@ -98,20 +98,20 @@ Any MCP-compatible agent — OpenClaw, Claude, or your own — can call these to
 
 | Adapter | Protocol | Buy | Sell | Snipe | Pool Discovery | Price | LP |
 |---------|----------|-----|------|-------|----------------|-------|----|
-| raydium-amm-v4 | AMM v4 | x | | x | x | x | |
+| raydium-amm-v4 | AMM v4 | x | x | x | x | x | |
 | raydium-cpmm | CPMM | x | x | x | x | x | |
 | raydium-clmm | CLMM | x | x | x | x | x | |
 | raydium-launchlab | Launchlab | x | | | x | x | |
-| meteora-damm-v1 | Dynamic AMM | x | | x | x | x | |
+| meteora-damm-v1 | Dynamic AMM | x | x | x | x | x | |
 | meteora-damm-v2 | CpAmm | x | x | x | x | x | add/remove/claim |
-| meteora-dlmm | DLMM | x | | x | | x | |
+| meteora-dlmm | DLMM | x | x | x | | x | |
 | meteora-dbc | DBC | x | x | x | | x | |
 | meteora-lp-dlmm | DLMM LP | | | | | | add/remove |
-| orca | Whirlpool | x | | x | | x | |
-| byreal-clmm | CLMM | x | | x | | x | |
-| pancakeswap-clmm | CLMM | x | | x | | x | |
-| fusion-amm | Fusion | x | | x | | x | |
-| futarchy-amm | Futarchy | x | | x | | x | |
+| orca | Whirlpool | x | x | x | | x | |
+| byreal-clmm | CLMM | x | x | x | | x | |
+| pancakeswap-clmm | CLMM | x | x | x | | x | |
+| fusion-amm | Fusion | x | x | x | | x | |
+| futarchy-amm | Futarchy | x | x | x | | x | |
 | futarchy-launchpad | Launchpad | | | | | | fund/claim |
 | jupiter-ultra | Ultra API | x | x | | | | |
 | dflow | Intent | x | x | | | | |

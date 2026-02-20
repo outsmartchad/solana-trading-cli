@@ -18,10 +18,12 @@ import {
 } from "@solana/web3.js";
 import {
   getAssociatedTokenAddress,
+  getAccount,
   createAssociatedTokenAccountIdempotentInstruction,
   createSyncNativeInstruction,
   createCloseAccountInstruction,
   TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
 import {
@@ -335,7 +337,7 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
   readonly protocol = "amm-v4";
   readonly capabilities: DexCapabilities = defaultCapabilities({
     canBuy: true,
-    canSell: false, // No sell in source module
+    canSell: true,
     canSnipe: true,
     canFindPool: true,
     canGetPrice: true,
@@ -466,10 +468,138 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
     };
   }
 
-  // ----- Core: sell (unsupported) -----
+  // ----- Core: sell -----
 
-  async sell(_params: SellParams): Promise<SwapResult> {
-    throw new UnsupportedOperationError(this.name, "sell");
+  async sell(params: SellParams): Promise<SwapResult> {
+    const connection = getConnection();
+    const wallet = getWallet();
+    const tokenMint = new PublicKey(params.tokenMint);
+    const quoteMintPk = params.quoteMint ? new PublicKey(params.quoteMint) : WSOL_MINT_PK;
+    const slippageBps = params.opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
+    const priorityFee = params.opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
+    const computeUnits = params.opts?.computeUnitLimit ?? 300_000;
+
+    // Resolve pool
+    let poolId: PublicKey;
+    if (params.poolAddress) {
+      poolId = new PublicKey(params.poolAddress);
+    } else {
+      const found = await discoverAmmV4Pool(connection, params.tokenMint, quoteMintPk.toBase58());
+      if (!found) throw new PoolNotFoundError(this.name, params.tokenMint, params.quoteMint);
+      poolId = new PublicKey(found.poolId);
+    }
+
+    // Derive all pool accounts
+    const poolAccounts = await derivePoolAccounts(connection, poolId);
+
+    // Detect base token program
+    const baseTokenProgram = await getTokenProgramForMint(connection, tokenMint);
+
+    // Get token balance
+    const baseAta = await getAssociatedTokenAddress(
+      tokenMint,
+      wallet.publicKey,
+      baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID),
+      baseTokenProgram,
+    );
+    const tokenAccount = await getAccount(connection, baseAta, "confirmed", baseTokenProgram);
+    const balance = tokenAccount.amount;
+
+    // Calculate sell amount based on percentage
+    const sellAmount = BigInt(Math.floor((Number(balance) * params.percentage) / 100));
+
+    if (sellAmount === 0n) {
+      throw new Error(`No balance to sell for ${params.tokenMint}`);
+    }
+
+    // Compute minOut from reserves (reversed direction vs buy)
+    let minOut = 0n;
+    try {
+      const [coinBal, pcBal] = await Promise.all([
+        connection.getTokenAccountBalance(poolAccounts.poolCoinTokenAccount),
+        connection.getTokenAccountBalance(poolAccounts.poolPcTokenAccount),
+      ]);
+      const coinReserve = BigInt(coinBal.value.amount);
+      const pcReserve = BigInt(pcBal.value.amount);
+
+      // Selling token → receiving quote. Determine direction.
+      let estOut: bigint;
+      if (poolAccounts.coinMint.equals(tokenMint)) {
+        // Selling coinMint → receiving pcMint
+        const k = coinReserve * pcReserve;
+        const newCoin = coinReserve + sellAmount;
+        estOut = pcReserve - k / newCoin;
+      } else {
+        // Selling pcMint → receiving coinMint
+        const k = coinReserve * pcReserve;
+        const newPc = pcReserve + sellAmount;
+        estOut = coinReserve - k / newPc;
+      }
+      minOut = (estOut * BigInt(10000 - slippageBps)) / 10000n;
+    } catch {
+      // zero floor
+    }
+
+    // Build ATAs — reversed from buy: input is token, output is quote
+    const userInputAta = baseAta;
+    const quoteTokenProgram = quoteMintPk.equals(WSOL_MINT_PK)
+      ? TOKEN_PROGRAM_ID_PK
+      : await getTokenProgramForMint(connection, quoteMintPk);
+    const userOutputAta = await getAssociatedTokenAddress(quoteMintPk, wallet.publicKey);
+
+    // Determine input token program (the token being sold)
+    const inputTokenProgram = baseTokenProgram;
+
+    // Build instructions
+    const ixs: TransactionInstruction[] = [
+      ComputeBudgetProgram.setComputeUnitLimit({ units: computeUnits }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
+      createAssociatedTokenAccountIdempotentInstruction(
+        wallet.publicKey, userInputAta, wallet.publicKey, tokenMint,
+        baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID_PK,
+      ),
+      createAssociatedTokenAccountIdempotentInstruction(wallet.publicKey, userOutputAta, wallet.publicKey, quoteMintPk),
+    ];
+
+    // WSOL output: create WSOL ATA so we can receive wrapped SOL, then close after
+    if (quoteMintPk.equals(WSOL_MINT_PK)) {
+      // ATA creation already handled above via idempotent instruction
+    }
+
+    // Swap — input is token ATA, output is quote ATA
+    ixs.push(createSwapIx(poolAccounts, wallet.publicKey, userInputAta, userOutputAta, sellAmount, minOut, inputTokenProgram));
+
+    // Close WSOL output ATA to unwrap back to SOL
+    if (quoteMintPk.equals(WSOL_MINT_PK)) {
+      ixs.push(createCloseAccountInstruction(userOutputAta, wallet.publicKey, wallet.publicKey, [], TOKEN_PROGRAM_ID_PK));
+    }
+
+    // Submit
+    const { blockhash } = await connection.getLatestBlockhash();
+    const results = await landTransaction(ixs, wallet, blockhash, {
+      dex: this.name,
+      operation: "sell",
+      tipSol: params.opts?.tipSol,
+    });
+
+    const firstAccepted = results.find((r) => r.accepted);
+
+    // Human-readable sell amount
+    let tokenDecimals = 9;
+    try {
+      const mintData = await connection.getTokenSupply(tokenMint);
+      tokenDecimals = mintData.value.decimals;
+    } catch { /* fallback to 9 */ }
+    const humanAmount = Number(sellAmount) / Math.pow(10, tokenDecimals);
+
+    return {
+      txSignature: firstAccepted?.signature ?? "",
+      confirmed: !!firstAccepted?.accepted,
+      amountIn: humanAmount,
+      amountInToken: params.tokenMint,
+      dex: this.name,
+      poolAddress: poolId.toBase58(),
+    };
   }
 
   // ----- Snipe -----

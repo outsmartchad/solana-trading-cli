@@ -678,6 +678,7 @@ export class ClmmBaseAdapter implements IDexAdapter {
   readonly protocol: string;
   readonly capabilities: DexCapabilities = defaultCapabilities({
     canBuy: true,
+    canSell: true,
     canSnipe: true,
     canFindPool: false, // Requires off-chain indexing or Raydium API
     canGetPrice: true,
@@ -730,10 +731,77 @@ export class ClmmBaseAdapter implements IDexAdapter {
     };
   }
 
-  // ---- Core: sell (not supported) ----
+  // ---- Core: sell ----
 
-  async sell(_params: SellParams): Promise<SwapResult> {
-    throw new UnsupportedOperationError(this.name, "sell");
+  async sell(params: SellParams): Promise<SwapResult> {
+    const { tokenMint, percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const connection = getConnection();
+    const wallet = getWallet();
+    const quoteMintStr = quoteMintParam ?? WSOL_MINT;
+
+    if (!poolAddress) {
+      throw new Error(`${this.name}: poolAddress is required (auto-discovery not yet supported)`);
+    }
+
+    // 1. Get balance of the token being sold
+    const baseMintPk = new PublicKey(tokenMint);
+    const baseMintTokenProgram = await getTokenProgramForMint(connection, baseMintPk);
+    const baseAta = await getAssociatedTokenAddress(
+      baseMintPk,
+      wallet.publicKey,
+      false,
+      baseMintTokenProgram,
+    );
+
+    let balance: { amount: bigint; decimals: number };
+    try {
+      const res = await connection.getTokenAccountBalance(baseAta);
+      balance = { amount: BigInt(res.value.amount), decimals: res.value.decimals };
+    } catch {
+      balance = { amount: 0n, decimals: 0 };
+    }
+
+    // 2. Calculate sell amount from percentage
+    const sellAmount = (balance.amount * BigInt(Math.floor(percentage))) / 100n;
+    if (sellAmount === 0n) {
+      return {
+        txSignature: "",
+        confirmed: false,
+        amountIn: 0,
+        amountInToken: tokenMint,
+        dex: this.name,
+        poolAddress,
+      };
+    }
+
+    // 3. Build swap IXs with reversed direction: tokenMint is now the input
+    const allIxs = await this.buildFullSellTx(
+      tokenMint,
+      sellAmount,
+      quoteMintStr,
+      poolAddress,
+      wallet,
+      opts,
+    );
+
+    // 4. Land transaction
+    const blockhash = await connection.getLatestBlockhash();
+    const results = await landTransaction(allIxs, wallet, blockhash, {
+      dex: this.name,
+      operation: "sell",
+      tipSol: opts?.tipSol,
+    });
+
+    const accepted = results.find((r) => r.accepted);
+    const humanSellAmount = Number(sellAmount) / 10 ** balance.decimals;
+    return {
+      txSignature: accepted?.signature ?? "",
+      confirmed: !!accepted,
+      amountIn: humanSellAmount,
+      amountInToken: tokenMint,
+      dex: this.name,
+      poolAddress,
+    };
   }
 
   // ---- Snipe ----
@@ -775,8 +843,40 @@ export class ClmmBaseAdapter implements IDexAdapter {
 
   async buildSwapIxs(params: BuyParams | SellParams): Promise<BuildSwapIxsResult> {
     if ("percentage" in params) {
-      throw new UnsupportedOperationError(this.name, "buildSwapIxs(sell)");
+      // Sell path
+      const { tokenMint, percentage, quoteMint: quoteMintParam, poolAddress } = params;
+      const quoteMintStr = quoteMintParam ?? WSOL_MINT;
+      if (!poolAddress) {
+        throw new Error(`${this.name}: poolAddress is required for buildSwapIxs`);
+      }
+
+      const connection = getConnection();
+      const wallet = getWallet();
+      const baseMintPk = new PublicKey(tokenMint);
+      const baseMintTokenProgram = await getTokenProgramForMint(connection, baseMintPk);
+      const baseAta = await getAssociatedTokenAddress(
+        baseMintPk,
+        wallet.publicKey,
+        false,
+        baseMintTokenProgram,
+      );
+
+      let balance: { amount: bigint; decimals: number };
+      try {
+        const res = await connection.getTokenAccountBalance(baseAta);
+        balance = { amount: BigInt(res.value.amount), decimals: res.value.decimals };
+      } catch {
+        balance = { amount: 0n, decimals: 0 };
+      }
+
+      const sellAmount = (balance.amount * BigInt(Math.floor(percentage))) / 100n;
+      const sellAmountHuman = Number(sellAmount) / 10 ** balance.decimals;
+
+      // For sell: tokenMint is input, quoteMint is output
+      // Pass tokenMint as "quoteMint" (input) and quoteMintStr as "tokenMint" (output)
+      return this.doBuildSwapIxs(quoteMintStr, sellAmountHuman, tokenMint, poolAddress);
     }
+
     const { tokenMint, amountSol, quoteMint: quoteMintParam, poolAddress, opts } = params;
     const quoteMintStr = quoteMintParam ?? WSOL_MINT;
     if (!poolAddress) {
@@ -1044,5 +1144,194 @@ export class ClmmBaseAdapter implements IDexAdapter {
     }
 
     return [...preIxs, ...swapIxs];
+  }
+
+  // ---- Internal: full sell transaction with WSOL output handling + compute budget ----
+
+  private async buildFullSellTx(
+    tokenMint: string,
+    sellAmount: bigint,
+    quoteMintStr: string,
+    poolAddress: string,
+    wallet: Keypair,
+    opts?: SellParams["opts"],
+  ): Promise<TransactionInstruction[]> {
+    // For sell, the input is tokenMint and the output is quoteMint.
+    // We build swap IXs directly using the raw sell amount (bigint) to avoid
+    // decimal rounding issues with quoteDecimals().
+    const connection = getConnection();
+    const poolId = new PublicKey(poolAddress);
+    const baseMint = new PublicKey(tokenMint);
+    const quoteMint = new PublicKey(quoteMintStr);
+
+    // 1. Derive pool accounts
+    const poolAccounts = await deriveClmmPoolAccounts(connection, poolId, this.programId);
+
+    // 2. Fetch pool state
+    const poolState = await fetchClmmPoolState(connection, poolId, this.programId);
+
+    // 3. For sell: input is baseMint (token being sold), output is quoteMint
+    const inputMint = baseMint;
+    const outputMint = quoteMint;
+    const isBaseInput = poolState.tokenMint0.equals(inputMint);
+
+    // 4. Sqrt price limit
+    const currentSqrtPrice = poolState.sqrtPriceX64;
+    let sqrtPriceLimitX64: BN;
+    if (isBaseInput) {
+      const minPlusOne = MIN_SQRT_PRICE_X64.add(new BN(1));
+      sqrtPriceLimitX64 = minPlusOne.lt(currentSqrtPrice)
+        ? minPlusOne
+        : currentSqrtPrice.sub(new BN(1));
+      if (sqrtPriceLimitX64.lte(MIN_SQRT_PRICE_X64)) {
+        sqrtPriceLimitX64 = MIN_SQRT_PRICE_X64.add(new BN(1));
+      }
+    } else {
+      const maxMinusOne = MAX_SQRT_PRICE_X64.sub(new BN(1));
+      sqrtPriceLimitX64 = maxMinusOne.gt(currentSqrtPrice)
+        ? maxMinusOne
+        : currentSqrtPrice.add(new BN(1));
+      if (sqrtPriceLimitX64.gte(MAX_SQRT_PRICE_X64)) {
+        sqrtPriceLimitX64 = MAX_SQRT_PRICE_X64.sub(new BN(1));
+      }
+    }
+
+    // 5. Get bitmap extension
+    const exBitmapInfo = await getTickArrayBitmapExtension(
+      this.programId,
+      poolId,
+      connection,
+    );
+
+    // 6. Find initialized tick arrays
+    const zeroForOne = isBaseInput;
+    let firstResult = findFirstInitializedTickArrayFromBitmap(
+      this.programId,
+      poolId,
+      {
+        tickCurrent: poolState.tickCurrent,
+        tickSpacing: poolState.tickSpacing,
+        tickArrayBitmap: poolState.tickArrayBitmap,
+        exBitmapInfo: {
+          positiveTickArrayBitmap: exBitmapInfo.positiveTickArrayBitmap,
+          negativeTickArrayBitmap: exBitmapInfo.negativeTickArrayBitmap,
+        },
+      },
+      zeroForOne,
+    );
+
+    if (!firstResult.isExist) {
+      firstResult = await findFirstInitializedTickArrayBruteForce(
+        connection,
+        this.programId,
+        poolId,
+        poolState.tickCurrent,
+        poolState.tickSpacing,
+        zeroForOne,
+      );
+    }
+
+    if (!firstResult.isExist || !firstResult.nextAccountMeta) {
+      throw new Error(
+        `No initialized tick array found for pool ${poolId.toBase58()}. ` +
+        `Current tick: ${poolState.tickCurrent}, Tick spacing: ${poolState.tickSpacing}`,
+      );
+    }
+
+    // Build tick array list (up to 4)
+    const tickArrays: PublicKey[] = [firstResult.nextAccountMeta];
+    let currentStartIndex = firstResult.startIndex;
+    for (let i = 1; i < 4; i++) {
+      currentStartIndex = getNextTickArrayStartIndex(
+        currentStartIndex,
+        poolState.tickSpacing,
+        zeroForOne,
+      );
+      const addr = deriveTickArray(this.programId, poolId, currentStartIndex);
+      const info = await connection.getAccountInfo(addr);
+      if (info && info.owner.equals(this.programId)) {
+        tickArrays.push(addr);
+      } else {
+        break;
+      }
+    }
+
+    // 7. Get user ATAs
+    const inputMintTokenProgram = await getTokenProgramForMint(connection, inputMint);
+    const outputMintTokenProgram = await getTokenProgramForMint(connection, outputMint);
+
+    const inputAta = await getAssociatedTokenAddress(
+      inputMint,
+      wallet.publicKey,
+      false,
+      inputMintTokenProgram,
+    );
+    const outputAta = await getAssociatedTokenAddress(
+      outputMint,
+      wallet.publicKey,
+      false,
+      outputMintTokenProgram,
+    );
+
+    // 8. Build swap IX
+    const inputVaultMint = isBaseInput ? poolState.tokenMint0 : poolState.tokenMint1;
+    const outputVaultMint = isBaseInput ? poolState.tokenMint1 : poolState.tokenMint0;
+
+    const swapIx = createClmmSwapIx(
+      this.programId,
+      poolAccounts,
+      wallet.publicKey,
+      inputAta,
+      outputAta,
+      BigInt(sellAmount.toString()),
+      BigInt(0), // min out — unlimited slippage
+      sqrtPriceLimitX64,
+      isBaseInput,
+      tickArrays,
+      inputVaultMint,
+      outputVaultMint,
+      exBitmapInfo.exBitmapAddress,
+    );
+
+    // 9. Compose full transaction
+    const cuPrice = opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
+    const cuLimit = opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT;
+    const isWsolOutput = quoteMintStr === WSOL_MINT;
+
+    const preIxs: TransactionInstruction[] = [
+      ComputeBudgetProgram.setComputeUnitLimit({ units: cuLimit }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: cuPrice }),
+    ];
+
+    // Create ATAs idempotently
+    const createInputAtaIx = createAssociatedTokenAccountIdempotentInstruction(
+      wallet.publicKey,
+      inputAta,
+      wallet.publicKey,
+      inputMint,
+      inputMintTokenProgram,
+    );
+    const createOutputAtaIx = createAssociatedTokenAccountIdempotentInstruction(
+      wallet.publicKey,
+      outputAta,
+      wallet.publicKey,
+      outputMint,
+      outputMintTokenProgram,
+    );
+
+    if (isWsolOutput) {
+      // For sell to WSOL: create output WSOL ATA, swap, then close to unwrap SOL
+      const closeIx = createCloseAccountInstruction(
+        outputAta,
+        wallet.publicKey,
+        wallet.publicKey,
+        [],
+        TOKEN_PROGRAM_ID,
+      );
+
+      return [...preIxs, createInputAtaIx, createOutputAtaIx, swapIx, closeIx];
+    }
+
+    return [...preIxs, createInputAtaIx, createOutputAtaIx, swapIx];
   }
 }

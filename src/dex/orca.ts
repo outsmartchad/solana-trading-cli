@@ -29,6 +29,7 @@ import {
   createCloseAccountInstruction,
   createSyncNativeInstruction,
   getAssociatedTokenAddress,
+  getAccount,
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -314,6 +315,7 @@ export class OrcaAdapter implements IDexAdapter {
   readonly protocol = "whirlpool";
   readonly capabilities: DexCapabilities = defaultCapabilities({
     canBuy: true,
+    canSell: true,
     canSnipe: true,
     canFindPool: false, // Requires off-chain indexing or Orca API
     canGetPrice: true,
@@ -378,10 +380,89 @@ export class OrcaAdapter implements IDexAdapter {
     };
   }
 
-  // ---- Core: sell (not supported) ----
+  // ---- Core: sell ----
 
-  async sell(_params: SellParams): Promise<SwapResult> {
-    throw new UnsupportedOperationError(this.name, "sell");
+  async sell(params: SellParams): Promise<SwapResult> {
+    const { tokenMint, percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const connection = getConnection();
+    const wallet = getWallet();
+    const quoteMintStr = quoteMintParam ?? WSOL_MINT;
+
+    if (!poolAddress) {
+      throw new Error("orca: poolAddress is required (auto-discovery not yet supported)");
+    }
+
+    await initializeOrca();
+
+    const baseMintPk = new PublicKey(tokenMint);
+
+    // Detect base token program
+    const baseTokenProgram = await getTokenProgramForMint(baseMintPk);
+
+    // Get token balance
+    const ata = await getAssociatedTokenAddress(baseMintPk, wallet.publicKey, false, baseTokenProgram);
+    const tokenAccount = await getAccount(connection, ata, "confirmed", baseTokenProgram);
+    const balance = tokenAccount.amount;
+
+    // Calculate sell amount based on percentage
+    const sellAmountBigInt = BigInt(Math.floor((Number(balance) * percentage) / 100));
+
+    if (sellAmountBigInt === 0n) {
+      throw new Error(`No balance to sell for ${tokenMint}`);
+    }
+
+    const rpc = createSolanaRpc(main_endpoint);
+    const walletSigner = await createKeyPairSignerFromBytes(
+      new Uint8Array(wallet.secretKey),
+    );
+
+    const slippageBps = opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
+
+    // Swap with tokenMint as input (selling the base token)
+    const { instructions } = await swapInstructions(
+      rpc,
+      { inputAmount: sellAmountBigInt, mint: address(tokenMint) },
+      address(poolAddress),
+      slippageBps,
+      walletSigner,
+    );
+
+    const web3Instructions = convertInstructions(instructions);
+
+    // Build full TX with compute budget
+    const cuLimit = opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT;
+    const cuPrice = opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
+    const allIxs: TransactionInstruction[] = [
+      ComputeBudgetProgram.setComputeUnitLimit({ units: cuLimit }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: cuPrice }),
+      ...web3Instructions,
+    ];
+
+    const blockhash = await connection.getLatestBlockhash();
+    const results = await landTransaction(allIxs, wallet, blockhash, {
+      dex: this.name,
+      operation: "sell",
+      tipSol: opts?.tipSol,
+    });
+
+    const accepted = results.find((r) => r.accepted);
+
+    // Human-readable sell amount
+    let tokenDecimals = 9;
+    try {
+      const mintData = await connection.getTokenSupply(baseMintPk);
+      tokenDecimals = mintData.value.decimals;
+    } catch { /* fallback to 9 */ }
+    const humanAmount = Number(sellAmountBigInt) / Math.pow(10, tokenDecimals);
+
+    return {
+      txSignature: accepted?.signature ?? "",
+      confirmed: !!accepted,
+      amountIn: humanAmount,
+      amountInToken: tokenMint,
+      dex: this.name,
+      poolAddress,
+    };
   }
 
   // ---- Snipe ----

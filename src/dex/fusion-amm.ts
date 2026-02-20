@@ -382,6 +382,7 @@ export class FusionAmmAdapter implements IDexAdapter {
   readonly protocol = "fusion-amm";
   readonly capabilities: DexCapabilities = defaultCapabilities({
     canBuy: true,
+    canSell: true,
     canSnipe: true,
     canFindPool: false, // Requires off-chain indexing
     canGetPrice: true,
@@ -434,10 +435,86 @@ export class FusionAmmAdapter implements IDexAdapter {
     };
   }
 
-  // ---- Core: sell (not supported) ----
+  // ---- Core: sell ----
 
-  async sell(_params: SellParams): Promise<SwapResult> {
-    throw new UnsupportedOperationError(this.name, "sell");
+  async sell(params: SellParams): Promise<SwapResult> {
+    const { tokenMint, percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const connection = getConnection();
+    const wallet = getWallet();
+    const quoteMintStr = quoteMintParam ?? WSOL_MINT;
+
+    if (!poolAddress) {
+      throw new Error("fusion-amm: poolAddress is required (auto-discovery not yet supported)");
+    }
+
+    // 1. Get balance of the token being sold
+    const baseMintPk = new PublicKey(tokenMint);
+    const baseMintTokenProgram = await this.getTokenProgramForMint(connection, baseMintPk);
+    const baseAta = await getAssociatedTokenAddress(
+      baseMintPk,
+      wallet.publicKey,
+      false,
+      baseMintTokenProgram,
+    );
+
+    let balance: { amount: bigint; decimals: number };
+    try {
+      const res = await connection.getTokenAccountBalance(baseAta);
+      balance = { amount: BigInt(res.value.amount), decimals: res.value.decimals };
+    } catch {
+      balance = { amount: 0n, decimals: 0 };
+    }
+
+    // 2. Calculate sell amount from percentage
+    const sellAmount = (balance.amount * BigInt(Math.floor(percentage))) / 100n;
+    if (sellAmount === 0n) {
+      return {
+        txSignature: "",
+        confirmed: false,
+        amountIn: 0,
+        amountInToken: tokenMint,
+        dex: this.name,
+        poolAddress,
+      };
+    }
+
+    // 3. Build swap IXs — pass tokenMint as the "quote" (input) to buildFusionSwapInstructions
+    //    since it determines direction via `specifiedTokenA = quoteMint === fusionPool.data.tokenMintA`
+    const { instructions: swapIxs } = await this.doBuildSwapIxs(
+      quoteMintStr,          // "tokenMint" param (output)
+      0,                     // amountSol unused — we override inputAmount
+      tokenMint,             // "quoteMint" param (input = token being sold)
+      poolAddress,
+      opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS,
+      sellAmount,            // override input amount with raw sell amount
+    );
+
+    // 4. Wrap with WSOL handling for output
+    const allIxs = await this.wrapSellInstructionsWithWSOL(
+      swapIxs,
+      quoteMintStr,
+      wallet,
+      opts,
+    );
+
+    // 5. Land transaction
+    const blockhash = await connection.getLatestBlockhash();
+    const results = await landTransaction(allIxs, wallet, blockhash, {
+      dex: this.name,
+      operation: "sell",
+      tipSol: opts?.tipSol,
+    });
+
+    const accepted = results.find((r) => r.accepted);
+    const humanSellAmount = Number(sellAmount) / 10 ** balance.decimals;
+    return {
+      txSignature: accepted?.signature ?? "",
+      confirmed: !!accepted,
+      amountIn: humanSellAmount,
+      amountInToken: tokenMint,
+      dex: this.name,
+      poolAddress,
+    };
   }
 
   // ---- Snipe ----
@@ -487,8 +564,45 @@ export class FusionAmmAdapter implements IDexAdapter {
 
   async buildSwapIxs(params: BuyParams | SellParams): Promise<BuildSwapIxsResult> {
     if ("percentage" in params) {
-      throw new UnsupportedOperationError(this.name, "buildSwapIxs(sell)");
+      // Sell path
+      const { tokenMint, percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
+      const quoteMintStr = quoteMintParam ?? WSOL_MINT;
+      if (!poolAddress) {
+        throw new Error("fusion-amm: poolAddress is required for buildSwapIxs");
+      }
+
+      const connection = getConnection();
+      const wallet = getWallet();
+      const baseMintPk = new PublicKey(tokenMint);
+      const baseMintTokenProgram = await this.getTokenProgramForMint(connection, baseMintPk);
+      const baseAta = await getAssociatedTokenAddress(
+        baseMintPk,
+        wallet.publicKey,
+        false,
+        baseMintTokenProgram,
+      );
+
+      let balance: { amount: bigint; decimals: number };
+      try {
+        const res = await connection.getTokenAccountBalance(baseAta);
+        balance = { amount: BigInt(res.value.amount), decimals: res.value.decimals };
+      } catch {
+        balance = { amount: 0n, decimals: 0 };
+      }
+
+      const sellAmount = (balance.amount * BigInt(Math.floor(percentage))) / 100n;
+
+      // For sell: tokenMint is input, quoteMint is output
+      return this.doBuildSwapIxs(
+        quoteMintStr,
+        0,
+        tokenMint,
+        poolAddress,
+        opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS,
+        sellAmount,
+      );
     }
+
     const { tokenMint, amountSol, quoteMint: quoteMintParam, poolAddress, opts } = params;
     const quoteMintStr = quoteMintParam ?? WSOL_MINT;
     if (!poolAddress) {
@@ -548,11 +662,12 @@ export class FusionAmmAdapter implements IDexAdapter {
     quoteMintStr: string,
     poolAddress: string,
     slippageBps: number,
+    rawInputAmount?: bigint,
   ): Promise<BuildSwapIxsResult> {
     const wallet = getWallet();
     const rpc = createSolanaRpc(main_endpoint);
     const poolAddr = address(poolAddress);
-    const inputAmount = amountToSmallestUnit(amountSol, quoteMintStr);
+    const inputAmount = rawInputAmount ?? amountToSmallestUnit(amountSol, quoteMintStr);
 
     const signer = await createKeyPairSignerFromBytes(
       new Uint8Array(wallet.secretKey),
@@ -638,6 +753,77 @@ export class FusionAmmAdapter implements IDexAdapter {
     }
 
     return [...preIxs, ...swapIxs];
+  }
+
+  /**
+   * Wrap sell swap instructions with WSOL output handling + compute budget.
+   * For sell: we're selling a token and receiving quote (potentially WSOL).
+   * If output is WSOL, create the WSOL ATA, swap, then close it to unwrap SOL.
+   */
+  private async wrapSellInstructionsWithWSOL(
+    swapIxs: TransactionInstruction[],
+    quoteMintStr: string,
+    wallet: Keypair,
+    opts?: SellParams["opts"],
+  ): Promise<TransactionInstruction[]> {
+    const isWsolOutput = quoteMintStr === WSOL_MINT;
+    const cuLimit = opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT;
+    const cuPrice = opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
+
+    const preIxs: TransactionInstruction[] = [
+      ComputeBudgetProgram.setComputeUnitLimit({ units: cuLimit }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: cuPrice }),
+    ];
+
+    if (isWsolOutput) {
+      const quoteMintPk = new PublicKey(quoteMintStr);
+      const outputAta = await getAssociatedTokenAddress(
+        quoteMintPk,
+        wallet.publicKey,
+        false,
+        TOKEN_PROGRAM_ID,
+      );
+
+      // Ensure the WSOL output ATA exists
+      preIxs.push(
+        createAssociatedTokenAccountIdempotentInstruction(
+          wallet.publicKey,
+          outputAta,
+          wallet.publicKey,
+          quoteMintPk,
+          TOKEN_PROGRAM_ID,
+        ),
+      );
+
+      // After swap, close WSOL ATA to unwrap SOL back to wallet
+      const postIxs = [
+        createCloseAccountInstruction(
+          outputAta,
+          wallet.publicKey,
+          wallet.publicKey,
+          [],
+          TOKEN_PROGRAM_ID,
+        ),
+      ];
+
+      return [...preIxs, ...swapIxs, ...postIxs];
+    }
+
+    return [...preIxs, ...swapIxs];
+  }
+
+  /**
+   * Detect whether a mint uses Token-2022 or the standard Token program.
+   */
+  private async getTokenProgramForMint(
+    connection: ReturnType<typeof getConnection>,
+    mint: PublicKey,
+  ): Promise<PublicKey> {
+    const info = await connection.getAccountInfo(mint);
+    if (!info) throw new Error(`Mint account not found: ${mint.toBase58()}`);
+    return info.owner.equals(TOKEN_2022_PROGRAM_ID)
+      ? TOKEN_2022_PROGRAM_ID
+      : TOKEN_PROGRAM_ID;
   }
 }
 

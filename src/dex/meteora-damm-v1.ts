@@ -20,6 +20,7 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import AmmImpl from "@meteora-ag/dynamic-amm-sdk";
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, getAccount, getAssociatedTokenAddress } from "@solana/spl-token";
 
 import { getWallet, getConnection } from "../helpers/config";
 import { landTransaction } from "../transactions/landing";
@@ -87,6 +88,7 @@ export class MeteoraDammV1Adapter implements IDexAdapter {
   readonly protocol = "damm-v1";
   readonly capabilities: DexCapabilities = defaultCapabilities({
     canBuy: true,
+    canSell: true,
     canSnipe: true,
     canFindPool: true,
     canGetPrice: true,
@@ -151,10 +153,94 @@ export class MeteoraDammV1Adapter implements IDexAdapter {
     };
   }
 
-  // ----- Core: sell (not supported) -----
+  // ----- Core: sell -----
 
-  async sell(_params: SellParams): Promise<SwapResult> {
-    throw new UnsupportedOperationError(this.name, "sell");
+  async sell(params: SellParams): Promise<SwapResult> {
+    const { tokenMint, percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const connection = getConnection();
+    const wallet = getWallet();
+    const quoteMintStr = quoteMintParam ?? WSOL_MINT;
+
+    // Resolve pool
+    const poolPk = poolAddress
+      ? new PublicKey(poolAddress)
+      : await this.resolvePool(tokenMint, quoteMintStr);
+
+    const ammInstance = await AmmImpl.create(connection, poolPk);
+    const baseMintPk = new PublicKey(tokenMint);
+
+    // Detect base token program
+    const baseMintAccInfo = await connection.getAccountInfo(baseMintPk);
+    if (!baseMintAccInfo) {
+      throw new Error(`Token mint not found: ${tokenMint}`);
+    }
+    const baseTokenProgram = baseMintAccInfo.owner.equals(TOKEN_2022_PROGRAM_ID)
+      ? TOKEN_2022_PROGRAM_ID
+      : TOKEN_PROGRAM_ID;
+
+    // Get token balance
+    const ata = await getAssociatedTokenAddress(baseMintPk, wallet.publicKey, false, baseTokenProgram);
+    const tokenAccount = await getAccount(connection, ata, "confirmed", baseTokenProgram);
+    const balance = tokenAccount.amount;
+
+    // Calculate sell amount based on percentage
+    const sellAmount = new BN(
+      Math.floor((Number(balance) * percentage) / 100).toString(),
+    );
+
+    if (sellAmount.isZero()) {
+      throw new Error(`No balance to sell for ${tokenMint}`);
+    }
+
+    // Quote with slippage — pass baseMintPk as input (selling base token)
+    const slippagePct = (opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS) / 100;
+    const swapQuote = ammInstance.getSwapQuote(baseMintPk, sellAmount, slippagePct);
+
+    // Build swap IX — reversed direction (base → quote)
+    const swapTx = await ammInstance.swap(
+      wallet.publicKey,
+      baseMintPk,
+      sellAmount,
+      swapQuote.minSwapOutAmount,
+    );
+
+    // Compute budget IXs
+    const computeLimit = opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT;
+    const priorityFee = opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
+
+    const ixs: TransactionInstruction[] = [
+      ComputeBudgetProgram.setComputeUnitLimit({ units: computeLimit }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
+      ...swapTx.instructions,
+    ];
+
+    // Land transaction
+    const blockhash = await connection.getLatestBlockhash();
+    const results = await landTransaction(ixs, wallet, blockhash, {
+      dex: this.name,
+      operation: "sell",
+      tipSol: opts?.tipSol,
+      addressLookupTables: opts?.addressLookupTables,
+    });
+
+    const accepted = results.find((r) => r.accepted);
+
+    // Human-readable sell amount
+    let tokenDecimals = 9;
+    try {
+      const mintData = await connection.getTokenSupply(baseMintPk);
+      tokenDecimals = mintData.value.decimals;
+    } catch { /* fallback to 9 */ }
+    const humanAmount = Number(sellAmount.toString()) / Math.pow(10, tokenDecimals);
+
+    return {
+      txSignature: accepted?.signature ?? "",
+      confirmed: !!accepted?.accepted,
+      amountIn: humanAmount,
+      amountInToken: tokenMint,
+      dex: this.name,
+      poolAddress: poolPk.toBase58(),
+    };
   }
 
   // ----- Snipe -----
