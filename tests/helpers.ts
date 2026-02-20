@@ -53,7 +53,7 @@ export const ORCA_SOL_USDC = "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE";
 // ---------------------------------------------------------------------------
 
 /** Amount of SOL to spend on buy tests */
-export const BUY_AMOUNT_SOL = 0.001;
+export const BUY_AMOUNT_SOL = 0.02;
 
 /** Sell percentage for sell tests (sell everything we just bought) */
 export const SELL_PERCENTAGE = 100;
