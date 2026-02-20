@@ -40,6 +40,9 @@ export const RAYDIUM_CLMM_SOL_USDC = "2QdhepnKRTLjjSqPL1PtKNwqrUkoLee2B1d3S4TNag
 /** MET token mint */
 export const MET = "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL";
 
+/** Random Meteora DBC: 6mwEqau1eKHch1QYCTRv5sdnGtJzVouzaLbKY5LDdoge/SOL pool */
+export const METEORA_DBC_GRACE_SOL = "DgxYpXJB2adQ9wFdyoCdnh5fNGfcLxXZsdkdqoyZZmwX";
+
 /** Meteora DAMM v2: MET/SOL pool */
 export const METEORA_DAMM_V2_MET_SOL = "9x7WTWq66KbMC1w7AUX72khNg31nQmWRE4N4cDvJY7JT";
 

@@ -9,7 +9,6 @@
  */
 
 import { getDexAdapter } from "../src/dex";
-import { MeteoraDammV2Adapter } from "../src/dex/meteora-damm-v2";
 import {
   ensureMainnetReady,
   delay,
@@ -21,6 +20,7 @@ import {
   MET,
   METEORA_DAMM_V2_MET_SOL,
   METEORA_DLMM_MET_SOL,
+  METEORA_DBC_GRACE_SOL,
 } from "./helpers";
 
 beforeAll(async () => {
@@ -117,12 +117,15 @@ describe("meteora-dlmm", () => {
 
 // ============================================================
 // meteora-dbc
+// Pool: GRACE/SOL (METEORA_DBC_GRACE_SOL)
+// Token: 6mwEqau1eKHch1QYCTRv5sdnGtJzVouzaLbKY5LDdoge
 // Capabilities: buy, sell, getPrice
 // NOTE: DBC pools are bonding curves — may graduate.
-//       Tests use try/catch for graceful skip.
 // ============================================================
 describe("meteora-dbc", () => {
   const adapter = getDexAdapter("meteora-dbc");
+  const pool = METEORA_DBC_GRACE_SOL;
+  const DBC_TOKEN = "6mwEqau1eKHch1QYCTRv5sdnGtJzVouzaLbKY5LDdoge";
 
   test("capabilities check", () => {
     expect(adapter.capabilities.canBuy).toBe(true);
@@ -132,32 +135,33 @@ describe("meteora-dbc", () => {
     expect(adapter.capabilities.canFindPool).toBe(false);
   });
 
-  // DBC pools are ephemeral — skip if no active pool
-  test.skip("buy/sell: requires active DBC token", async () => {
-    const DBC_POOL = "REPLACE_WITH_ACTIVE_DBC_POOL";
-    const DBC_TOKEN = "REPLACE_WITH_ACTIVE_DBC_TOKEN";
-
-    const price = await adapter.getPrice!(DBC_POOL);
+  test("getPrice: GRACE/SOL DBC pool", async () => {
+    const price = await adapter.getPrice!(pool);
     logResult("meteora-dbc getPrice", price);
     expect(price.price).toBeGreaterThan(0);
+  });
 
-    const buyResult = await adapter.buy({
+  test("buy: 0.02 SOL worth of GRACE", async () => {
+    await delay();
+    const result = await adapter.buy({
       tokenMint: DBC_TOKEN,
       amountSol: BUY_AMOUNT_SOL,
-      poolAddress: DBC_POOL,
+      poolAddress: pool,
     });
-    logResult("meteora-dbc buy", buyResult);
-    expect(buyResult.txSignature).toBeTruthy();
+    logResult("meteora-dbc buy", result);
+    expect(result.txSignature).toBeTruthy();
+    expect(result.dex).toBe("meteora-dbc");
+  });
 
-    await delay(5000);
-
-    const sellResult = await adapter.sell({
+  test("sell: 100% of GRACE just bought", async () => {
+    await delay(10000);
+    const result = await adapter.sell({
       tokenMint: DBC_TOKEN,
       percentage: SELL_PERCENTAGE,
-      poolAddress: DBC_POOL,
+      poolAddress: pool,
     });
-    logResult("meteora-dbc sell", sellResult);
-    expect(sellResult.txSignature).toBeTruthy();
+    logResult("meteora-dbc sell", result);
+    expect(result.txSignature).toBeTruthy();
   });
 });
 

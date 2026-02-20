@@ -46,6 +46,7 @@ import {
 
 import { getWallet, getConnection } from "../helpers/config";
 import { landTransaction } from "../transactions/landing";
+import { sendAndConfirmVtx } from "../transactions/send-rpc";
 
 import {
   IDexAdapter,
@@ -163,33 +164,13 @@ export class MeteoraDbcAdapter implements IDexAdapter {
     const poolPk = new PublicKey(poolAddress);
 
     const dbcClient = new DynamicBondingCurveClient(connection, "confirmed");
-    const poolState = await dbcClient.state.getPool(poolPk);
-    if (!poolState) throw new Error(`Pool not found: ${poolAddress}`);
-
-    const poolConfigState = await dbcClient.state.getPoolConfig(poolState.config);
-    if (!poolConfigState) throw new Error(`Pool config not found: ${poolState.config.toString()}`);
-
     const amountIn = amountToLamports(amountSol, quoteMintStr);
-    const currentPoint = await getCurrentPoint(dbcClient.connection, poolConfigState.activationType);
-
-    const slippageBps = opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
-    const swapQuote = await dbcClient.pool.swapQuote2({
-      virtualPool: poolState,
-      config: poolConfigState,
-      swapBaseForQuote: false, // buy: quote → base
-      amountIn,
-      slippageBps,
-      hasReferral: false,
-      eligibleForFirstSwapWithMinFee: false,
-      currentPoint,
-      swapMode: SwapMode.ExactIn,
-    });
 
     const swap2Params: Swap2Params = {
       swapMode: SwapMode.ExactIn,
       swapBaseForQuote: false,
       amountIn,
-      minimumAmountOut: swapQuote.minimumAmountOut!,
+      minimumAmountOut: new BN(0),
       owner: wallet.publicKey,
       pool: poolPk,
       referralTokenAccount: null,
@@ -210,18 +191,13 @@ export class MeteoraDbcAdapter implements IDexAdapter {
       opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS,
     );
 
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "buy",
-      tipSol: opts?.tipSol,
+    const result = await sendAndConfirmVtx(connection, ixs, wallet, {
       addressLookupTables: opts?.addressLookupTables,
     });
 
-    const accepted = results.find((r) => r.accepted);
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted?.accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: amountSol,
       amountInToken: quoteMintStr,
       dex: this.name,
@@ -244,11 +220,6 @@ export class MeteoraDbcAdapter implements IDexAdapter {
     const baseMintPk = new PublicKey(tokenMint);
 
     const dbcClient = new DynamicBondingCurveClient(connection, "confirmed");
-    const poolState = await dbcClient.state.getPool(poolPk);
-    if (!poolState) throw new Error(`Pool not found: ${poolAddress}`);
-
-    const poolConfigState = await dbcClient.state.getPoolConfig(poolState.config);
-    if (!poolConfigState) throw new Error(`Pool config not found`);
 
     // Get token balance
     const baseTokenProgram = await detectTokenProgram(baseMintPk);
@@ -260,26 +231,11 @@ export class MeteoraDbcAdapter implements IDexAdapter {
 
     if (sellAmount.isZero()) throw new Error(`No balance to sell for ${tokenMint}`);
 
-    const currentPoint = await getCurrentPoint(dbcClient.connection, poolConfigState.activationType);
-    const slippageBps = opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
-
-    const swapQuote = await dbcClient.pool.swapQuote2({
-      virtualPool: poolState,
-      config: poolConfigState,
-      swapBaseForQuote: true, // sell: base → quote
-      amountIn: sellAmount,
-      slippageBps,
-      hasReferral: false,
-      eligibleForFirstSwapWithMinFee: false,
-      currentPoint,
-      swapMode: SwapMode.ExactIn,
-    });
-
     const tx = await dbcClient.pool.swap2({
       swapMode: SwapMode.ExactIn,
       swapBaseForQuote: true,
       amountIn: sellAmount,
-      minimumAmountOut: swapQuote.minimumAmountOut!,
+      minimumAmountOut: new BN(0),
       owner: wallet.publicKey,
       pool: poolPk,
       referralTokenAccount: null,
@@ -296,15 +252,10 @@ export class MeteoraDbcAdapter implements IDexAdapter {
       ...filteredIxs,
     ];
 
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "sell",
-      tipSol: opts?.tipSol,
+    const rpcResult = await sendAndConfirmVtx(connection, ixs, wallet, {
       addressLookupTables: opts?.addressLookupTables,
     });
 
-    const accepted = results.find((r) => r.accepted);
     // Convert raw amount to human-readable using actual token decimals
     let tokenDecimals = 9;
     try {
@@ -313,8 +264,8 @@ export class MeteoraDbcAdapter implements IDexAdapter {
     } catch { /* fallback to 9 */ }
     const humanAmount = Number(sellAmount.toString()) / Math.pow(10, tokenDecimals);
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted?.accepted,
+      txSignature: rpcResult.txSignature,
+      confirmed: rpcResult.confirmed,
       amountIn: humanAmount,
       amountInToken: tokenMint,
       dex: this.name,
