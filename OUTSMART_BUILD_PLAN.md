@@ -2,7 +2,9 @@
 
 ## Overview
 
-**Goal:** Transform `solana-trading-cli` (566-star legacy prototype) into `outsmart` — a production-grade, distributable CLI package with 19 DEX integrations, 12 TX landing providers, and a unified command interface. Designed for both human CLI users and AI agent integration (OpenClaw, etc.).
+**Goal:** Transform `solana-trading-cli` (566-star legacy prototype) into `outsmart-cli` — a production-grade, distributable CLI package with 17 DEX integrations, 12 TX landing providers, and a unified command interface.
+
+> Agent/MCP/OpenClaw integration lives in the separate [`outsmart-agent`](https://github.com/outsmartchad/outsmart-agent) repo.
 
 **Source modules:** `100x-algo-bots/trading-modules/*` (battle-tested production code)
 **Target repo:** `solana-trading-cli` (package renamed to `outsmart`)
@@ -14,7 +16,7 @@
 
 ### 1. Class-Based IDexAdapter (not loose handler functions)
 
-Every DEX module implements the `IDexAdapter` interface (defined in `src/dex/types.ts`). The CLI and external consumers (OpenClaw plugin, bots) access adapters via `getDexAdapter("raydium-amm-v4")` from the `DexRegistry` — no direct imports of DEX internals.
+Every DEX module implements the `IDexAdapter` interface (defined in `src/dex/types.ts`). The CLI and library consumers access adapters via `getDexAdapter("raydium-amm-v4")` from the `DexRegistry` — no direct imports of DEX internals.
 
 ```typescript
 interface IDexAdapter {
@@ -45,9 +47,9 @@ ALL API keys, private keys, and RPC endpoints come from environment variables. T
 
 DEX adapters go in `src/dex/` alongside legacy code. Legacy `src/raydium/`, `src/meteora/`, `src/orca/`, `src/jupiter/` are NOT rewritten in-place — new class-based adapters sit next to them and wrap/replace the functionality.
 
-### 5. Standalone + OpenClaw Plugin (Option A)
+### 5. Standalone CLI + Library Export
 
-`outsmart` is an independent npm package with its own CLI. A separate thin OpenClaw plugin wraps `IDexAdapter`/`DexRegistry` as OpenClaw tools. This keeps outsmart useful without OpenClaw and avoids coupling to OpenClaw's release cycle. OpenClaw integration is Phase 7 (after core is 100% functional).
+`outsmart-cli` is an independent npm package with its own CLI. It also exports `IDexAdapter`/`DexRegistry` as a library for programmatic use (`import { getDexAdapter } from 'outsmart'`). Agent/MCP integration is handled in the separate `outsmart-agent` repo.
 
 ---
 
@@ -182,60 +184,10 @@ Shared infra:
 ### [ ] Phase 6 — CLI + Packaging (Agent 6)
 
 - CLI entry point with `outsmart` command
-- Subcommands: buy, sell, snipe, price, balance, wrap-sol, unwrap-sol, config, init, nonce
+- Subcommands: buy, sell, quote, find-pool, add-liq, remove-liq, claim-fees, positions, list-dex, config, init, info
 - Wire all DEX adapters via DexRegistry
 - Output formatting, --json, --verbose, --dry-run flags
 - npm publish, Homebrew formula, standalone binaries, shell completion
-
-### [ ] Phase 7 — MCP Tool Server + OpenClaw Integration
-
-outsmart becomes a tool server that any AI agent can call via MCP (Model Context Protocol).
-
-**7a. MCP Tool Server (~200-300 lines)**
-- Wrap every IDexAdapter method as an MCP tool
-- Tools: buy, sell, snipe, add_liq, remove_liq, get_price, find_pool, list_dex, claim_fees
-- Each tool takes JSON params, calls the adapter, returns JSON result
-- Agent doesn't need to know Solana internals — just "buy 0.1 SOL of token X on raydium-cpmm"
-- Compatible with any MCP client: OpenClaw, Claude, custom agents
-
-**7b. OpenClaw Browser Intelligence**
-
-OpenClaw provides the browser layer — navigating the same sites human trenchers use to gather intelligence that isn't available via RPC:
-
-| Site | What the agent does there |
-|------|--------------------------|
-| [GMGN](https://gmgn.ai) | Smart money tracking, wallet profiling, insider activity detection. Check who's buying before outsmart executes. |
-| [Axiom](https://axiom.trade) | Token sentiment, holder distribution, trade flow. For tokens that list on Axiom first, interact with the UI directly. |
-| [LPAgent](https://app.lpagent.io/) | LP position analytics, fee APR comparison, pool selection. Feed data back so outsmart can rebalance/exit positions. |
-| [DexScreener](https://dexscreener.com) | Price charts, liquidity depth, social links. outsmart queries the API directly; OpenClaw reads the linked project pages. |
-
-The pattern: **outsmart reads the chain, OpenClaw reads the internet.** outsmart executes at the code level, OpenClaw gathers the intelligence that informs those executions.
-
-**7c. Hybrid Agent Workflows**
-
-Example: snipe-with-verification flow
-1. outsmart (Listen): gRPC stream detects new pool creation on Raydium
-2. outsmart (Read): Fetch pool state, token mint, initial liquidity
-3. OpenClaw (Browse): Navigate to GMGN — check smart money wallets, insider flags
-4. OpenClaw (Browse): Navigate to project website — verify team page, audit links
-5. OpenClaw (Decide): "Looks legit, proceed" / "Red flags, skip"
-6. outsmart (Write): Execute snipe with MEV tip through 12 providers
-7. OpenClaw (Browse): Monitor token chart on Birdeye/DexScreener
-8. outsmart (Write): Sell at target or stop-loss
-
-Example: LP management flow
-1. OpenClaw (Browse): Check LPAgent for best fee APR pools
-2. outsmart (Write): Add liquidity on Meteora DAMM v2 via `add_liq`
-3. OpenClaw (Browse): Monitor position performance on LPAgent dashboard
-4. outsmart (Read): Check unclaimed fees via on-chain math
-5. outsmart (Write): Claim fees via `claim_fees`
-6. OpenClaw (Browse): Compare APR with competing pools on LPAgent
-7. outsmart (Write): Rebalance — remove from underperforming pool, add to better one
-
-**7d. Shared Wallet**
-- outsmart holds the private key (env var) for direct RPC signing
-- OpenClaw controls the same wallet via browser extension (Phantom/Backpack)
-- Both can sign transactions; outsmart for speed (raw RPC), OpenClaw for UI-only protocols
 
 ### [ ] Snipe Command — gRPC Pool Creation Listener
 
@@ -371,10 +323,10 @@ Each adapter must:
 ## Final Deliverable Checklist
 
 - [ ] `outsmart` published to npm
-- [ ] All 19 DEXes wired as IDexAdapter implementations
+- [ ] All 17 DEXes wired as IDexAdapter implementations
 - [ ] 12 TX landing providers via LandingOrchestrator
 - [ ] Durable nonce for concurrent landing safety
-- [ ] CLI with buy/sell/quote/find-pool/add-liq/remove-liq/list-dex/config/init/info commands
+- [ ] CLI with buy/sell/quote/find-pool/add-liq/remove-liq/claim-fees/positions/list-dex/config/init/info commands
 - [ ] Snipe command with gRPC pool creation listener (requires user's Geyser gRPC key)
 - [ ] --json, --verbose, --dry-run flags
 - [ ] Library mode: `import { getDexAdapter } from 'outsmart'`
@@ -382,7 +334,6 @@ Each adapter must:
 - [ ] Zero hardcoded API keys
 - [ ] Zero infinite loops
 - [ ] No `any` types in money paths
-- [ ] OpenClaw plugin wrapper (Phase 7)
 
 ---
 
@@ -489,7 +440,5 @@ All phases 0-6 completed. 17 DEX adapters registered, CLI entry point working, l
 2. **Re-run DLMM LP tests** after fixing the blockhash issue
 3. **Run remaining test suites**: `test:raydium` → `test:orca` → `test:clmm` → `test:fusion` → `test:api`
    - These adapters also need the `landTransaction` → `sendAndConfirmVtx` refactor
-4. **outsmart-agent scaffold** — copy core code into agent repo
-5. **MCP tool server** — Phase 7a in outsmart-agent
-6. **gRPC snipe streaming** — deferred (user will provide instructions from `100x-algo-bots` repo)
-7. **npm publish** — `outsmart` name available on npm
+4. **gRPC snipe streaming** — deferred (user will provide instructions from `100x-algo-bots` repo)
+5. **npm publish** — `outsmart` name available on npm
