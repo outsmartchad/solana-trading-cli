@@ -29,13 +29,19 @@ npm install -g outsmart
 
 ### 2. Configure
 
-Copy the `.env.example` file to `.env` in the project root and fill in your values:
+Run the interactive setup — it prompts for your wallet key and RPC endpoint:
+
+```bash
+outsmart init
+```
+
+This writes your config to `~/.outsmart/config.env` (and `.env` in the project root if you cloned from source). You only need to do this once.
+
+**Or configure manually:** copy `.env.example` to `.env` and fill in your values:
 
 ```bash
 cp .env.example .env
 ```
-
-Edit `.env` with your keys:
 
 ```bash
 # Required
@@ -186,6 +192,16 @@ outsmart info --token <MINT>
 ```
 
 Returns: price, market cap, volume, liquidity, pair age, buyer counts, social links.
+
+### init
+
+Interactive setup — prompts for your wallet private key and RPC endpoint, validates the key, and writes config to `~/.outsmart/config.env`.
+
+```bash
+outsmart init
+```
+
+You only need to run this once. After that, all commands will use the saved config.
 
 ### config
 
