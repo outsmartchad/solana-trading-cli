@@ -414,6 +414,7 @@ export class JupiterUltraAdapter implements IDexAdapter {
   readonly capabilities: DexCapabilities = defaultCapabilities({
     canBuy: true,
     canSell: true,
+    isAggregator: true,
   });
 
   // ----- Core: buy -----

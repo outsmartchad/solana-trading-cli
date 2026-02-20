@@ -1,9 +1,17 @@
 /**
  * Test setup — imports all DEX adapter modules to trigger auto-registration.
  *
- * This file is loaded by Jest via setupFilesAfterFramework in jest.config.ts.
+ * This file is loaded by Jest via setupFiles in jest.config.ts.
  * Without this, getDexAdapter() will fail because no adapters are registered.
  */
+
+// Suppress bigint-buffer native binding warning from @bloxroute/solana-trader-client-ts.
+// The pure JS fallback works fine — the warning is cosmetic noise.
+const _origWarn = console.warn.bind(console);
+console.warn = (...args: any[]) => {
+  if (typeof args[0] === "string" && args[0].includes("bigint: Failed to load bindings")) return;
+  _origWarn(...args);
+};
 
 // Import all adapter modules to trigger registerAdapter() side effects
 import "../src/dex/raydium-amm-v4";

@@ -37,11 +37,11 @@ export const RAYDIUM_CPMM_SOL_USDC = "7JuwJuNU88gurFnyWeiyGKbFmExMWcmRZntn9imEzd
 /** Raydium CLMM: SOL/USDC */
 export const RAYDIUM_CLMM_SOL_USDC = "2QdhepnKRTLjjSqPL1PtKNwqrUkoLee2B1d3S4TNagMs";
 
-/** Meteora DAMM v1: SOL/USDC customizable pool */
-export const METEORA_DAMM_V1_SOL_USDC = "BRr3RXuya8nXEhA8bfp6yKAyVPivPUH64yiRPAECNeYn";
+/** Meteora DAMM v2: MET/SOL pool */
+export const METEORA_DAMM_V2_MET_SOL = "9x7WTWq66KbMC1w7AUX72khNg31nQmWRE4N4cDvJY7JT";
 
-/** Meteora DLMM: SOL/USDC pool */
-export const METEORA_DLMM_SOL_USDC = "ARwi1S4DaiTG5DX7S4M4ZsrXqpMD1MrTmbu9ue2tpmEq";
+/** Meteora DLMM: MET/SOL pool */
+export const METEORA_DLMM_MET_SOL = "AsSyvUnbfaZJPRrNh3kUuvZTeHKoMVWEoHz86f4Q5D9x";
 
 /** Orca Whirlpool: SOL/USDC */
 export const ORCA_SOL_USDC = "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE";

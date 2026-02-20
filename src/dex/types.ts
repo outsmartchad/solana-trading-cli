@@ -79,8 +79,10 @@ export interface BuyParams {
   quoteMint?: string;
 
   /**
-   * Pool address to trade on. If omitted, the adapter will attempt
-   * auto-discovery via findPool().
+   * Pool address to trade on.
+   *
+   * Required for on-chain DEX adapters. Not needed for aggregators
+   * (jupiter-ultra, dflow) which find the best route automatically.
    */
   poolAddress?: string;
 
@@ -305,6 +307,19 @@ export interface DexCapabilities {
 
   /** Can remove liquidity */
   canRemoveLiquidity: boolean;
+
+  /**
+   * Whether this adapter is a swap aggregator (e.g. Jupiter, DFlow).
+   *
+   * Aggregators route trades across multiple DEXes — the user only needs to
+   * specify the token mint, not a pool address. The aggregator finds the best
+   * route automatically.
+   *
+   * On-chain adapters (isAggregator=false) require a pool address. The adapter
+   * reads the pool's base/quote mints and determines the swap direction. The
+   * user does NOT need to specify a token mint — it's derived from pool state.
+   */
+  isAggregator: boolean;
 }
 
 /**
@@ -322,6 +337,7 @@ export function defaultCapabilities(
     canGetPrice: false,
     canAddLiquidity: false,
     canRemoveLiquidity: false,
+    isAggregator: false,
     ...overrides,
   };
 }

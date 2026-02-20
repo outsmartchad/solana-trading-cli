@@ -27,14 +27,17 @@ const homeConfigPath = path.join(
 const legacyEnvPath = path.join(__dirname, ".env");
 const cwdEnvPath = path.join(process.cwd(), ".env");
 
+// Config loading strategy:
+// dotenv.config() never overwrites already-set env vars, so we load
+// highest-priority files FIRST. Later files only fill in missing vars.
+//   Priority: env vars > cwd/.env > ~/.outsmart/config.env
 if (fs.existsSync(cwdEnvPath)) {
   dotenv.config({ path: cwdEnvPath });
-} else if (fs.existsSync(legacyEnvPath)) {
-  dotenv.config({ path: legacyEnvPath });
-} else if (fs.existsSync(homeConfigPath)) {
+}
+if (fs.existsSync(homeConfigPath)) {
   dotenv.config({ path: homeConfigPath });
 }
-// Note: if no .env file found, we proceed with environment variables only.
+// Note: if no config files found, we proceed with environment variables only.
 // This allows the CLI to run `outsmart init` without a pre-existing config.
 
 export function loadKeypairFromFile(filename: string): Keypair {

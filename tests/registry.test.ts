@@ -100,9 +100,11 @@ describe("DexRegistry", () => {
       },
       "jupiter-ultra": {
         canBuy: true, canSell: true, canSnipe: false, canFindPool: false, canGetPrice: false,
+        isAggregator: true,
       },
       "dflow": {
         canBuy: true, canSell: true, canSnipe: false, canFindPool: false, canGetPrice: false,
+        isAggregator: true,
       },
     };
 

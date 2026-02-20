@@ -99,19 +99,18 @@ npm run test:meteora
 
 | Adapter | Tests | Pool |
 |---------|-------|------|
-| meteora-damm-v1 | findPool, getPrice, buy | `BRr3RXuya8nXEhA8bfp6yKAyVPivPUH64yiRPAECNeYn` (SOL/USDC) |
 | meteora-damm-v2 | capabilities, findPool, getPrice, buy, sell, addLiq, removeLiq, claimFees | auto-discovered SOL/USDC |
 | meteora-dlmm | getPrice, buy | `ARwi1S4DaiTG5DX7S4M4ZsrXqpMD1MrTmbu9ue2tpmEq` (SOL/USDC) |
 | meteora-dbc | capabilities check only | (skipped — needs active bonding curve) |
 | meteora-lp-dlmm | capabilities, addLiquidity, removeLiquidity | `ARwi1S4DaiTG5DX7S4M4ZsrXqpMD1MrTmbu9ue2tpmEq` (SOL/USDC) |
 
 **Notes:**
-- DAMM v1 tests use try/catch — pool may not exist or may fail. That's OK.
+- DAMM v1 is excluded — legacy AMM program.
 - DAMM v2 auto-discovers a pool via `findPool`. If none found, later tests skip.
 - LP tests (addLiquidity/removeLiquidity) may fail if wallet doesn't hold both tokens. That's OK.
 - DBC tests are `test.skip` — need ephemeral bonding curve pool.
 
-**Expected:** ~18 tests, 3-5 minutes
+**Expected:** ~15 tests, 3-5 minutes
 
 ---
 
@@ -208,7 +207,6 @@ All pools are high-liquidity mainnet SOL/USDC pairs. These are stable and unlike
 | Raydium AMM v4 SOL/USDC | `58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2` | raydium-amm-v4 |
 | Raydium CPMM SOL/USDC | `7JuwJuNU88gurFnyWeiyGKbFmExMWcmRZntn9imEzdny` | raydium-cpmm |
 | Raydium CLMM SOL/USDC | `2QdhepnKRTLjjSqPL1PtKNwqrUkoLee2B1d3S4TNagMs` | raydium-clmm |
-| Meteora DAMM v1 SOL/USDC | `BRr3RXuya8nXEhA8bfp6yKAyVPivPUH64yiRPAECNeYn` | meteora-damm-v1 |
 | Meteora DLMM SOL/USDC | `ARwi1S4DaiTG5DX7S4M4ZsrXqpMD1MrTmbu9ue2tpmEq` | meteora-dlmm |
 | Orca Whirlpool SOL/USDC | `Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE` | orca |
 | Meteora DAMM v2 SOL/USDC | (auto-discovered via findPool) | meteora-damm-v2 |

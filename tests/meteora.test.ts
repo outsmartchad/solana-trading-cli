@@ -1,8 +1,9 @@
 /**
  * Mainnet integration tests for Meteora adapters.
  *
- * Covers: meteora-damm-v1, meteora-damm-v2, meteora-dlmm, meteora-dbc,
- *         meteora-lp-dlmm
+ * Covers: meteora-damm-v2, meteora-dlmm, meteora-dbc, meteora-lp-dlmm
+ *
+ * NOTE: meteora-damm-v1 is excluded — legacy AMM program.
  *
  * CAUTION: These tests execute real transactions on Solana mainnet.
  */
@@ -17,55 +18,12 @@ import {
   SELL_PERCENTAGE,
   WSOL,
   USDC,
-  METEORA_DAMM_V1_SOL_USDC,
-  METEORA_DLMM_SOL_USDC,
+  METEORA_DAMM_V2_MET_SOL,
+  METEORA_DLMM_MET_SOL,
 } from "./helpers";
 
 beforeAll(async () => {
   await ensureMainnetReady();
-});
-
-// ============================================================
-// meteora-damm-v1
-// Capabilities: buy, sell, findPool, getPrice
-// ============================================================
-describe("meteora-damm-v1", () => {
-  const adapter = getDexAdapter("meteora-damm-v1");
-
-  test("findPool: SOL/USDC", async () => {
-    const pool = await adapter.findPool!(WSOL, USDC);
-    logResult("meteora-damm-v1 findPool", pool);
-    // DAMM v1 customizable pool may or may not exist for SOL/USDC
-    // Just verify the method doesn't throw
-  });
-
-  test("getPrice: SOL/USDC pool", async () => {
-    await delay();
-    try {
-      const price = await adapter.getPrice!(METEORA_DAMM_V1_SOL_USDC);
-      logResult("meteora-damm-v1 getPrice", price);
-      expect(price.price).toBeGreaterThan(0);
-    } catch (e: any) {
-      // Pool may not exist — skip gracefully
-      console.log(`meteora-damm-v1 getPrice skipped: ${e.message}`);
-    }
-  });
-
-  test("buy: 0.001 SOL on DAMM v1 pool", async () => {
-    await delay();
-    try {
-      const result = await adapter.buy({
-        tokenMint: USDC,
-        amountSol: BUY_AMOUNT_SOL,
-        poolAddress: METEORA_DAMM_V1_SOL_USDC,
-      });
-      logResult("meteora-damm-v1 buy", result);
-      expect(result.txSignature).toBeTruthy();
-      expect(result.dex).toBe("meteora-damm-v1");
-    } catch (e: any) {
-      console.log(`meteora-damm-v1 buy skipped: ${e.message}`);
-    }
-  });
 });
 
 // ============================================================
@@ -204,7 +162,7 @@ describe("meteora-dlmm", () => {
 
   test("getPrice: SOL/USDC DLMM pool", async () => {
     try {
-      const price = await adapter.getPrice!(METEORA_DLMM_SOL_USDC);
+      const price = await adapter.getPrice!(METEORA_DLMM_MET_SOL);
       logResult("meteora-dlmm getPrice", price);
       expect(price.price).toBeGreaterThan(0);
     } catch (e: any) {
@@ -218,7 +176,7 @@ describe("meteora-dlmm", () => {
       const result = await adapter.buy({
         tokenMint: USDC,
         amountSol: BUY_AMOUNT_SOL,
-        poolAddress: METEORA_DLMM_SOL_USDC,
+        poolAddress: METEORA_DLMM_MET_SOL,
       });
       logResult("meteora-dlmm buy", result);
       expect(result.txSignature).toBeTruthy();
@@ -293,7 +251,7 @@ describe("meteora-lp-dlmm", () => {
     await delay();
     try {
       const result = await adapter.addLiquidity!({
-        poolAddress: METEORA_DLMM_SOL_USDC,
+        poolAddress: METEORA_DLMM_MET_SOL,
         amountA: 0.001,
       });
       logResult("meteora-lp-dlmm addLiquidity", result);
@@ -307,7 +265,7 @@ describe("meteora-lp-dlmm", () => {
     await delay(5000);
     try {
       const result = await adapter.removeLiquidity!({
-        poolAddress: METEORA_DLMM_SOL_USDC,
+        poolAddress: METEORA_DLMM_MET_SOL,
         percentage: 100,
       });
       logResult("meteora-lp-dlmm removeLiquidity", result);

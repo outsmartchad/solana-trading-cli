@@ -14,9 +14,14 @@ const _origWarn = process.stderr.write.bind(process.stderr);
  * 17 DEX adapters, 12 TX landing providers, one unified interface.
  *
  * Usage:
- *   outsmart buy  --dex raydium-cpmm --token <MINT> --amount 0.1
- *   outsmart sell --dex raydium-cpmm --token <MINT> --pct 100
- *   outsmart buy  --dex raydium-cpmm --token <MINT> --amount 0.5 --pool <POOL> --tip 0.01
+ *   # On-chain DEX — requires pool address + token mint
+ *   outsmart buy  --dex meteora-dlmm --pool <POOL> --token <MINT> --amount 0.1
+ *   outsmart sell --dex meteora-dlmm --pool <POOL> --token <MINT> --pct 100
+ *
+ *   # Swap aggregator — requires token mint only (finds best route automatically)
+ *   outsmart buy  --dex jupiter-ultra --token <MINT> --amount 0.1
+ *   outsmart sell --dex jupiter-ultra --token <MINT> --pct 100
+ *
  *   outsmart quote --dex meteora-dlmm --pool <POOL>
  *   outsmart list-dex
  *   outsmart list-dex --cap canSell
@@ -153,14 +158,30 @@ const program = new Command()
 
 const buyCmd = new Command("buy")
   .description("Buy tokens with SOL (or quote token)")
-  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. raydium-cpmm)")
-  .requiredOption("-t, --token <mint>", "token mint address to buy")
+  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. raydium-cpmm, jupiter-ultra)")
   .requiredOption("-a, --amount <sol>", "amount of SOL to spend")
-  .option("-p, --pool <address>", "pool address (auto-discovered if omitted)")
+  .option("-p, --pool <address>", "pool address (required for on-chain DEXes)")
+  .option("-t, --token <mint>", "token mint address to buy")
   .action(async (cmdOpts) => {
     const adapter = getDexAdapter(cmdOpts.dex);
     if (!adapter.capabilities.canBuy) {
       die(`${adapter.name} does not support buy`);
+    }
+
+    // Validate inputs based on adapter type
+    if (adapter.capabilities.isAggregator) {
+      // Aggregators (jupiter-ultra, dflow): need --token, no --pool needed
+      if (!cmdOpts.token) {
+        die(`${adapter.name} is a swap aggregator — --token <mint> is required.\n  Example: outsmart buy --dex ${adapter.name} --token <MINT> --amount 0.1`);
+      }
+    } else {
+      // On-chain DEXes: need both --pool and --token
+      if (!cmdOpts.pool) {
+        die(`${adapter.name} is an on-chain DEX — --pool <address> is required.\n  Example: outsmart buy --dex ${adapter.name} --pool <POOL> --token <MINT> --amount 0.1`);
+      }
+      if (!cmdOpts.token) {
+        die(`${adapter.name} is an on-chain DEX — --token <mint> is required.\n  Example: outsmart buy --dex ${adapter.name} --pool <POOL> --token <MINT> --amount 0.1`);
+      }
     }
 
     const params: BuyParams = {
@@ -186,13 +207,29 @@ program.addCommand(buyCmd);
 const sellCmd = new Command("sell")
   .description("Sell tokens for SOL (or quote token)")
   .requiredOption("-d, --dex <name>", "DEX adapter name")
-  .requiredOption("-t, --token <mint>", "token mint address to sell")
   .requiredOption("--pct <percentage>", "percentage of held balance to sell (0-100)")
-  .option("-p, --pool <address>", "pool address (auto-discovered if omitted)")
+  .option("-p, --pool <address>", "pool address (required for on-chain DEXes)")
+  .option("-t, --token <mint>", "token mint address to sell")
   .action(async (cmdOpts) => {
     const adapter = getDexAdapter(cmdOpts.dex);
     if (!adapter.capabilities.canSell) {
       die(`${adapter.name} does not support sell`);
+    }
+
+    // Validate inputs based on adapter type
+    if (adapter.capabilities.isAggregator) {
+      // Aggregators (jupiter-ultra, dflow): need --token, no --pool needed
+      if (!cmdOpts.token) {
+        die(`${adapter.name} is a swap aggregator — --token <mint> is required.\n  Example: outsmart sell --dex ${adapter.name} --token <MINT> --pct 100`);
+      }
+    } else {
+      // On-chain DEXes: need both --pool and --token
+      if (!cmdOpts.pool) {
+        die(`${adapter.name} is an on-chain DEX — --pool <address> is required.\n  Example: outsmart sell --dex ${adapter.name} --pool <POOL> --token <MINT> --pct 100`);
+      }
+      if (!cmdOpts.token) {
+        die(`${adapter.name} is an on-chain DEX — --token <mint> is required.\n  Example: outsmart sell --dex ${adapter.name} --pool <POOL> --token <MINT> --pct 100`);
+      }
     }
 
     const params: SellParams = {
@@ -632,7 +669,8 @@ program
 
     console.log();
     console.log("  You're ready to trade:");
-    console.log("    outsmart buy --dex raydium-cpmm --token <MINT> --amount 0.1");
+    console.log("    outsmart buy --dex meteora-dlmm --pool <POOL> --amount 0.1");
+    console.log("    outsmart buy --dex jupiter-ultra --token <MINT> --amount 0.1");
     console.log("    outsmart list-dex");
     console.log();
 
