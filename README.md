@@ -29,22 +29,21 @@ npm install -g outsmart
 
 ### 2. Configure
 
-Create a `.env` file in the project root:
+Copy the `.env.example` file to `.env` in the project root and fill in your values:
 
 ```bash
-outsmart config env > .env
+cp .env.example .env
 ```
 
-Set the required values:
+Edit `.env` with your keys:
 
 ```bash
-# Solana RPC (Helius, Quicknode, Triton, etc.)
-SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY
-
-# Wallet (base58 private key or path to keypair JSON)
-WALLET_PRIVATE_KEY=YOUR_BASE58_PRIVATE_KEY
-# WALLET_PATH=/path/to/keypair.json    # alternative
+# Required
+PRIVATE_KEY=your_base58_private_key_here
+MAINNET_ENDPOINT=https://mainnet.helius-rpc.com/?api-key=YOUR_HELIUS_KEY
 ```
+
+See `.env.example` for all available options (TX landing provider keys, trading defaults, etc.).
 
 ### 3. Trade
 
