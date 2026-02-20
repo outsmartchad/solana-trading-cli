@@ -15,7 +15,6 @@ import {
   logResult,
   BUY_AMOUNT_SOL,
   SELL_PERCENTAGE,
-  SNIPE_TIP_SOL,
   WSOL,
   USDC,
   METEORA_DAMM_V1_SOL_USDC,
@@ -28,7 +27,7 @@ beforeAll(async () => {
 
 // ============================================================
 // meteora-damm-v1
-// Capabilities: buy, snipe, findPool, getPrice
+// Capabilities: buy, sell, findPool, getPrice
 // ============================================================
 describe("meteora-damm-v1", () => {
   const adapter = getDexAdapter("meteora-damm-v1");
@@ -67,27 +66,11 @@ describe("meteora-damm-v1", () => {
       console.log(`meteora-damm-v1 buy skipped: ${e.message}`);
     }
   });
-
-  test("snipe: 0.001 SOL on DAMM v1 pool", async () => {
-    await delay();
-    try {
-      const result = await adapter.snipe!({
-        tokenMint: USDC,
-        amountSol: BUY_AMOUNT_SOL,
-        poolAddress: METEORA_DAMM_V1_SOL_USDC,
-        tipSol: SNIPE_TIP_SOL,
-      });
-      logResult("meteora-damm-v1 snipe", result);
-      expect(result.txSignature).toBeTruthy();
-    } catch (e: any) {
-      console.log(`meteora-damm-v1 snipe skipped: ${e.message}`);
-    }
-  });
 });
 
 // ============================================================
 // meteora-damm-v2
-// Capabilities: buy, sell, snipe, findPool, getPrice,
+// Capabilities: buy, sell, findPool, getPrice,
 //               addLiquidity, removeLiquidity + claimFees
 // ============================================================
 describe("meteora-damm-v2", () => {
@@ -155,22 +138,6 @@ describe("meteora-damm-v2", () => {
     expect(result.txSignature).toBeTruthy();
   });
 
-  test("snipe: 0.001 SOL", async () => {
-    if (!discoveredPool) {
-      console.log("Skipping snipe — no pool discovered");
-      return;
-    }
-    await delay();
-    const result = await adapter.snipe!({
-      tokenMint: USDC,
-      amountSol: BUY_AMOUNT_SOL,
-      poolAddress: discoveredPool,
-      tipSol: SNIPE_TIP_SOL,
-    });
-    logResult("meteora-damm-v2 snipe", result);
-    expect(result.txSignature).toBeTruthy();
-  });
-
   // LP operations — addLiquidity requires existing pool with
   // tokens in wallet. These are tested if pool is available.
   test("addLiquidity: tiny deposit", async () => {
@@ -230,7 +197,7 @@ describe("meteora-damm-v2", () => {
 
 // ============================================================
 // meteora-dlmm
-// Capabilities: buy, snipe, getPrice
+// Capabilities: buy, sell, getPrice
 // ============================================================
 describe("meteora-dlmm", () => {
   const adapter = getDexAdapter("meteora-dlmm");
@@ -260,27 +227,11 @@ describe("meteora-dlmm", () => {
       console.log(`meteora-dlmm buy skipped: ${e.message}`);
     }
   });
-
-  test("snipe: 0.001 SOL on DLMM pool", async () => {
-    await delay();
-    try {
-      const result = await adapter.snipe!({
-        tokenMint: USDC,
-        amountSol: BUY_AMOUNT_SOL,
-        poolAddress: METEORA_DLMM_SOL_USDC,
-        tipSol: SNIPE_TIP_SOL,
-      });
-      logResult("meteora-dlmm snipe", result);
-      expect(result.txSignature).toBeTruthy();
-    } catch (e: any) {
-      console.log(`meteora-dlmm snipe skipped: ${e.message}`);
-    }
-  });
 });
 
 // ============================================================
 // meteora-dbc
-// Capabilities: buy, sell, snipe, getPrice
+// Capabilities: buy, sell, getPrice
 // NOTE: DBC pools are bonding curves — may graduate.
 //       Tests use try/catch for graceful skip.
 // ============================================================

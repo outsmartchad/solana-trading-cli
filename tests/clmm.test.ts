@@ -4,7 +4,7 @@
  * Covers: byreal-clmm, pancakeswap-clmm
  *
  * Both extend ClmmBaseAdapter with different program IDs.
- * Capabilities: buy, snipe, getPrice
+ * Capabilities: buy, sell, getPrice
  *
  * NOTE: These DEXes may have limited pool availability for common pairs.
  *       Tests use try/catch for graceful handling.
@@ -18,7 +18,6 @@ import {
   delay,
   logResult,
   BUY_AMOUNT_SOL,
-  SNIPE_TIP_SOL,
   WSOL,
   USDC,
 } from "./helpers";
@@ -35,9 +34,9 @@ describe("byreal-clmm", () => {
 
   test("capabilities check", () => {
     expect(adapter.capabilities.canBuy).toBe(true);
+    expect(adapter.capabilities.canSell).toBe(true);
     expect(adapter.capabilities.canSnipe).toBe(true);
     expect(adapter.capabilities.canGetPrice).toBe(true);
-    expect(adapter.capabilities.canSell).toBe(false);
     expect(adapter.capabilities.canFindPool).toBe(false);
   });
 
@@ -69,9 +68,9 @@ describe("pancakeswap-clmm", () => {
 
   test("capabilities check", () => {
     expect(adapter.capabilities.canBuy).toBe(true);
+    expect(adapter.capabilities.canSell).toBe(true);
     expect(adapter.capabilities.canSnipe).toBe(true);
     expect(adapter.capabilities.canGetPrice).toBe(true);
-    expect(adapter.capabilities.canSell).toBe(false);
     expect(adapter.capabilities.canFindPool).toBe(false);
   });
 

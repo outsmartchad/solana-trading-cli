@@ -14,7 +14,6 @@ import {
   logResult,
   BUY_AMOUNT_SOL,
   SELL_PERCENTAGE,
-  SNIPE_TIP_SOL,
   WSOL,
   USDC,
   RAYDIUM_V4_SOL_USDC,
@@ -28,7 +27,7 @@ beforeAll(async () => {
 
 // ============================================================
 // raydium-amm-v4
-// Capabilities: buy, snipe, findPool, getPrice
+// Capabilities: buy, sell, findPool, getPrice
 // ============================================================
 describe("raydium-amm-v4", () => {
   const adapter = getDexAdapter("raydium-amm-v4");
@@ -60,24 +59,11 @@ describe("raydium-amm-v4", () => {
     expect(result.txSignature).toBeTruthy();
     expect(result.dex).toBe("raydium-amm-v4");
   });
-
-  test("snipe: 0.001 SOL on SOL/USDC pool", async () => {
-    await delay();
-    const result = await adapter.snipe!({
-      tokenMint: USDC,
-      amountSol: BUY_AMOUNT_SOL,
-      poolAddress: RAYDIUM_V4_SOL_USDC,
-      tipSol: SNIPE_TIP_SOL,
-    });
-    logResult("raydium-amm-v4 snipe", result);
-    expect(result.txSignature).toBeTruthy();
-    expect(result.dex).toBe("raydium-amm-v4");
-  });
 });
 
 // ============================================================
 // raydium-cpmm
-// Capabilities: buy, sell, snipe, findPool, getPrice
+// Capabilities: buy, sell, findPool, getPrice
 // ============================================================
 describe("raydium-cpmm", () => {
   const adapter = getDexAdapter("raydium-cpmm");
@@ -119,23 +105,11 @@ describe("raydium-cpmm", () => {
     expect(result.txSignature).toBeTruthy();
     expect(result.dex).toBe("raydium-cpmm");
   });
-
-  test("snipe: 0.001 SOL on SOL/USDC pool", async () => {
-    await delay();
-    const result = await adapter.snipe!({
-      tokenMint: USDC,
-      amountSol: BUY_AMOUNT_SOL,
-      poolAddress: RAYDIUM_CPMM_SOL_USDC,
-      tipSol: SNIPE_TIP_SOL,
-    });
-    logResult("raydium-cpmm snipe", result);
-    expect(result.txSignature).toBeTruthy();
-  });
 });
 
 // ============================================================
 // raydium-clmm
-// Capabilities: buy, sell, snipe, findPool, getPrice
+// Capabilities: buy, sell, findPool, getPrice
 // ============================================================
 describe("raydium-clmm", () => {
   const adapter = getDexAdapter("raydium-clmm");
@@ -174,18 +148,6 @@ describe("raydium-clmm", () => {
       poolAddress: RAYDIUM_CLMM_SOL_USDC,
     });
     logResult("raydium-clmm sell", result);
-    expect(result.txSignature).toBeTruthy();
-  });
-
-  test("snipe: 0.001 SOL on SOL/USDC pool", async () => {
-    await delay();
-    const result = await adapter.snipe!({
-      tokenMint: USDC,
-      amountSol: BUY_AMOUNT_SOL,
-      poolAddress: RAYDIUM_CLMM_SOL_USDC,
-      tipSol: SNIPE_TIP_SOL,
-    });
-    logResult("raydium-clmm snipe", result);
     expect(result.txSignature).toBeTruthy();
   });
 });

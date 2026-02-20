@@ -74,9 +74,9 @@ npm run test:raydium
 
 | Adapter | Tests | Pool |
 |---------|-------|------|
-| raydium-amm-v4 | findPool, getPrice, buy, snipe | `58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2` (SOL/USDC) |
-| raydium-cpmm | findPool, getPrice, buy, sell, snipe | `7JuwJuNU88gurFnyWeiyGKbFmExMWcmRZntn9imEzdny` (SOL/USDC) |
-| raydium-clmm | findPool, getPrice, buy, sell, snipe | `2QdhepnKRTLjjSqPL1PtKNwqrUkoLee2B1d3S4TNagMs` (SOL/USDC) |
+| raydium-amm-v4 | findPool, getPrice, buy | `58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2` (SOL/USDC) |
+| raydium-cpmm | findPool, getPrice, buy, sell | `7JuwJuNU88gurFnyWeiyGKbFmExMWcmRZntn9imEzdny` (SOL/USDC) |
+| raydium-clmm | findPool, getPrice, buy, sell | `2QdhepnKRTLjjSqPL1PtKNwqrUkoLee2B1d3S4TNagMs` (SOL/USDC) |
 | raydium-launchlab | capabilities check only | (skipped — needs active bonding curve) |
 
 **Flow per adapter:**
@@ -84,9 +84,8 @@ npm run test:raydium
 2. `getPrice` — reads on-chain pool state, returns price
 3. `buy` — buys 0.001 SOL worth of USDC
 4. `sell` — sells 100% of the USDC just bought (5s delay for confirmation)
-5. `snipe` — same as buy but calls the snipe() adapter method (internal, not CLI)
 
-**Expected:** ~13 tests, 2-3 minutes (includes delays + TX confirmation)
+**Expected:** ~10 tests, 2-3 minutes (includes delays + TX confirmation)
 
 ---
 
@@ -100,9 +99,9 @@ npm run test:meteora
 
 | Adapter | Tests | Pool |
 |---------|-------|------|
-| meteora-damm-v1 | findPool, getPrice, buy, snipe | `BRr3RXuya8nXEhA8bfp6yKAyVPivPUH64yiRPAECNeYn` (SOL/USDC) |
-| meteora-damm-v2 | capabilities, findPool, getPrice, buy, sell, snipe, addLiq, removeLiq, claimFees | auto-discovered SOL/USDC |
-| meteora-dlmm | getPrice, buy, snipe | `ARwi1S4DaiTG5DX7S4M4ZsrXqpMD1MrTmbu9ue2tpmEq` (SOL/USDC) |
+| meteora-damm-v1 | findPool, getPrice, buy | `BRr3RXuya8nXEhA8bfp6yKAyVPivPUH64yiRPAECNeYn` (SOL/USDC) |
+| meteora-damm-v2 | capabilities, findPool, getPrice, buy, sell, addLiq, removeLiq, claimFees | auto-discovered SOL/USDC |
+| meteora-dlmm | getPrice, buy | `ARwi1S4DaiTG5DX7S4M4ZsrXqpMD1MrTmbu9ue2tpmEq` (SOL/USDC) |
 | meteora-dbc | capabilities check only | (skipped — needs active bonding curve) |
 | meteora-lp-dlmm | capabilities, addLiquidity, removeLiquidity | `ARwi1S4DaiTG5DX7S4M4ZsrXqpMD1MrTmbu9ue2tpmEq` (SOL/USDC) |
 
@@ -126,7 +125,7 @@ npm run test:orca
 
 | Adapter | Tests | Pool |
 |---------|-------|------|
-| orca | capabilities, getPrice, buy, snipe | `Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE` (SOL/USDC Whirlpool) |
+| orca | capabilities, getPrice, buy, sell | `Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE` (SOL/USDC Whirlpool) |
 
 **Expected:** 4 tests, ~1 minute
 

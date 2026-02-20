@@ -15,7 +15,6 @@ import {
   delay,
   logResult,
   BUY_AMOUNT_SOL,
-  SNIPE_TIP_SOL,
   WSOL,
   USDC,
 } from "./helpers";
@@ -26,16 +25,16 @@ beforeAll(async () => {
 
 // ============================================================
 // fusion-amm
-// Capabilities: buy, snipe, getPrice
+// Capabilities: buy, sell, getPrice
 // ============================================================
 describe("fusion-amm", () => {
   const adapter = getDexAdapter("fusion-amm");
 
   test("capabilities check", () => {
     expect(adapter.capabilities.canBuy).toBe(true);
+    expect(adapter.capabilities.canSell).toBe(true);
     expect(adapter.capabilities.canSnipe).toBe(true);
     expect(adapter.capabilities.canGetPrice).toBe(true);
-    expect(adapter.capabilities.canSell).toBe(false);
     expect(adapter.capabilities.canFindPool).toBe(false);
   });
 
@@ -62,16 +61,16 @@ describe("fusion-amm", () => {
 
 // ============================================================
 // futarchy-amm
-// Capabilities: buy, snipe, getPrice
+// Capabilities: buy, sell, getPrice
 // ============================================================
 describe("futarchy-amm", () => {
   const adapter = getDexAdapter("futarchy-amm");
 
   test("capabilities check", () => {
     expect(adapter.capabilities.canBuy).toBe(true);
+    expect(adapter.capabilities.canSell).toBe(true);
     expect(adapter.capabilities.canSnipe).toBe(true);
     expect(adapter.capabilities.canGetPrice).toBe(true);
-    expect(adapter.capabilities.canSell).toBe(false);
     expect(adapter.capabilities.canFindPool).toBe(false);
   });
 

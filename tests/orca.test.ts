@@ -1,7 +1,7 @@
 /**
  * Mainnet integration tests for Orca Whirlpool adapter.
  *
- * Capabilities: buy, snipe, getPrice
+ * Capabilities: buy, sell, getPrice
  *
  * CAUTION: Real transactions on Solana mainnet.
  */
@@ -12,7 +12,7 @@ import {
   delay,
   logResult,
   BUY_AMOUNT_SOL,
-  SNIPE_TIP_SOL,
+  SELL_PERCENTAGE,
   WSOL,
   USDC,
   ORCA_SOL_USDC,
@@ -27,9 +27,9 @@ describe("orca", () => {
 
   test("capabilities check", () => {
     expect(adapter.capabilities.canBuy).toBe(true);
+    expect(adapter.capabilities.canSell).toBe(true);
     expect(adapter.capabilities.canSnipe).toBe(true);
     expect(adapter.capabilities.canGetPrice).toBe(true);
-    expect(adapter.capabilities.canSell).toBe(false);
     expect(adapter.capabilities.canFindPool).toBe(false);
   });
 
@@ -52,15 +52,14 @@ describe("orca", () => {
     expect(result.dex).toBe("orca");
   });
 
-  test("snipe: 0.001 SOL on Whirlpool", async () => {
-    await delay();
-    const result = await adapter.snipe!({
+  test("sell: 100% of USDC via Orca", async () => {
+    await delay(5000);
+    const result = await adapter.sell!({
       tokenMint: USDC,
-      amountSol: BUY_AMOUNT_SOL,
+      percentage: SELL_PERCENTAGE,
       poolAddress: ORCA_SOL_USDC,
-      tipSol: SNIPE_TIP_SOL,
     });
-    logResult("orca snipe", result);
+    logResult("orca sell", result);
     expect(result.txSignature).toBeTruthy();
   });
 });

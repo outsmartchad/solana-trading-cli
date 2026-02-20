@@ -58,9 +58,6 @@ export const BUY_AMOUNT_SOL = 0.001;
 /** Sell percentage for sell tests (sell everything we just bought) */
 export const SELL_PERCENTAGE = 100;
 
-/** Snipe tip in SOL */
-export const SNIPE_TIP_SOL = 0.0001;
-
 // ---------------------------------------------------------------------------
 // Pre-flight checks
 // ---------------------------------------------------------------------------
