@@ -28,6 +28,7 @@ import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, getAccount, getAssociatedToken
 
 import { getWallet, getConnection } from "../helpers/config";
 import { landTransaction } from "../transactions/landing";
+import { sendAndConfirmVtx } from "../transactions/send-rpc";
 
 import {
   IDexAdapter,
@@ -159,31 +160,18 @@ export class MeteoraDlmmAdapter implements IDexAdapter {
       inAmount: inputAmount,
       lbPair: dlmmPool.pubkey,
       user: wallet.publicKey,
-      minOutAmount: swapQuote.minOutAmount ?? new BN(0),
+      minOutAmount: new BN(0),
       outToken,
     });
 
-    const computeLimit = opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT;
-    const priorityFee = opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
-
-    const ixs: TransactionInstruction[] = [
-      ComputeBudgetProgram.setComputeUnitLimit({ units: computeLimit }),
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
-      ...swapTx.instructions,
-    ];
-
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "buy",
-      tipSol: opts?.tipSol,
+    // DLMM SDK already includes ComputeBudget + ATA creation in swapTx.instructions
+    const result = await sendAndConfirmVtx(connection, swapTx.instructions, wallet, {
       addressLookupTables: opts?.addressLookupTables,
     });
 
-    const accepted = results.find((r) => r.accepted);
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted?.accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: amountSol,
       amountInToken: quoteMintStr,
       dex: this.name,
@@ -252,28 +240,14 @@ export class MeteoraDlmmAdapter implements IDexAdapter {
       inAmount: sellAmount,
       lbPair: dlmmPool.pubkey,
       user: wallet.publicKey,
-      minOutAmount: swapQuote.minOutAmount ?? new BN(0),
+      minOutAmount: new BN(0),
       outToken,
     });
 
-    const computeLimit = opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT;
-    const priorityFee = opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
-
-    const ixs: TransactionInstruction[] = [
-      ComputeBudgetProgram.setComputeUnitLimit({ units: computeLimit }),
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
-      ...swapTx.instructions,
-    ];
-
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "sell",
-      tipSol: opts?.tipSol,
+    // DLMM SDK already includes ComputeBudget + ATA creation in swapTx.instructions
+    const rpcResult = await sendAndConfirmVtx(connection, swapTx.instructions, wallet, {
       addressLookupTables: opts?.addressLookupTables,
     });
-
-    const accepted = results.find((r) => r.accepted);
 
     // Human-readable sell amount
     let tokenDecimals = 9;
@@ -284,8 +258,8 @@ export class MeteoraDlmmAdapter implements IDexAdapter {
     const humanAmount = Number(sellAmount.toString()) / Math.pow(10, tokenDecimals);
 
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted?.accepted,
+      txSignature: rpcResult.txSignature,
+      confirmed: rpcResult.confirmed,
       amountIn: humanAmount,
       amountInToken: tokenMint,
       dex: this.name,

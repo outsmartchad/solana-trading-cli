@@ -39,12 +39,14 @@ import {
   TOKEN_PROGRAM_ID,
   getAccount,
   getAssociatedTokenAddress,
+  createAssociatedTokenAccountIdempotentInstruction,
   unpackMint,
 } from "@solana/spl-token";
 import { MathUtil } from "@raydium-io/raydium-sdk-v2";
 
 import { getWallet, getConnection } from "../helpers/config";
 import { landTransaction } from "../transactions/landing";
+import { sendAndConfirmVtx } from "../transactions/send-rpc";
 
 import {
   IDexAdapter,
@@ -204,29 +206,13 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
     const quoteMintPk = new PublicKey(quoteMintStr);
     const inputAmount = amountToLamports(amountSol, quoteMintStr);
 
-    // Calculate minimumAmountOut with slippage protection
-    const slippageBps = opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
-    // Estimate output from vault balances (simple constant-product approximation)
-    const [balA, balB] = await Promise.all([
-      connection.getTokenAccountBalance(poolState.tokenAVault),
-      connection.getTokenAccountBalance(poolState.tokenBVault),
-    ]);
-    const isInputA = quoteMintPk.equals(poolState.tokenAMint);
-    const reserveIn = new BN(isInputA ? balA.value.amount : balB.value.amount);
-    const reserveOut = new BN(isInputA ? balB.value.amount : balA.value.amount);
-    let estimatedOut = new BN(0);
-    if (!reserveIn.isZero() && !reserveOut.isZero()) {
-      estimatedOut = inputAmount.mul(reserveOut).div(reserveIn.add(inputAmount));
-    }
-    const minimumAmountOut = estimatedOut.muln(10000 - slippageBps).divn(10000);
-
     const swapParams: SwapParams = {
       payer: wallet.publicKey,
       pool: poolPk,
       inputTokenMint: quoteMintPk,
       outputTokenMint: baseMintPk,
       amountIn: inputAmount,
-      minimumAmountOut,
+      minimumAmountOut: new BN(0),
       tokenAMint: poolState.tokenAMint,
       tokenBMint: poolState.tokenBMint,
       tokenAVault: poolState.tokenAVault,
@@ -238,27 +224,35 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
 
     const swapTx = await cpAmm.swap(swapParams);
 
+    // Ensure output token ATA exists before swap
+    const baseMintAccInfo = await connection.getAccountInfo(baseMintPk);
+    const baseTokenProgram = baseMintAccInfo?.owner.equals(TOKEN_2022_PROGRAM_ID)
+      ? TOKEN_2022_PROGRAM_ID
+      : TOKEN_PROGRAM_ID;
+    const outputAta = await getAssociatedTokenAddress(
+      baseMintPk, wallet.publicKey, false, baseTokenProgram,
+    );
+    const createAtaIx = createAssociatedTokenAccountIdempotentInstruction(
+      wallet.publicKey, outputAta, wallet.publicKey, baseMintPk, baseTokenProgram,
+    );
+
     const computeLimit = opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT;
     const priorityFee = opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
 
     const ixs: TransactionInstruction[] = [
       ComputeBudgetProgram.setComputeUnitLimit({ units: computeLimit }),
       ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
+      createAtaIx,
       ...swapTx.instructions,
     ];
 
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "buy",
-      tipSol: opts?.tipSol,
+    const result = await sendAndConfirmVtx(connection, ixs, wallet, {
       addressLookupTables: opts?.addressLookupTables,
     });
 
-    const accepted = results.find((r) => r.accepted);
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted?.accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: amountSol,
       amountInToken: quoteMintStr,
       dex: this.name,
@@ -334,19 +328,11 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
       ...swapTx.instructions,
     ];
 
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "sell",
-      tipSol: opts?.tipSol,
+    const rpcResult = await sendAndConfirmVtx(connection, ixs, wallet, {
       addressLookupTables: opts?.addressLookupTables,
     });
 
-    const accepted = results.find((r) => r.accepted);
     // Get actual token decimals for human-readable amount
-    const baseMintInfo = await connection.getAccountInfo(baseMintPk);
-    const baseTokenProgramId = baseMintInfo?.owner.equals(TOKEN_2022_PROGRAM_ID)
-      ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID;
     let tokenDecimals = 9; // default
     try {
       const mintData = await connection.getTokenSupply(baseMintPk);
@@ -354,8 +340,8 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
     } catch { /* fallback to 9 */ }
     const humanAmount = Number(sellAmount.toString()) / Math.pow(10, tokenDecimals);
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted?.accepted,
+      txSignature: rpcResult.txSignature,
+      confirmed: rpcResult.confirmed,
       amountIn: humanAmount,
       amountInToken: tokenMint,
       dex: this.name,

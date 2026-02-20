@@ -37,6 +37,9 @@ export const RAYDIUM_CPMM_SOL_USDC = "7JuwJuNU88gurFnyWeiyGKbFmExMWcmRZntn9imEzd
 /** Raydium CLMM: SOL/USDC */
 export const RAYDIUM_CLMM_SOL_USDC = "2QdhepnKRTLjjSqPL1PtKNwqrUkoLee2B1d3S4TNagMs";
 
+/** MET token mint */
+export const MET = "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL";
+
 /** Meteora DAMM v2: MET/SOL pool */
 export const METEORA_DAMM_V2_MET_SOL = "9x7WTWq66KbMC1w7AUX72khNg31nQmWRE4N4cDvJY7JT";
 
@@ -99,4 +102,7 @@ export function delay(ms: number = 2000): Promise<void> {
 export function logResult(label: string, result: any): void {
   console.log(`\n--- ${label} ---`);
   console.log(JSON.stringify(result, null, 2));
+  if (result?.txSignature) {
+    console.log(`https://solscan.io/tx/${result.txSignature}`);
+  }
 }

@@ -548,7 +548,7 @@ export const USDT_MINT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 export const DEFAULT_SLIPPAGE_BPS = 300;
 
 /** Default priority fee in microLamports per compute unit */
-export const DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS = 4000;
+export const DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS = 100_000;
 
 /** Default compute unit limit */
-export const DEFAULT_COMPUTE_UNIT_LIMIT = 200_000;
+export const DEFAULT_COMPUTE_UNIT_LIMIT = 400_000;
