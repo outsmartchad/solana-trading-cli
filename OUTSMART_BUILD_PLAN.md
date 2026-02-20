@@ -237,13 +237,45 @@ Example: LP management flow
 - OpenClaw controls the same wallet via browser extension (Phantom/Backpack)
 - Both can sign transactions; outsmart for speed (raw RPC), OpenClaw for UI-only protocols
 
-### [ ] gRPC Bot Integration (deferred)
+### [ ] Snipe Command — gRPC Pool Creation Listener
 
-- gRPC snipers from `100x-algo-bots` will be integrated into CLI repo separately
-- Reconnection, heartbeat, clean shutdown hardening
-- Wire to new landing layer
+**Status:** Not yet implemented. Requires user's own Geyser gRPC key.
+
+The `outsmart snipe` command is a **background process** that listens for new liquidity pool creation on selected DEXes and instantly buys when a target token appears.
+
+**How it works:**
+
+1. User runs:
+   ```bash
+   outsmart snipe --dex raydium-cpmm,meteora-damm-v2 --token <MINT> --amount 0.5 --tip 0.01
+   ```
+
+2. The command spawns a **background listener** (cronjob/tmux process) that:
+   - Connects to a **Geyser gRPC stream** (Yellowstone) using the user's own gRPC key (`GRPC_URL` + `GRPC_XTOKEN` env vars)
+   - Subscribes to **program account updates** for the selected DEX program IDs
+   - Filters for **pool creation events** — new accounts matching the pool layout for each DEX
+
+3. When a new pool is created:
+   - Checks if the **base or quote token** matches the target `--token` mint address
+   - If match found, **instantly fires a buy transaction** through concurrent multi-provider TX landing (all 12 providers)
+   - Uses durable nonce for exactly-once execution safety
+   - Applies the user's `--tip` and `--amount` settings
+
+4. After successful snipe (or user cancellation), the listener shuts down cleanly
+
+**Requirements:**
+- User's own Geyser gRPC key (from Helius, Triton, Shyft, or another provider)
+- `GRPC_URL` and `GRPC_XTOKEN` environment variables set
+- Funded wallet with enough SOL for the snipe + fees + tip
+
+**Implementation plan:**
+- Port gRPC streaming code from `100x-algo-bots/trading-modules/` 
+- Add reconnection logic, heartbeat, clean shutdown hardening
+- Wire pool creation detection to the existing `snipe()` adapter methods (already implemented in all adapters)
+- Wire to `LandingOrchestrator.submitConcurrent()` with nonce for dedup safety
+- Background process management (spawn/monitor/kill)
 - This completes the **Listen** layer of the three-layer architecture
-- Timing: after user provides instructions for 100x-algo-bots integration
+- Timing: after user provides specific instructions for `100x-algo-bots` gRPC integration
 
 ---
 
@@ -342,7 +374,8 @@ Each adapter must:
 - [ ] All 19 DEXes wired as IDexAdapter implementations
 - [ ] 12 TX landing providers via LandingOrchestrator
 - [ ] Durable nonce for concurrent landing safety
-- [ ] CLI with buy/sell/snipe/price/balance commands
+- [ ] CLI with buy/sell/quote/find-pool/add-liq/remove-liq/list-dex/config/init/info commands
+- [ ] Snipe command with gRPC pool creation listener (requires user's Geyser gRPC key)
 - [ ] --json, --verbose, --dry-run flags
 - [ ] Library mode: `import { getDexAdapter } from 'outsmart'`
 - [ ] Standalone binaries + Homebrew formula
