@@ -342,8 +342,13 @@ program
   .description("Add liquidity to a pool")
   .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-lp-dlmm)")
   .requiredOption("-p, --pool <address>", "pool address")
-  .requiredOption("--amount-a <amount>", "amount of token A (or SOL) to deposit")
-  .option("--amount-b <amount>", "amount of token B to deposit (if required)")
+  .option("--amount-sol <amount>", "amount of SOL to deposit")
+  .option("--amount-token <amount>", "amount of non-SOL token to deposit")
+  .option("-t, --token <mint>", "token mint (for single-sided token deposits)")
+  .option("--strategy <type>", "distribution strategy: spot|curve|bid-ask (default: spot)")
+  .option("--bins <count>", "number of bins to spread across (default: 50, max: 70)")
+  .option("--amount-a <amount>", "amount of token A (legacy, use --amount-sol instead)")
+  .option("--amount-b <amount>", "amount of token B (legacy, use --amount-token instead)")
   .option("--slippage <bps>", "slippage tolerance in basis points")
   .option("--priority <microLamports>", "priority fee in microLamports per CU")
   .option("--tip <sol>", "MEV tip in SOL")
@@ -356,18 +361,51 @@ program
       die(`${adapter.name} declares canAddLiquidity but has no addLiquidity() implementation`);
     }
 
-    const params = {
+    // Validate: at least one amount must be provided
+    const hasAmountSol = cmdOpts.amountSol != null;
+    const hasAmountToken = cmdOpts.amountToken != null;
+    const hasLegacyA = cmdOpts.amountA != null;
+    const hasLegacyB = cmdOpts.amountB != null;
+
+    if (!hasAmountSol && !hasAmountToken && !hasLegacyA && !hasLegacyB) {
+      die("At least one of --amount-sol or --amount-token must be provided.\n"
+        + "  Examples:\n"
+        + `    outsmart add-liq --dex ${adapter.name} --pool <POOL> --amount-sol 0.5\n`
+        + `    outsmart add-liq --dex ${adapter.name} --pool <POOL> --amount-token 1000 --token <MINT>\n`
+        + `    outsmart add-liq --dex ${adapter.name} --pool <POOL> --amount-sol 0.5 --amount-token 1000`);
+    }
+
+    // Validate strategy
+    const validStrategies = ["spot", "curve", "bid-ask"];
+    if (cmdOpts.strategy && !validStrategies.includes(cmdOpts.strategy)) {
+      die(`Invalid strategy "${cmdOpts.strategy}". Must be one of: ${validStrategies.join(", ")}`);
+    }
+
+    const params: import("./dex/types").AddLiquidityParams = {
       poolAddress: cmdOpts.pool,
-      amountA: Number(cmdOpts.amountA),
-      amountB: cmdOpts.amountB != null ? Number(cmdOpts.amountB) : undefined,
+      amountSol: hasAmountSol ? Number(cmdOpts.amountSol) : undefined,
+      amountToken: hasAmountToken ? Number(cmdOpts.amountToken) : undefined,
+      tokenMint: cmdOpts.token,
+      strategy: cmdOpts.strategy,
+      bins: cmdOpts.bins != null ? Number(cmdOpts.bins) : undefined,
+      amountA: hasLegacyA ? Number(cmdOpts.amountA) : undefined,
+      amountB: hasLegacyB ? Number(cmdOpts.amountB) : undefined,
       opts: buildSwapOpts(cmdOpts),
     };
 
-    console.log(`\n  adding liquidity on ${adapter.name} (pool: ${params.poolAddress})...`);
+    const mode = params.amountSol && params.amountToken
+      ? "balanced" : params.amountSol ? "one-sided SOL" : "one-sided token";
+    console.log(`\n  adding ${mode} liquidity on ${adapter.name} (pool: ${params.poolAddress})...`);
+    if (cmdOpts.strategy) console.log(`  strategy:  ${cmdOpts.strategy}`);
+    if (cmdOpts.bins) console.log(`  bins:      ${cmdOpts.bins}`);
+
     const result = await adapter.addLiquidity(params);
     console.log();
     console.log(`  tx:        ${result.txSignature}`);
     console.log(`  confirmed: ${result.confirmed}`);
+    if (result.positionAddress) {
+      console.log(`  position:  ${result.positionAddress}`);
+    }
     if (result.error) {
       console.log(`  error:     ${result.error}`);
     }
@@ -384,6 +422,7 @@ program
   .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-lp-dlmm)")
   .requiredOption("-p, --pool <address>", "pool address")
   .requiredOption("--pct <percentage>", "percentage of LP position to remove (0-100)")
+  .option("--position <address>", "specific position address to remove from (default: first found)")
   .option("--slippage <bps>", "slippage tolerance in basis points")
   .option("--priority <microLamports>", "priority fee in microLamports per CU")
   .option("--tip <sol>", "MEV tip in SOL")
@@ -396,21 +435,106 @@ program
       die(`${adapter.name} declares canRemoveLiquidity but has no removeLiquidity() implementation`);
     }
 
-    const params = {
+    const params: import("./dex/types").RemoveLiquidityParams = {
       poolAddress: cmdOpts.pool,
       percentage: Number(cmdOpts.pct),
+      positionAddress: cmdOpts.position,
       opts: buildSwapOpts(cmdOpts),
     };
 
     console.log(`\n  removing ${params.percentage}% liquidity on ${adapter.name} (pool: ${params.poolAddress})...`);
+    if (params.positionAddress) {
+      console.log(`  position:  ${params.positionAddress}`);
+    }
     const result = await adapter.removeLiquidity(params);
     console.log();
     console.log(`  tx:        ${result.txSignature}`);
     console.log(`  confirmed: ${result.confirmed}`);
+    if (result.positionAddress) {
+      console.log(`  position:  ${result.positionAddress}`);
+    }
     if (result.error) {
       console.log(`  error:     ${result.error}`);
     }
     console.log();
+  });
+
+// ---------------------------------------------------------------------------
+// outsmart claim-fees
+// ---------------------------------------------------------------------------
+
+program
+  .command("claim-fees")
+  .description("Claim accumulated swap fees from LP positions")
+  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-lp-dlmm)")
+  .requiredOption("-p, --pool <address>", "pool address")
+  .option("--position <address>", "specific position address to claim from (default: first found)")
+  .action(async (cmdOpts) => {
+    const adapter = getDexAdapter(cmdOpts.dex);
+    if (!adapter.capabilities.canClaimFees) {
+      die(`${adapter.name} does not support claimFees`);
+    }
+    if (!adapter.claimFees) {
+      die(`${adapter.name} declares canClaimFees but has no claimFees() implementation`);
+    }
+
+    console.log(`\n  claiming fees on ${adapter.name} (pool: ${cmdOpts.pool})...`);
+    const result = await adapter.claimFees(cmdOpts.pool, cmdOpts.position);
+    console.log();
+    console.log(`  tx:        ${result.txSignature}`);
+    console.log(`  confirmed: ${result.confirmed}`);
+    if (result.positionAddress) {
+      console.log(`  position:  ${result.positionAddress}`);
+    }
+    if (result.error) {
+      console.log(`  error:     ${result.error}`);
+    }
+    console.log();
+  });
+
+// ---------------------------------------------------------------------------
+// outsmart positions
+// ---------------------------------------------------------------------------
+
+program
+  .command("positions")
+  .description("List LP positions in a pool")
+  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-lp-dlmm)")
+  .requiredOption("-p, --pool <address>", "pool address")
+  .option("--json", "output as JSON")
+  .action(async (cmdOpts) => {
+    const adapter = getDexAdapter(cmdOpts.dex);
+    if (!adapter.capabilities.canListPositions) {
+      die(`${adapter.name} does not support listPositions`);
+    }
+    if (!adapter.listPositions) {
+      die(`${adapter.name} declares canListPositions but has no listPositions() implementation`);
+    }
+
+    const positions = await adapter.listPositions(cmdOpts.pool);
+
+    if (cmdOpts.json) {
+      console.log(JSON.stringify(positions, null, 2));
+      return;
+    }
+
+    if (positions.length === 0) {
+      console.log(`\n  No positions found in pool ${cmdOpts.pool}\n`);
+      return;
+    }
+
+    console.log(`\n  ${positions.length} position(s) in pool ${cmdOpts.pool}:\n`);
+
+    for (const pos of positions) {
+      console.log(`  position:  ${pos.positionAddress}`);
+      console.log(`  bins:      ${pos.lowerBinId} → ${pos.upperBinId}`);
+      console.log(`  in-range:  ${pos.inRange}`);
+      console.log(`  tokenX:    ${pos.amountX} (${pos.tokenXMint})`);
+      console.log(`  tokenY:    ${pos.amountY} (${pos.tokenYMint})`);
+      console.log(`  feeX:      ${pos.feeX}`);
+      console.log(`  feeY:      ${pos.feeY}`);
+      console.log();
+    }
   });
 
 // ---------------------------------------------------------------------------

@@ -383,3 +383,113 @@ Each adapter must:
 - [ ] Zero infinite loops
 - [ ] No `any` types in money paths
 - [ ] OpenClaw plugin wrapper (Phase 7)
+
+---
+
+## Session Progress Log
+
+### Session 1 — Foundation + All 17 Adapters + CLI (Phases 0-6)
+
+All phases 0-6 completed. 17 DEX adapters registered, CLI entry point working, legacy cleanup done.
+
+### Session 2 — Snipe Removal, CLI Redesign, Mainnet Testing, DLMM LP
+
+#### Completed
+
+1. **Test cleanup — snipe removal** (`794c52c`)
+   - Removed all `adapter.snipe()` test cases from orca, raydium, meteora, clmm, fusion-futarchy
+   - Updated `canSell` expectations to `true` for 5 adapters
+   - Removed `SNIPE_TIP_SOL` from helpers
+   - Cleaned snipe references from `docs/TESTING.md`
+
+2. **CLI redesign + isAggregator capability** (`f27ebe9`)
+   - Added `isAggregator` boolean to `DexCapabilities` interface
+   - Set `isAggregator: true` on jupiter-ultra and dflow
+   - CLI buy/sell validates: on-chain needs `--pool` + `--token`, aggregators need `--token` only
+
+3. **Config fix** — loads both `~/.outsmart/config.env` and `cwd/.env` layered
+
+4. **Removed meteora-damm-v1 from tests** — legacy AMM program
+
+5. **Suppressed bigint-buffer warning** in Jest setup (`tests/setup.ts`)
+
+6. **Git identity fix** — configured git to use `outsmartchad`
+
+7. **Buy amount increased to 0.02 SOL** (`429cfe1`)
+
+8. **RPC send+confirm for swaps, fix DLMM duplicate compute budget** (`dc0ab3a`)
+   - Created `src/transactions/send-rpc.ts` with `sendAndConfirmVtx()` helper
+   - Refactored DAMM v2 and DLMM buy/sell to use `sendAndConfirmVtx` instead of landing orchestrator
+   - Fixed DLMM duplicate ComputeBudget instruction bug
+   - Added ATA creation in DAMM v2 buy
+   - Set `minimumAmountOut=0` for both adapters
+   - Bumped priority fee to 100k microlamports, compute limit to 400k CU
+
+9. **DBC adapter refactor + GRACE/SOL tests** (`993f9a1`)
+   - Refactored meteora-dbc buy/sell to use `sendAndConfirmVtx`
+   - Set `minimumAmountOut=0` for both buy and sell
+   - All 4 DBC tests pass: capabilities, getPrice, buy (confirmed), sell (confirmed)
+
+10. **DLMM LP adapter rewrite** (WIP — not yet committed)
+    - Extended `types.ts` with LP-specific types:
+      - `LpStrategy` type (`"spot" | "curve" | "bid-ask"`)
+      - `LpPositionInfo` interface (position details, bin range, amounts, fees, in-range status)
+      - `AddLiquidityParams` — new fields: `amountSol`, `amountToken`, `tokenMint`, `strategy`, `bins` (legacy `amountA`/`amountB` kept for backward compat)
+      - `RemoveLiquidityParams` — new field: `positionAddress`
+      - `TxResult` — new fields: `positionAddress`, `poolAddress`, `dex`
+      - `DexCapabilities` — new flags: `canClaimFees`, `canListPositions`
+      - `IDexAdapter` — new optional methods: `claimFees()`, `listPositions()`
+    - Rewrote `meteora-lp-dlmm.ts`:
+      - Uses `sendAndConfirmVtx` instead of raw `sendAndConfirmTransaction`
+      - Supports strategy selection (spot/curve/bid-ask) via SDK `StrategyType` enum
+      - Supports bin count customization (1-70, default 50)
+      - Three modes: one-sided SOL, one-sided token, balanced
+      - Correctly maps SOL/token amounts based on pool's tokenX/tokenY ordering
+      - Returns `positionAddress` from addLiquidity
+      - `removeLiquidity` supports targeting a specific position via `positionAddress`
+      - New `claimFees()` — claims swap fees from a position (uses `dlmmPool.claimSwapFee`)
+      - New `listPositions()` — returns all user positions with bin ranges, amounts, fees, in-range status
+    - Updated CLI (`cli.ts`):
+      - `add-liq` redesigned: `--amount-sol`, `--amount-token`, `--strategy`, `--bins`, `--token` flags
+      - `remove-liq` updated: `--position` flag for targeting specific positions
+      - New `claim-fees` command: `outsmart claim-fees --dex meteora-lp-dlmm --pool <POOL>`
+      - New `positions` command: `outsmart positions --dex meteora-lp-dlmm --pool <POOL>` (with `--json`)
+    - Updated `meteora-damm-v2.ts`:
+      - `claimFees` signature aligned to interface `(poolAddress, positionAddress?)`
+      - Added `canClaimFees: true` capability
+      - `addLiquidity` handles optional `amountA` (falls back to `amountSol`)
+    - Updated tests:
+      - `registry.test.ts` — added `canClaimFees`/`canListPositions` expectations
+      - `meteora.test.ts` — DLMM LP tests rewritten: add → list → claim → remove flow
+    - **Registry tests: 4/4 PASS**
+    - **Meteora swap tests: 11/11 PASS** (DAMM v2, DLMM, DBC — all buy/sell confirmed on-chain)
+    - **DLMM LP tests: 3/4 FAIL** — `addLiquidity` TX expired (block height exceeded)
+      - The `initializePositionAndAddLiquidityByStrategy` SDK call takes too long (~60s) and the blockhash expires before `sendAndConfirmVtx` can submit
+      - Root cause: the SDK builds a legacy `Transaction` with its own compute budget. We then extract `.instructions` and rebuild as V0 with `sendAndConfirmVtx`. The time between getting the blockhash and actually sending is too long because DLMM.create() + getActiveBin() + SDK call all happen before we fetch the blockhash.
+      - **Fix needed:** Fetch blockhash AFTER building the SDK transaction (not inside `sendAndConfirmVtx`), or increase retries. Alternatively, use the legacy `sendAndConfirmTransaction` path that the SDK's Transaction was built for.
+
+#### Mainnet TX Confirmations This Session
+
+| Adapter | Operation | TX Signature | Status |
+|---------|-----------|-------------|--------|
+| meteora-damm-v2 | buy | `Nvc9Ec...` | Confirmed |
+| meteora-damm-v2 | sell | `61xbQr...` | Confirmed |
+| meteora-dlmm | buy | `4gECDE...` | Confirmed |
+| meteora-dlmm | sell | `spy1Ap...` | Confirmed |
+| meteora-dbc | buy | `61KpGL...` | Confirmed |
+| meteora-dbc | sell | `ZQwHuw...` | Confirmed |
+| meteora-lp-dlmm | addLiquidity | `5wheP...` | EXPIRED (block height exceeded) |
+
+#### What's Next
+
+1. **Fix DLMM LP addLiquidity blockhash expiry** — the SDK transaction build is too slow. Either:
+   - Option A: Fetch a fresh blockhash right before sending (split `sendAndConfirmVtx` into build + send steps)
+   - Option B: Fall back to legacy `sendAndConfirmTransaction` for LP operations where the SDK returns a complete `Transaction` object
+   - Option C: Send the SDK's own Transaction directly (it already has instructions, just needs signing)
+2. **Re-run DLMM LP tests** after fixing the blockhash issue
+3. **Run remaining test suites**: `test:raydium` → `test:orca` → `test:clmm` → `test:fusion` → `test:api`
+   - These adapters also need the `landTransaction` → `sendAndConfirmVtx` refactor
+4. **outsmart-agent scaffold** — copy core code into agent repo
+5. **MCP tool server** — Phase 7a in outsmart-agent
+6. **gRPC snipe streaming** — deferred (user will provide instructions from `100x-algo-bots` repo)
+7. **npm publish** — `outsmart` name available on npm

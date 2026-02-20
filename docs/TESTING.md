@@ -30,11 +30,11 @@ node dist/cli.js init
 
 The test wallet needs at least **0.01 SOL** (recommend **0.05 SOL**).
 
-Tests use tiny amounts:
-- Buy: 0.001 SOL per trade
+Tests use small amounts:
+- Buy: 0.02 SOL per trade (`BUY_AMOUNT_SOL` in `tests/helpers.ts`)
 - Sell: 100% of what was just bought (gets the SOL back minus fees)
 - TX fees: ~0.000005 SOL each
-- Total across all suites: **~0.02-0.03 SOL** if everything passes
+- Total across all suites: **~0.05-0.10 SOL** if everything passes
 
 ### 3. Build
 
@@ -89,7 +89,7 @@ npm run test:raydium
 
 ---
 
-### 3. Meteora (mainnet, costs ~0.01 SOL)
+### 3. Meteora (mainnet, costs ~0.04 SOL)
 
 ```bash
 npm run test:meteora
@@ -99,18 +99,20 @@ npm run test:meteora
 
 | Adapter | Tests | Pool |
 |---------|-------|------|
-| meteora-damm-v2 | capabilities, findPool, getPrice, buy, sell, addLiq, removeLiq, claimFees | auto-discovered SOL/USDC |
-| meteora-dlmm | getPrice, buy | `ARwi1S4DaiTG5DX7S4M4ZsrXqpMD1MrTmbu9ue2tpmEq` (SOL/USDC) |
-| meteora-dbc | capabilities check only | (skipped — needs active bonding curve) |
-| meteora-lp-dlmm | capabilities, addLiquidity, removeLiquidity | `ARwi1S4DaiTG5DX7S4M4ZsrXqpMD1MrTmbu9ue2tpmEq` (SOL/USDC) |
+| meteora-damm-v2 | capabilities, getPrice, buy, sell | `9x7WTWq66KbMC1w7AUX72khNg31nQmWRE4N4cDvJY7JT` (MET/SOL) |
+| meteora-dlmm | getPrice, buy, sell | `AsSyvUnbfaZJPRrNh3kUuvZTeHKoMVWEoHz86f4Q5D9x` (MET/SOL) |
+| meteora-dbc | capabilities, getPrice, buy, sell | `DgxYpXJB2adQ9wFdyoCdnh5fNGfcLxXZsdkdqoyZZmwX` (GRACE/SOL) |
+| meteora-lp-dlmm | capabilities, addLiquidity, listPositions, claimFees, removeLiquidity | `AsSyvUnbfaZJPRrNh3kUuvZTeHKoMVWEoHz86f4Q5D9x` (MET/SOL) |
 
 **Notes:**
 - DAMM v1 is excluded — legacy AMM program.
-- DAMM v2 auto-discovers a pool via `findPool`. If none found, later tests skip.
-- LP tests (addLiquidity/removeLiquidity) may fail if wallet doesn't hold both tokens. That's OK.
-- DBC tests are `test.skip` — need ephemeral bonding curve pool.
+- All swap adapters use hardcoded pool addresses (no `findPool` in tests).
+- All swap adapters use `sendAndConfirmVtx` for TX submission (standard RPC, not landing orchestrator).
+- DLMM LP tests run a full lifecycle: add → list → claim fees → remove 100%.
+- DLMM LP addLiquidity may fail with blockhash expiry if SDK calls are slow (WIP fix).
+- Buy amount: 0.02 SOL per trade.
 
-**Expected:** ~15 tests, 3-5 minutes
+**Expected:** ~16 tests, 2-3 minutes for swaps + ~60s for LP
 
 ---
 
@@ -200,16 +202,17 @@ Runs all test files sequentially (`maxWorkers: 1` since tests share a wallet). T
 
 ## Pool Addresses Used
 
-All pools are high-liquidity mainnet SOL/USDC pairs. These are stable and unlikely to disappear.
+All pools are high-liquidity mainnet pairs. Defined in `tests/helpers.ts`.
 
 | Pool | Address | DEX |
 |------|---------|-----|
 | Raydium AMM v4 SOL/USDC | `58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2` | raydium-amm-v4 |
 | Raydium CPMM SOL/USDC | `7JuwJuNU88gurFnyWeiyGKbFmExMWcmRZntn9imEzdny` | raydium-cpmm |
 | Raydium CLMM SOL/USDC | `2QdhepnKRTLjjSqPL1PtKNwqrUkoLee2B1d3S4TNagMs` | raydium-clmm |
-| Meteora DLMM SOL/USDC | `ARwi1S4DaiTG5DX7S4M4ZsrXqpMD1MrTmbu9ue2tpmEq` | meteora-dlmm |
+| Meteora DAMM v2 MET/SOL | `9x7WTWq66KbMC1w7AUX72khNg31nQmWRE4N4cDvJY7JT` | meteora-damm-v2 |
+| Meteora DLMM MET/SOL | `AsSyvUnbfaZJPRrNh3kUuvZTeHKoMVWEoHz86f4Q5D9x` | meteora-dlmm, meteora-lp-dlmm |
+| Meteora DBC GRACE/SOL | `DgxYpXJB2adQ9wFdyoCdnh5fNGfcLxXZsdkdqoyZZmwX` | meteora-dbc |
 | Orca Whirlpool SOL/USDC | `Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE` | orca |
-| Meteora DAMM v2 SOL/USDC | (auto-discovered via findPool) | meteora-damm-v2 |
 
 ---
 

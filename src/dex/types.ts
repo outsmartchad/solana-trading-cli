@@ -191,6 +191,15 @@ export interface TxResult {
 
   /** Error message if the transaction failed */
   error?: string;
+
+  /** Position address (for LP operations that create/modify positions) */
+  positionAddress?: string;
+
+  /** Pool address (for LP operations) */
+  poolAddress?: string;
+
+  /** Which DEX adapter executed this operation */
+  dex?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -251,6 +260,19 @@ export interface PriceInfo {
 }
 
 // ---------------------------------------------------------------------------
+// LP strategy (for DLMM-style concentrated liquidity)
+// ---------------------------------------------------------------------------
+
+/**
+ * Liquidity distribution strategy for concentrated liquidity pools.
+ *
+ * - spot:    Uniform distribution across bins (most common)
+ * - curve:   Bell-curve distribution, concentrated near active bin
+ * - bid-ask: Skewed distribution — heavier on one side (DCA-in or DCA-out)
+ */
+export type LpStrategy = "spot" | "curve" | "bid-ask";
+
+// ---------------------------------------------------------------------------
 // Liquidity parameters
 // ---------------------------------------------------------------------------
 
@@ -258,10 +280,40 @@ export interface AddLiquidityParams {
   /** Pool address to add liquidity to */
   poolAddress: string;
 
-  /** Amount of token A (or SOL) to deposit, human-readable units */
-  amountA: number;
+  /**
+   * Amount of SOL to deposit, human-readable units.
+   * For one-sided SOL positions, only this is needed.
+   */
+  amountSol?: number;
 
-  /** Amount of token B to deposit (if required by the pool type) */
+  /**
+   * Amount of the non-SOL token to deposit, human-readable units.
+   * For one-sided token positions, only this is needed.
+   */
+  amountToken?: number;
+
+  /**
+   * Token mint address (required for single-sided token deposits).
+   * For SOL-only deposits this can be omitted — the adapter reads it from pool state.
+   */
+  tokenMint?: string;
+
+  /**
+   * Liquidity distribution strategy (default: "spot").
+   * Only applicable to concentrated liquidity pools (DLMM).
+   */
+  strategy?: LpStrategy;
+
+  /**
+   * Number of bins to spread liquidity across (default: 50, max: 70).
+   * Only applicable to concentrated liquidity pools (DLMM).
+   */
+  bins?: number;
+
+  // Legacy fields — kept for backward compatibility with non-DLMM adapters
+  /** @deprecated Use amountSol instead */
+  amountA?: number;
+  /** @deprecated Use amountToken instead */
   amountB?: number;
 
   /** Swap options (slippage, priority fee, etc.) */
@@ -275,8 +327,56 @@ export interface RemoveLiquidityParams {
   /** Percentage of LP position to remove (0-100) */
   percentage: number;
 
+  /**
+   * Specific position address to remove from (base58).
+   * If omitted, the adapter removes from the first position found.
+   */
+  positionAddress?: string;
+
   /** Swap options */
   opts?: SwapOpts;
+}
+
+// ---------------------------------------------------------------------------
+// LP Position info (for listPositions)
+// ---------------------------------------------------------------------------
+
+export interface LpPositionInfo {
+  /** Position account address (base58) */
+  positionAddress: string;
+
+  /** Pool address this position belongs to (base58) */
+  poolAddress: string;
+
+  /** DEX adapter name */
+  dex: string;
+
+  /** Lower bin ID of the position range */
+  lowerBinId: number;
+
+  /** Upper bin ID of the position range */
+  upperBinId: number;
+
+  /** Amount of token X in the position (human-readable) */
+  amountX: number;
+
+  /** Amount of token Y in the position (human-readable) */
+  amountY: number;
+
+  /** Token X mint (base58) */
+  tokenXMint: string;
+
+  /** Token Y mint (base58) */
+  tokenYMint: string;
+
+  /** Unclaimed fee for token X (human-readable) */
+  feeX: number;
+
+  /** Unclaimed fee for token Y (human-readable) */
+  feeY: number;
+
+  /** Whether the active bin is within this position's range */
+  inRange: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -308,6 +408,12 @@ export interface DexCapabilities {
   /** Can remove liquidity */
   canRemoveLiquidity: boolean;
 
+  /** Can claim LP swap fees from positions */
+  canClaimFees: boolean;
+
+  /** Can list user's LP positions */
+  canListPositions: boolean;
+
   /**
    * Whether this adapter is a swap aggregator (e.g. Jupiter, DFlow).
    *
@@ -337,6 +443,8 @@ export function defaultCapabilities(
     canGetPrice: false,
     canAddLiquidity: false,
     canRemoveLiquidity: false,
+    canClaimFees: false,
+    canListPositions: false,
     isAggregator: false,
     ...overrides,
   };
@@ -491,6 +599,23 @@ export interface IDexAdapter {
    * @throws UnsupportedOperationError if capabilities.canRemoveLiquidity is false
    */
   removeLiquidity?(params: RemoveLiquidityParams): Promise<TxResult>;
+
+  /**
+   * Claim accumulated swap fees from LP positions.
+   *
+   * @param poolAddress - Pool to claim fees from (base58)
+   * @param positionAddress - Specific position to claim from (base58). If omitted, claims from first position.
+   * @throws UnsupportedOperationError if capabilities.canClaimFees is false
+   */
+  claimFees?(poolAddress: string, positionAddress?: string): Promise<TxResult>;
+
+  /**
+   * List user's LP positions in a pool.
+   *
+   * @param poolAddress - Pool to list positions for (base58)
+   * @throws UnsupportedOperationError if capabilities.canListPositions is false
+   */
+  listPositions?(poolAddress: string): Promise<LpPositionInfo[]>;
 }
 
 // ---------------------------------------------------------------------------

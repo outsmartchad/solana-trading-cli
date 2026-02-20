@@ -185,6 +185,7 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
     canGetPrice: true,
     canAddLiquidity: true,
     canRemoveLiquidity: true,
+    canClaimFees: true,
   });
 
   // ----- Core: buy -----
@@ -582,7 +583,13 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
    *   cpAmm.createPositionAndAddLiquidity({ ... })
    */
   async addLiquidity(params: AddLiquidityParams): Promise<TxResult> {
-    const { poolAddress, amountA, amountB, opts } = params;
+    // DAMM v2 uses legacy amountA/amountB fields (or amountSol as fallback for amountA)
+    const { poolAddress, opts } = params;
+    const amountA = params.amountA ?? params.amountSol;
+    const amountB = params.amountB ?? params.amountToken;
+    if (amountA === undefined || amountA === 0) {
+      throw new Error("amountA (or --amount-sol) is required for DAMM v2 addLiquidity");
+    }
     const connection = getConnection();
     const wallet = getWallet();
     const poolPk = new PublicKey(poolAddress);
@@ -873,7 +880,7 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
    * Ported from: 100x-algo-bots/trading-modules/meteora-damm-v2/pool.ts
    *   claimAllPositionFees() + getUnClaimLpFee()
    */
-  async claimFees(poolAddress: string, opts?: { tipSol?: number }): Promise<TxResult> {
+  async claimFees(poolAddress: string, _positionAddress?: string): Promise<TxResult> {
     const connection = getConnection();
     const wallet = getWallet();
     const poolPk = new PublicKey(poolAddress);
@@ -948,7 +955,6 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
       const results = await landTransaction(ixs, wallet, blockhash, {
         dex: this.name,
         operation: "claim-fees",
-        tipSol: opts?.tipSol,
       });
 
       const accepted = results.find((r) => r.accepted);

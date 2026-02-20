@@ -68,7 +68,7 @@ describe("DexRegistry", () => {
       },
       "meteora-damm-v2": {
         canBuy: true, canSell: true, canSnipe: true, canFindPool: true, canGetPrice: true,
-        canAddLiquidity: true, canRemoveLiquidity: true,
+        canAddLiquidity: true, canRemoveLiquidity: true, canClaimFees: true,
       },
       "meteora-dlmm": {
         canBuy: true, canSell: true, canSnipe: true, canGetPrice: true,
@@ -78,6 +78,7 @@ describe("DexRegistry", () => {
       },
       "meteora-lp-dlmm": {
         canBuy: false, canSell: false, canAddLiquidity: true, canRemoveLiquidity: true,
+        canClaimFees: true, canListPositions: true,
       },
       "byreal-clmm": {
         canBuy: true, canSell: true, canSnipe: true, canGetPrice: true, canFindPool: false,

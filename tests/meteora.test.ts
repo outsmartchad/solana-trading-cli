@@ -167,44 +167,78 @@ describe("meteora-dbc", () => {
 
 // ============================================================
 // meteora-lp-dlmm
-// Capabilities: addLiquidity, removeLiquidity (LP only)
+// Capabilities: addLiquidity, removeLiquidity, claimFees, listPositions
+// Pool: MET/SOL (METEORA_DLMM_MET_SOL)
+// Flow: add → list → claim fees → remove 100%
 // ============================================================
 describe("meteora-lp-dlmm", () => {
   const adapter = getDexAdapter("meteora-lp-dlmm");
+  const pool = METEORA_DLMM_MET_SOL;
+  let positionAddress: string | undefined;
 
-  test("capabilities: LP only", () => {
+  test("capabilities: LP + fees + positions", () => {
     expect(adapter.capabilities.canAddLiquidity).toBe(true);
     expect(adapter.capabilities.canRemoveLiquidity).toBe(true);
+    expect(adapter.capabilities.canClaimFees).toBe(true);
+    expect(adapter.capabilities.canListPositions).toBe(true);
     expect(adapter.capabilities.canBuy).toBe(false);
     expect(adapter.capabilities.canSell).toBe(false);
   });
 
-  test("addLiquidity: tiny SOL deposit to DLMM pool", async () => {
+  test("addLiquidity: one-sided SOL deposit (spot, 50 bins)", async () => {
     await delay();
-    try {
-      const result = await adapter.addLiquidity!({
-        poolAddress: METEORA_DLMM_MET_SOL,
-        amountA: 0.001,
-      });
-      logResult("meteora-lp-dlmm addLiquidity", result);
-      expect(result.txSignature).toBeTruthy();
-    } catch (e: any) {
-      console.log(`meteora-lp-dlmm addLiquidity: ${e.message}`);
+    const result = await adapter.addLiquidity!({
+      poolAddress: pool,
+      amountSol: BUY_AMOUNT_SOL,
+      strategy: "spot",
+      bins: 50,
+    });
+    logResult("meteora-lp-dlmm addLiquidity", result);
+    expect(result.txSignature).toBeTruthy();
+    expect(result.confirmed).toBe(true);
+    expect(result.positionAddress).toBeTruthy();
+    expect(result.dex).toBe("meteora-lp-dlmm");
+    positionAddress = result.positionAddress;
+  });
+
+  test("listPositions: verify position exists", async () => {
+    await delay(5000);
+    const positions = await adapter.listPositions!(pool);
+    logResult("meteora-lp-dlmm listPositions", positions);
+    expect(positions.length).toBeGreaterThan(0);
+
+    // Find our position
+    if (positionAddress) {
+      const ours = positions.find((p) => p.positionAddress === positionAddress);
+      expect(ours).toBeDefined();
+      if (ours) {
+        expect(ours.dex).toBe("meteora-lp-dlmm");
+        expect(ours.poolAddress).toBe(pool);
+        expect(ours.lowerBinId).toBeDefined();
+        expect(ours.upperBinId).toBeDefined();
+      }
     }
   });
 
-  test("removeLiquidity: 100% from DLMM pool", async () => {
+  test("claimFees: claim from position", async () => {
+    await delay();
+    const result = await adapter.claimFees!(pool, positionAddress);
+    logResult("meteora-lp-dlmm claimFees", result);
+    // May return null/no fees if position was just created, that's OK
+    expect(result.dex).toBe("meteora-lp-dlmm");
+    // We don't assert confirmed=true because fees may be zero on a fresh position
+  });
+
+  test("removeLiquidity: 100% from specific position", async () => {
     await delay(5000);
-    try {
-      const result = await adapter.removeLiquidity!({
-        poolAddress: METEORA_DLMM_MET_SOL,
-        percentage: 100,
-      });
-      logResult("meteora-lp-dlmm removeLiquidity", result);
-      expect(result.txSignature).toBeTruthy();
-    } catch (e: any) {
-      // May fail if no position was created in addLiquidity
-      console.log(`meteora-lp-dlmm removeLiquidity: ${e.message}`);
-    }
+    const result = await adapter.removeLiquidity!({
+      poolAddress: pool,
+      percentage: 100,
+      positionAddress,
+    });
+    logResult("meteora-lp-dlmm removeLiquidity", result);
+    expect(result.txSignature).toBeTruthy();
+    expect(result.confirmed).toBe(true);
+    expect(result.dex).toBe("meteora-lp-dlmm");
   });
 });
