@@ -52,7 +52,7 @@ describe("DexRegistry", () => {
     // Exhaustive capability check for each adapter
     const expected: Record<string, Partial<Record<string, boolean>>> = {
       "raydium-amm-v4": {
-        canBuy: true, canSell: false, canSnipe: true, canFindPool: true, canGetPrice: true,
+        canBuy: true, canSell: true, canSnipe: true, canFindPool: true, canGetPrice: true,
       },
       "raydium-cpmm": {
         canBuy: true, canSell: true, canSnipe: true, canFindPool: true, canGetPrice: true,
@@ -64,14 +64,14 @@ describe("DexRegistry", () => {
         canBuy: true, canSell: false, canSnipe: false, canFindPool: true, canGetPrice: true,
       },
       "meteora-damm-v1": {
-        canBuy: true, canSell: false, canSnipe: true, canFindPool: true, canGetPrice: true,
+        canBuy: true, canSell: true, canSnipe: true, canFindPool: true, canGetPrice: true,
       },
       "meteora-damm-v2": {
         canBuy: true, canSell: true, canSnipe: true, canFindPool: true, canGetPrice: true,
         canAddLiquidity: true, canRemoveLiquidity: true,
       },
       "meteora-dlmm": {
-        canBuy: true, canSell: false, canSnipe: true, canGetPrice: true,
+        canBuy: true, canSell: true, canSnipe: true, canGetPrice: true,
       },
       "meteora-dbc": {
         canBuy: true, canSell: true, canSnipe: true, canGetPrice: true, canFindPool: false,
@@ -80,19 +80,19 @@ describe("DexRegistry", () => {
         canBuy: false, canSell: false, canAddLiquidity: true, canRemoveLiquidity: true,
       },
       "byreal-clmm": {
-        canBuy: true, canSell: false, canSnipe: true, canGetPrice: true, canFindPool: false,
+        canBuy: true, canSell: true, canSnipe: true, canGetPrice: true, canFindPool: false,
       },
       "pancakeswap-clmm": {
-        canBuy: true, canSell: false, canSnipe: true, canGetPrice: true, canFindPool: false,
+        canBuy: true, canSell: true, canSnipe: true, canGetPrice: true, canFindPool: false,
       },
       "orca": {
-        canBuy: true, canSell: false, canSnipe: true, canGetPrice: true, canFindPool: false,
+        canBuy: true, canSell: true, canSnipe: true, canGetPrice: true, canFindPool: false,
       },
       "fusion-amm": {
-        canBuy: true, canSell: false, canSnipe: true, canGetPrice: true, canFindPool: false,
+        canBuy: true, canSell: true, canSnipe: true, canGetPrice: true, canFindPool: false,
       },
       "futarchy-amm": {
-        canBuy: true, canSell: false, canSnipe: true, canGetPrice: true, canFindPool: false,
+        canBuy: true, canSell: true, canSnipe: true, canGetPrice: true, canFindPool: false,
       },
       "futarchy-launchpad": {
         canBuy: false, canSell: false, canSnipe: false, canFindPool: false, canGetPrice: false,
