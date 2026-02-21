@@ -2,6 +2,8 @@
 
 **Solana trading CLI — buy, sell, and LP across 18 DEXes with 12 TX landing providers.**
 
+**[Documentation](https://outsmartchad.github.io/outsmart-cli/)** | **[npm](https://www.npmjs.com/package/outsmart)** | **[Discord](https://discord.gg/dc3Kh3Y3yJ)**
+
 ```bash
 npm install -g outsmart@alpha
 outsmart init
