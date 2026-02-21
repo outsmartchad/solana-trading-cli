@@ -60,6 +60,12 @@ outsmart buy --dex raydium-cpmm --pool <POOL> --amount 0.1
 # Sell 100% of held balance
 outsmart sell --dex raydium-cpmm --pool <POOL> --pct 100
 
+# Stablecoin-quoted pool — auto-swaps SOL → USD1, then buys token
+outsmart buy --dex raydium-launchlab --pool <POOL> --amount 0.1
+
+# Sell on a stablecoin pool — sells token → USD1, then auto-swaps USD1 → SOL
+outsmart sell --dex raydium-launchlab --pool <POOL> --pct 100
+
 # Swap aggregator (no pool needed, just token)
 outsmart buy --dex jupiter-ultra --token <MINT> --amount 0.1
 
@@ -317,6 +323,32 @@ outsmart config env > .env  # Generate .env file
 
 ---
 
+## Stablecoin Auto-Swap
+
+Some pools use stablecoins (USDC, USDT, USD1) as the quote token instead of SOL. The CLI handles this automatically — no extra steps needed.
+
+**On buy:** detects the stablecoin quote from the pool, swaps SOL → stablecoin, then buys the token with the full swapped amount.
+
+**On sell:** sells the token for stablecoin on the DEX, then swaps the stablecoin proceeds back to SOL.
+
+```bash
+# LaunchLab pool quoted in USD1 — just specify SOL amount as usual
+outsmart buy --dex raydium-launchlab --pool <POOL> --amount 0.1
+# → auto-swaps 0.1 SOL → USD1 → buys token
+
+outsmart sell --dex raydium-launchlab --pool <POOL> --pct 100
+# → sells token → USD1 → auto-swaps USD1 → SOL
+```
+
+**How it works:**
+- If `JUPITER_API_KEY` is set, uses Jupiter Ultra for the SOL↔stablecoin conversion
+- If not set, falls back to on-chain DEX adapters with a curated pool registry (high-TVL Raydium CLMM, AMM v4, and Meteora DLMM pools)
+- Only the swapped amount is used — pre-existing stablecoin balances in your wallet are untouched
+
+Get a free Jupiter API key at [portal.jup.ag](https://portal.jup.ag) (optional — on-chain fallback works without it).
+
+---
+
 ## Shared Swap Options
 
 All swap commands (`buy`, `sell`) accept these options:
@@ -342,7 +374,7 @@ All swap commands (`buy`, `sell`) accept these options:
 | raydium-amm-v4 | AMM v4 | x | x | x | x | | |
 | raydium-cpmm | CPMM | x | x | x | x | | |
 | raydium-clmm | CLMM | x | x | x | x | | |
-| raydium-launchlab | Launchlab | x | | x | x | | |
+| raydium-launchlab | Launchlab | x | x | x | x | | |
 | meteora-damm-v1 | Dynamic AMM | x | x | x | x | | |
 | meteora-damm-v2 | CpAmm | x | x | x | x | add/remove/claim/positions | create pool |
 | meteora-dlmm | DLMM | x | x | | x | add/remove/claim/positions | |
@@ -421,6 +453,8 @@ This sends your buy transaction with a high priority fee and MEV tip through the
 | `DEFAULT_TIP_SOL` | MEV tip in SOL | `0.001` |
 | `DEFAULT_SLIPPAGE_BPS` | Slippage in basis points | `300` |
 | `DEFAULT_PRIORITY_FEE` | Priority fee in microLamports per CU | `4000` |
+| `JUPITER_API_KEY` | Jupiter Ultra/Metis API key ([portal.jup.ag](https://portal.jup.ag)) | on-chain fallback |
+| `DFLOW_API_KEY` | DFlow intent API key | |
 
 ### Optional — TX Landing Provider Keys
 
