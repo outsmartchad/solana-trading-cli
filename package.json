@@ -1,9 +1,9 @@
 {
   "name": "outsmart",
-  "version": "2.0.0-alpha.0",
+  "version": "2.0.0-alpha.1",
   "description": "Solana trading CLI — 18 DEX adapters, 12 TX landing providers.",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -53,9 +53,6 @@
   "url": "https://github.com/outsmartchad/solana-trading-cli/issues",
   "homepage": "https://github.com/outsmartchad/solana-trading-cli",
   "license": "ISC",
-  "engines": {
-    "node": ">=20.0.0"
-  },
   "dependencies": {
     "@bloxroute/solana-trader-client-ts": "^2.1.6",
     "@coral-xyz/anchor": "^0.29.0",
