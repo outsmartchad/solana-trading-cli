@@ -11,7 +11,7 @@ const _origWarn = process.stderr.write.bind(process.stderr);
 /**
  * outsmart CLI — The Solana trading command-line interface.
  *
- * 17 DEX adapters, 12 TX landing providers, one unified interface.
+ * 18 DEX adapters, 12 TX landing providers, one unified interface.
  *
  * Usage:
  *   # On-chain DEX — pool address required, token auto-detected from pool
@@ -427,7 +427,7 @@ function addSwapOptions(cmd: Command, includeTip = true): Command {
 
 const program = new Command()
   .name("outsmart")
-  .description("The Solana trading CLI — 17 DEX adapters, 12 TX landing providers.")
+  .description("The Solana trading CLI — 18 DEX adapters, 12 TX landing providers.")
   .version(pkg.version);
 
 // ---------------------------------------------------------------------------
