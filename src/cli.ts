@@ -102,6 +102,47 @@ function die(msg: string): never {
   process.exit(1);
 }
 
+/** Base58 character set (no 0, O, I, l) */
+const BASE58_CHARS = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
+
+/**
+ * Validate that a string is a valid Solana base58 address.
+ * Checks length (32-44 chars), character set, and PublicKey construction.
+ */
+function validateBase58(value: string, flag: string): void {
+  if (value.length < 32 || value.length > 44) {
+    die(`Invalid ${flag}: "${value}" is not a valid Solana address (must be 32-44 characters, got ${value.length})`);
+  }
+  if (!BASE58_CHARS.test(value)) {
+    die(`Invalid ${flag}: "${value}" is not a valid Solana address (contains invalid base58 characters)`);
+  }
+  try {
+    // Dynamic import would be async; use require for synchronous validation
+    // PublicKey is already used elsewhere in this file via dynamic import,
+    // but for a sync helper we use require.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { PublicKey } = require("@solana/web3.js");
+    new PublicKey(value);
+  } catch {
+    die(`Invalid ${flag}: "${value}" is not a valid Solana address`);
+  }
+}
+
+/**
+ * Validate that a DEX name is registered in the adapter registry.
+ * Shows available adapters if the name is not found.
+ */
+function validateDex(dexName: string): void {
+  const registry = getRegistry();
+  if (!registry.has(dexName)) {
+    const available = registry.getNames();
+    die(
+      `Unknown --dex "${dexName}". Available adapters:\n` +
+      available.map((n) => `    ${n}`).join("\n"),
+    );
+  }
+}
+
 function printResult(result: SwapResult): void {
   console.log();
   console.log(`  dex:       ${result.dex}`);
@@ -400,6 +441,12 @@ const buyCmd = new Command("buy")
   .option("-p, --pool <address>", "pool address (required for on-chain DEXes)")
   .option("-t, --token <mint>", "token mint address to buy")
   .action(async (cmdOpts) => {
+    // --- Input sanitization ---
+    validateDex(cmdOpts.dex);
+    if (cmdOpts.pool) validateBase58(cmdOpts.pool, "--pool");
+    if (cmdOpts.token) validateBase58(cmdOpts.token, "--token");
+    if (cmdOpts.quote) validateBase58(cmdOpts.quote, "--quote");
+
     const adapter = getDexAdapter(cmdOpts.dex);
     if (!adapter.capabilities.canBuy) {
       die(`${adapter.name} does not support buy`);
@@ -478,6 +525,12 @@ const sellCmd = new Command("sell")
   .option("-p, --pool <address>", "pool address (required for on-chain DEXes)")
   .option("-t, --token <mint>", "token mint address to sell")
   .action(async (cmdOpts) => {
+    // --- Input sanitization ---
+    validateDex(cmdOpts.dex);
+    if (cmdOpts.pool) validateBase58(cmdOpts.pool, "--pool");
+    if (cmdOpts.token) validateBase58(cmdOpts.token, "--token");
+    if (cmdOpts.quote) validateBase58(cmdOpts.quote, "--quote");
+
     const adapter = getDexAdapter(cmdOpts.dex);
     if (!adapter.capabilities.canSell) {
       die(`${adapter.name} does not support sell`);
@@ -1306,6 +1359,17 @@ program
     if (info.websiteURL) console.log(`  website:     ${info.websiteURL}`);
     console.log();
   });
+
+// ---------------------------------------------------------------------------
+// Graceful shutdown — prevents hanging on Ctrl+C during long RPC calls
+// ---------------------------------------------------------------------------
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.on(signal, () => {
+    console.log("\nShutting down...");
+    process.exit(0);
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Parse & run

@@ -32,6 +32,8 @@ export interface SendRpcOptions {
   commitment?: "processed" | "confirmed" | "finalized";
   /** Skip preflight simulation (default: true — we handle errors on-chain) */
   skipPreflight?: boolean;
+  /** Max retries on blockhash expiry / confirmation timeout (default: 2, so 3 total attempts) */
+  maxRetries?: number;
 }
 
 export interface SendRpcResult {
@@ -52,67 +54,82 @@ export async function sendAndConfirmVtx(
   signer: Keypair,
   opts?: SendRpcOptions,
 ): Promise<SendRpcResult> {
-  const blockhash = await connection.getLatestBlockhash("confirmed");
+  const totalAttempts = (opts?.maxRetries ?? 2) + 1;
 
-  const message = new TransactionMessage({
-    payerKey: signer.publicKey,
-    recentBlockhash: blockhash.blockhash,
-    instructions: ixs,
-  });
+  for (let attempt = 1; attempt <= totalAttempts; attempt++) {
+    const blockhash = await connection.getLatestBlockhash("confirmed");
 
-  const lookupTables = opts?.addressLookupTables ?? [];
-  const messageV0 = message.compileToV0Message(lookupTables);
-  const tx = new VersionedTransaction(messageV0);
+    const message = new TransactionMessage({
+      payerKey: signer.publicKey,
+      recentBlockhash: blockhash.blockhash,
+      instructions: ixs,
+    });
 
-  const signers: Keypair[] = [signer, ...(opts?.extraSigners ?? [])];
-  tx.sign(signers);
+    const lookupTables = opts?.addressLookupTables ?? [];
+    const messageV0 = message.compileToV0Message(lookupTables);
+    const tx = new VersionedTransaction(messageV0);
 
-  const sendOpts: SendOptions = {
-    skipPreflight: opts?.skipPreflight ?? true,
-    maxRetries: 3,
-  };
+    const signers: Keypair[] = [signer, ...(opts?.extraSigners ?? [])];
+    tx.sign(signers);
 
-  let signature: string;
-  try {
-    signature = await connection.sendRawTransaction(tx.serialize(), sendOpts);
-  } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    return { txSignature: "", confirmed: false, error: `Send failed: ${errMsg}` };
-  }
+    const sendOpts: SendOptions = {
+      skipPreflight: opts?.skipPreflight ?? true,
+      maxRetries: 3,
+    };
 
-  console.log(`  TX sent: ${signature} — confirming...`);
+    let signature: string;
+    try {
+      signature = await connection.sendRawTransaction(tx.serialize(), sendOpts);
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      return { txSignature: "", confirmed: false, error: `Send failed: ${errMsg}` };
+    }
 
-  try {
-    const commitment = opts?.commitment ?? "confirmed";
-    const confirmation = await connection.confirmTransaction(
-      {
-        signature,
-        blockhash: blockhash.blockhash,
-        lastValidBlockHeight: blockhash.lastValidBlockHeight,
-      },
-      commitment,
-    );
+    console.log(`  TX sent: ${signature} — confirming...`);
 
-    if (confirmation.value.err) {
+    try {
+      const commitment = opts?.commitment ?? "confirmed";
+      const confirmation = await connection.confirmTransaction(
+        {
+          signature,
+          blockhash: blockhash.blockhash,
+          lastValidBlockHeight: blockhash.lastValidBlockHeight,
+        },
+        commitment,
+      );
+
+      // Program errors are permanent — no retry
+      if (confirmation.value.err) {
+        return {
+          txSignature: signature,
+          confirmed: false,
+          error: JSON.stringify(confirmation.value.err),
+        };
+      }
+
+      return {
+        txSignature: signature,
+        confirmed: true,
+      };
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+
+      // Blockhash expiry / confirmation timeout — retry with fresh blockhash
+      if (attempt < totalAttempts) {
+        console.log(`  TX expired, retrying (attempt ${attempt + 1}/${totalAttempts})...`);
+        continue;
+      }
+
       return {
         txSignature: signature,
         confirmed: false,
-        error: JSON.stringify(confirmation.value.err),
+        error: `Confirmation failed: ${errMsg}`,
       };
     }
-
-    return {
-      txSignature: signature,
-      confirmed: true,
-    };
-  } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    return {
-      txSignature: signature,
-      confirmed: false,
-      error: `Confirmation failed: ${errMsg}`,
-    };
   }
+
+  // Unreachable — the loop always returns — but satisfies the compiler
+  return { txSignature: "", confirmed: false, error: "Unexpected: exhausted retries" };
 }
 
 // ---------------------------------------------------------------------------

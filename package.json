@@ -29,7 +29,8 @@
     "test:orca": "jest --testPathPattern=orca",
     "test:clmm": "jest --testPathPattern=clmm",
     "test:fusion": "jest --testPathPattern=fusion-futarchy",
-    "test:api": "jest --testPathPattern=api-adapters"
+    "test:api": "jest --testPathPattern=api-adapters",
+    "test:unit": "jest --testPathPattern=unit"
   },
   "keywords": [
     "solana",
