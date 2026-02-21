@@ -28,17 +28,26 @@ export const USDT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 // If a test fails with PoolNotFound, the pool may have migrated.
 // ---------------------------------------------------------------------------
 
-/** Raydium AMM v4: SOL/USDC */
-export const RAYDIUM_V4_SOL_USDC = "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2";
+/** Raydium AMM v4: SOL/Fartcoin */
+export const RAYDIUM_V4_SOL_FARTCOIN = "Bzc9NZfMqkXR6fz1DBph7BDf9BroyEf6pnzESP7v5iiw";
 
-/** Raydium CPMM: SOL/USDC */
-export const RAYDIUM_CPMM_SOL_USDC = "7JuwJuNU88gurFnyWeiyGKbFmExMWcmRZntn9imEzdny";
+/** Raydium CPMM: SOL/USELESS */
+export const RAYDIUM_CPMM_SOL_USELESS = "Q2sPHPdUWFMg7M7wwrQKLrn619cAucfRsmhVJffodSp";
 
-/** Raydium CLMM: SOL/USDC */
-export const RAYDIUM_CLMM_SOL_USDC = "2QdhepnKRTLjjSqPL1PtKNwqrUkoLee2B1d3S4TNagMs";
+/** Raydium CLMM: SOL/RAY */
+export const RAYDIUM_CLMM_SOL_RAY = "2AXXcN6oN9bBT5owwmTH53C7QHUXvhLeu718Kqt8rvY2";
 
 /** MET token mint */
 export const MET = "METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL";
+
+/** Fartcoin token mint */
+export const FARTCOIN = "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump";
+
+/** USELESS token mint */
+export const USELESS = "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk";
+
+/** RAY token mint */
+export const RAY = "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R";
 
 /** Random Meteora DBC: 6mwEqau1eKHch1QYCTRv5sdnGtJzVouzaLbKY5LDdoge/SOL pool */
 export const METEORA_DBC_GRACE_SOL = "DgxYpXJB2adQ9wFdyoCdnh5fNGfcLxXZsdkdqoyZZmwX";

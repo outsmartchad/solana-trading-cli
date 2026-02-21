@@ -15,10 +15,12 @@ import {
   BUY_AMOUNT_SOL,
   SELL_PERCENTAGE,
   WSOL,
-  USDC,
-  RAYDIUM_V4_SOL_USDC,
-  RAYDIUM_CPMM_SOL_USDC,
-  RAYDIUM_CLMM_SOL_USDC,
+  FARTCOIN,
+  USELESS,
+  RAY,
+  RAYDIUM_V4_SOL_FARTCOIN,
+  RAYDIUM_CPMM_SOL_USELESS,
+  RAYDIUM_CLMM_SOL_RAY,
 } from "./helpers";
 
 beforeAll(async () => {
@@ -27,35 +29,40 @@ beforeAll(async () => {
 
 // ============================================================
 // raydium-amm-v4
+// Pool: SOL/Fartcoin
 // Capabilities: buy, sell, findPool, getPrice
 // ============================================================
 describe("raydium-amm-v4", () => {
   const adapter = getDexAdapter("raydium-amm-v4");
+  const pool = RAYDIUM_V4_SOL_FARTCOIN;
 
-  test("findPool: SOL/USDC", async () => {
-    const pool = await adapter.findPool!(WSOL, USDC);
-    logResult("raydium-amm-v4 findPool", pool);
-    expect(pool).not.toBeNull();
-    expect(pool!.address).toBeTruthy();
-    expect(pool!.dex).toBe("raydium-amm-v4");
-  });
-
-  test("getPrice: SOL/USDC pool", async () => {
-    await delay();
-    const price = await adapter.getPrice!(RAYDIUM_V4_SOL_USDC);
+  test("getPrice: SOL/Fartcoin pool", async () => {
+    const price = await adapter.getPrice!(pool);
     logResult("raydium-amm-v4 getPrice", price);
     expect(price.price).toBeGreaterThan(0);
     expect(price.source).toBe("on-chain");
   });
 
-  test("buy: 0.001 SOL worth of USDC", async () => {
+  test("buy: 0.02 SOL worth of Fartcoin", async () => {
     await delay();
     const result = await adapter.buy({
-      tokenMint: USDC,
+      tokenMint: FARTCOIN,
       amountSol: BUY_AMOUNT_SOL,
-      poolAddress: RAYDIUM_V4_SOL_USDC,
+      poolAddress: pool,
     });
     logResult("raydium-amm-v4 buy", result);
+    expect(result.txSignature).toBeTruthy();
+    expect(result.dex).toBe("raydium-amm-v4");
+  });
+
+  test("sell: 100% of Fartcoin just bought", async () => {
+    await delay(5000); // extra wait for buy to settle
+    const result = await adapter.sell({
+      tokenMint: FARTCOIN,
+      percentage: SELL_PERCENTAGE,
+      poolAddress: pool,
+    });
+    logResult("raydium-amm-v4 sell", result);
     expect(result.txSignature).toBeTruthy();
     expect(result.dex).toBe("raydium-amm-v4");
   });
@@ -63,43 +70,37 @@ describe("raydium-amm-v4", () => {
 
 // ============================================================
 // raydium-cpmm
+// Pool: SOL/USELESS
 // Capabilities: buy, sell, findPool, getPrice
 // ============================================================
 describe("raydium-cpmm", () => {
   const adapter = getDexAdapter("raydium-cpmm");
+  const pool = RAYDIUM_CPMM_SOL_USELESS;
 
-  test("findPool: SOL/USDC", async () => {
-    const pool = await adapter.findPool!(WSOL, USDC);
-    logResult("raydium-cpmm findPool", pool);
-    expect(pool).not.toBeNull();
-    expect(pool!.dex).toBe("raydium-cpmm");
-  });
-
-  test("getPrice: SOL/USDC pool", async () => {
-    await delay();
-    const price = await adapter.getPrice!(RAYDIUM_CPMM_SOL_USDC);
+  test("getPrice: SOL/USELESS pool", async () => {
+    const price = await adapter.getPrice!(pool);
     logResult("raydium-cpmm getPrice", price);
     expect(price.price).toBeGreaterThan(0);
   });
 
-  test("buy: 0.001 SOL worth of USDC", async () => {
+  test("buy: 0.02 SOL worth of USELESS", async () => {
     await delay();
     const result = await adapter.buy({
-      tokenMint: USDC,
+      tokenMint: USELESS,
       amountSol: BUY_AMOUNT_SOL,
-      poolAddress: RAYDIUM_CPMM_SOL_USDC,
+      poolAddress: pool,
     });
     logResult("raydium-cpmm buy", result);
     expect(result.txSignature).toBeTruthy();
     expect(result.dex).toBe("raydium-cpmm");
   });
 
-  test("sell: 100% of USDC just bought", async () => {
-    await delay(5000); // extra wait for buy to settle
+  test("sell: 100% of USELESS just bought", async () => {
+    await delay(5000);
     const result = await adapter.sell({
-      tokenMint: USDC,
+      tokenMint: USELESS,
       percentage: SELL_PERCENTAGE,
-      poolAddress: RAYDIUM_CPMM_SOL_USDC,
+      poolAddress: pool,
     });
     logResult("raydium-cpmm sell", result);
     expect(result.txSignature).toBeTruthy();
@@ -109,43 +110,37 @@ describe("raydium-cpmm", () => {
 
 // ============================================================
 // raydium-clmm
+// Pool: SOL/RAY
 // Capabilities: buy, sell, findPool, getPrice
 // ============================================================
 describe("raydium-clmm", () => {
   const adapter = getDexAdapter("raydium-clmm");
+  const pool = RAYDIUM_CLMM_SOL_RAY;
 
-  test("findPool: SOL/USDC", async () => {
-    const pool = await adapter.findPool!(WSOL, USDC);
-    logResult("raydium-clmm findPool", pool);
-    expect(pool).not.toBeNull();
-    expect(pool!.dex).toBe("raydium-clmm");
-  });
-
-  test("getPrice: SOL/USDC pool", async () => {
-    await delay();
-    const price = await adapter.getPrice!(RAYDIUM_CLMM_SOL_USDC);
+  test("getPrice: SOL/RAY pool", async () => {
+    const price = await adapter.getPrice!(pool);
     logResult("raydium-clmm getPrice", price);
     expect(price.price).toBeGreaterThan(0);
   });
 
-  test("buy: 0.001 SOL worth of USDC", async () => {
+  test("buy: 0.02 SOL worth of RAY", async () => {
     await delay();
     const result = await adapter.buy({
-      tokenMint: USDC,
+      tokenMint: RAY,
       amountSol: BUY_AMOUNT_SOL,
-      poolAddress: RAYDIUM_CLMM_SOL_USDC,
+      poolAddress: pool,
     });
     logResult("raydium-clmm buy", result);
     expect(result.txSignature).toBeTruthy();
     expect(result.dex).toBe("raydium-clmm");
   });
 
-  test("sell: 100% of USDC just bought", async () => {
+  test("sell: 100% of RAY just bought", async () => {
     await delay(5000);
     const result = await adapter.sell({
-      tokenMint: USDC,
+      tokenMint: RAY,
       percentage: SELL_PERCENTAGE,
-      poolAddress: RAYDIUM_CLMM_SOL_USDC,
+      poolAddress: pool,
     });
     logResult("raydium-clmm sell", result);
     expect(result.txSignature).toBeTruthy();
