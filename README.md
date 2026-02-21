@@ -108,16 +108,19 @@ outsmart sell --dex dflow --token <MINT> --pct 50 --slippage 300
 Add liquidity to a pool.
 
 ```bash
-outsmart add-liq --dex meteora-damm-v2 --pool <POOL> --amount-a 1.0
-outsmart add-liq --dex meteora-lp-dlmm --pool <POOL> --amount-a 1.0 --amount-b 500
+outsmart add-liq --dex meteora-damm-v2 --pool <POOL> --amount-sol 1.0
+outsmart add-liq --dex meteora-lp-dlmm --pool <POOL> --amount-sol 0.5 --amount-token 1000
 ```
 
 | Flag | Description |
 |------|-------------|
 | `-d, --dex <name>` | DEX adapter name (required) |
 | `-p, --pool <address>` | Pool address (required) |
-| `--amount-a <amount>` | Amount of token A / SOL to deposit (required) |
-| `--amount-b <amount>` | Amount of token B to deposit (optional) |
+| `--amount-sol <amount>` | Amount of SOL to deposit |
+| `--amount-token <amount>` | Amount of non-SOL token to deposit |
+| `-t, --token <mint>` | Token mint (for single-sided token deposits) |
+| `--strategy <type>` | Distribution: `spot` \| `curve` \| `bid-ask` (DLMM only, default: spot) |
+| `--bins <count>` | Number of bins (DLMM only, default: 50, max: 70) |
 
 ### remove-liq
 
@@ -133,6 +136,37 @@ outsmart remove-liq --dex meteora-lp-dlmm --pool <POOL> --pct 50
 | `-d, --dex <name>` | DEX adapter name (required) |
 | `-p, --pool <address>` | Pool address (required) |
 | `--pct <percentage>` | Percentage of LP position to remove, 0-100 (required) |
+| `--position <address>` | Specific position to remove from (default: first found) |
+
+### claim-fees
+
+Claim accumulated swap fees from LP positions.
+
+```bash
+outsmart claim-fees --dex meteora-damm-v2 --pool <POOL>
+outsmart claim-fees --dex meteora-lp-dlmm --pool <POOL> --position <POSITION>
+```
+
+| Flag | Description |
+|------|-------------|
+| `-d, --dex <name>` | DEX adapter name (required) |
+| `-p, --pool <address>` | Pool address (required) |
+| `--position <address>` | Specific position to claim from (default: all) |
+
+### positions
+
+List LP positions in a pool.
+
+```bash
+outsmart positions --dex meteora-damm-v2 --pool <POOL>
+outsmart positions --dex meteora-lp-dlmm --pool <POOL> --json
+```
+
+| Flag | Description |
+|------|-------------|
+| `-d, --dex <name>` | DEX adapter name (required) |
+| `-p, --pool <address>` | Pool address (required) |
+| `--json` | Output as JSON |
 
 ### quote
 
@@ -183,6 +217,60 @@ outsmart create-pool --base <MINT> --quote So111...112 --base-amount 1000000 --q
 | `--base-amount <amount>` | Initial base token deposit, human-readable (required) |
 | `--quote-amount <amount>` | Initial quote token deposit, human-readable (required) |
 | `--index <number>` | Pool index (default: 1; 0 is reserved for canonical pump pools) |
+
+### create-damm-pool
+
+Create a Meteora DAMM v2 custom pool with full fee configuration. This is the primary method for token launches — gives full control over fee schedule, dynamic fees, and activation timing.
+
+```bash
+# Basic: create with default fee schedule (99% → 2% linear decay over 24h)
+outsmart create-damm-pool --base <MINT> --base-amount 1000000 --quote-amount 0.5
+
+# Custom fees: exponential decay, dynamic fee enabled
+outsmart create-damm-pool --base <MINT> --base-amount 1000000 --quote-amount 0.5 \
+  --max-fee 5000 --min-fee 100 --fee-mode 1 --dynamic-fee
+
+# Scheduled activation (unix timestamp)
+outsmart create-damm-pool --base <MINT> --base-amount 1000000 --quote-amount 0.5 \
+  --activation 1740000000
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--base <mint>` | Base token mint address (required) | |
+| `--base-amount <amount>` | Initial base token deposit (required) | |
+| `--quote-amount <amount>` | Initial quote token deposit (required) | |
+| `--quote <mint>` | Quote token mint | WSOL |
+| `--price <number>` | Initial price in quote/base units | quoteAmount / baseAmount |
+| `--max-fee <bps>` | Max base fee at activation | 9900 |
+| `--min-fee <bps>` | Min base fee after decay | 200 |
+| `--periods <n>` | Number of fee decay periods | 1440 |
+| `--duration <secs>` | Total fee decay duration in seconds | 86400 |
+| `--fee-mode <0\|1>` | 0 = linear decay, 1 = exponential | 0 |
+| `--dynamic-fee` | Enable dynamic fee on top of base fee | false |
+| `--collect-mode <0\|1>` | 0 = both tokens, 1 = quote only | 1 |
+| `--activation <timestamp>` | Activation unix timestamp | immediate |
+| `--alpha-vault` | Create alpha vault after pool | false |
+
+### create-damm-config-pool
+
+Create a Meteora DAMM v2 pool using an existing on-chain config. Simpler than `create-damm-pool` — the config determines the fee schedule and price range.
+
+```bash
+outsmart create-damm-config-pool --base <MINT> --base-amount 1000000 --quote-amount 0.5 \
+  --config 2yAJha5NVgq5mEitTUvdWSUKrcYvxAAc2H6rPDbEQqSu
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--base <mint>` | Base token mint address (required) | |
+| `--base-amount <amount>` | Initial base token deposit (required) | |
+| `--quote-amount <amount>` | Initial quote token deposit (required) | |
+| `--config <address>` | On-chain config address (required) | |
+| `--quote <mint>` | Quote token mint | WSOL |
+| `--price <number>` | Initial price in quote/base units | quoteAmount / baseAmount |
+| `--activation <timestamp>` | Activation unix timestamp | immediate |
+| `--lock` | Permanently lock initial liquidity | false |
 
 ### list-dex
 
@@ -253,10 +341,10 @@ All swap commands (`buy`, `sell`) accept these options:
 | raydium-clmm | CLMM | x | x | x | x | | |
 | raydium-launchlab | Launchlab | x | | x | x | | |
 | meteora-damm-v1 | Dynamic AMM | x | x | x | x | | |
-| meteora-damm-v2 | CpAmm | x | x | x | x | add/remove/claim | |
+| meteora-damm-v2 | CpAmm | x | x | x | x | add/remove/claim/positions | create pool |
 | meteora-dlmm | DLMM | x | x | | x | | |
 | meteora-dbc | DBC | x | x | | x | | |
-| meteora-lp-dlmm | DLMM LP | | | | | add/remove | |
+| meteora-lp-dlmm | DLMM LP | | | | | add/remove/claim/positions | |
 | **pumpfun** | Bonding Curve | x | x | | x | | create coin |
 | **pumpfun-amm** | PumpSwap AMM | x | x | | x | | create pool |
 | orca | Whirlpool | x | x | | x | | |
