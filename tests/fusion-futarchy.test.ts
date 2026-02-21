@@ -10,6 +10,9 @@
  */
 
 import { getDexAdapter } from "../src/dex";
+import { getConnection, getWallet } from "../src/helpers/config";
+import { getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { PublicKey } from "@solana/web3.js";
 import {
   ensureMainnetReady,
   delay,
@@ -24,6 +27,19 @@ import {
 
 /** Raydium CLMM SOL/USDC pool for auto-swap */
 const RAYDIUM_SOL_USDC_CLMM = "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv";
+
+/** Read USDC balance (UI amount) for wallet */
+async function getUsdcBalance(): Promise<number> {
+  const conn = getConnection();
+  const wallet = getWallet();
+  const ata = getAssociatedTokenAddressSync(new PublicKey(USDC), wallet.publicKey);
+  try {
+    const bal = await conn.getTokenAccountBalance(ata);
+    return Number(bal.value.uiAmount ?? 0);
+  } catch {
+    return 0;
+  }
+}
 
 beforeAll(async () => {
   await ensureMainnetReady();
@@ -88,8 +104,12 @@ describe("futarchy-amm", () => {
     expect(price.price).toBeGreaterThan(0);
   });
 
-  test("buy: swap SOL→USDC then buy token (auto-swap)", async () => {
-    // Step 1: Swap SOL→USDC via raydium-clmm (pool quote is USDC)
+  test("buy: swap SOL→USDC then buy token (auto-swap with balance delta)", async () => {
+    // Step 1: Record pre-swap USDC balance
+    const preBalance = await getUsdcBalance();
+    console.log(`Pre-swap USDC balance: ${preBalance}`);
+
+    // Step 2: Swap SOL→USDC via raydium-clmm (pool quote is USDC)
     const raydiumClmm = getDexAdapter("raydium-clmm");
     await delay();
     const swapResult = await raydiumClmm.buy({
@@ -100,12 +120,18 @@ describe("futarchy-amm", () => {
     logResult("SOL→USDC swap", swapResult);
     expect(swapResult.txSignature).toBeTruthy();
 
-    // Step 2: Buy BANK token with USDC via futarchy-amm
-    // amountSol is repurposed as USDC amount (adapter auto-detects USDC quote)
+    // Step 3: Measure balance delta (how much USDC we actually received)
     await delay(5000);
+    const postBalance = await getUsdcBalance();
+    const usdcReceived = postBalance - preBalance;
+    console.log(`Post-swap USDC balance: ${postBalance}, delta: ${usdcReceived}`);
+    expect(usdcReceived).toBeGreaterThan(0);
+
+    // Step 4: Buy BANK token with ALL received USDC via futarchy-amm
+    // amountSol is repurposed as USDC amount (adapter auto-detects USDC quote)
     const result = await adapter.buy({
       tokenMint: token,
-      amountSol: BUY_AMOUNT_SOL, // ~0.02 USDC worth
+      amountSol: usdcReceived,
       poolAddress: pool,
     });
     logResult("futarchy-amm buy", result);
