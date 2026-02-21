@@ -601,31 +601,34 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
    * Add liquidity to an existing DAMM v2 pool by creating a new position.
    *
    * DAMM v2 uses full-range positions (MIN_SQRT_PRICE → MAX_SQRT_PRICE).
-   * This method creates a new position NFT and deposits both tokens.
    *
-   * Params:
-   *   - poolAddress: the pool to add liquidity to
-   *   - amountA: amount of token A in human-readable units
-   *   - amountB: (optional) amount of token B in human-readable units.
-   *             If omitted, auto-calculates proportional to current pool ratio.
+   * The correct pattern (from zodiac/operator meteora-executor.ts):
+   *   1. Read the pool's actual sqrtPrice from on-chain state
+   *   2. Compute both token amounts proportionally from pool vault reserves
+   *   3. Pass both amounts + pool's sqrtPrice to getLiquidityDelta()
    *
-   * Ported from: 100x-algo-bots/trading-modules/meteora-damm-v2/create.ts
-   *   cpAmm.createPositionAndAddLiquidity({ ... })
+   * The SDK's getLiquidityDelta is the black box — give it both max amounts
+   * + the current sqrtPrice, it figures out the correct liquidity delta.
    */
   async addLiquidity(params: AddLiquidityParams): Promise<TxResult> {
-    // DAMM v2 uses legacy amountA/amountB fields (or amountSol as fallback for amountA)
     const { poolAddress, opts } = params;
-    const amountA = params.amountA ?? params.amountSol;
-    const amountB = params.amountB ?? params.amountToken;
-    if (amountA === undefined || amountA === 0) {
-      throw new Error("amountA (or --amount-sol) is required for DAMM v2 addLiquidity");
+    const inputAmountSol = params.amountSol ?? params.amountA;
+    const inputAmountToken = params.amountToken ?? params.amountB;
+
+    if ((inputAmountSol === undefined || inputAmountSol === 0) &&
+        (inputAmountToken === undefined || inputAmountToken === 0)) {
+      throw new Error("At least one of --amount-sol or --amount-token is required for DAMM v2 addLiquidity");
     }
+
     const connection = getConnection();
     const wallet = getWallet();
     const poolPk = new PublicKey(poolAddress);
 
     const cpAmm = new CpAmm(connection);
     const poolState = await cpAmm.fetchPoolState(poolPk);
+
+    // Pool's current sqrt price from on-chain state — the ground truth
+    const currentSqrtPrice = poolState.sqrtPrice;
 
     // Fetch decimals for both tokens
     const tokenAMint = poolState.tokenAMint;
@@ -660,56 +663,96 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
       tokenBInfo = { mint: mintB, currentEpoch: epochInfo.epoch };
     }
 
-    // Convert human amounts to lamports
-    const tokenAAmount = new BN(
-      new Decimal(amountA).mul(Decimal.pow(10, decimalsA)).floor().toFixed(),
-    );
+    // Read pool vault balances for proportional calculation
+    const [balA, balB] = await Promise.all([
+      connection.getTokenAccountBalance(poolState.tokenAVault),
+      connection.getTokenAccountBalance(poolState.tokenBVault),
+    ]);
+    const reserveA = new BN(balA.value.amount);
+    const reserveB = new BN(balB.value.amount);
 
+    // Compute both token amounts. When only one side is given,
+    // derive the other proportionally from pool vault reserves.
+    let tokenAAmount: BN;
     let tokenBAmount: BN;
-    if (amountB !== undefined) {
-      tokenBAmount = new BN(
-        new Decimal(amountB).mul(Decimal.pow(10, decimalsB)).floor().toFixed(),
+
+    if (inputAmountSol !== undefined && inputAmountSol > 0 &&
+        inputAmountToken !== undefined && inputAmountToken > 0) {
+      // Both sides provided explicitly
+      tokenAAmount = new BN(
+        new Decimal(inputAmountSol).mul(Decimal.pow(10, decimalsA)).floor().toFixed(),
       );
-    } else {
-      // Auto-calculate proportional amount from pool reserves
-      const [balA, balB] = await Promise.all([
-        connection.getTokenAccountBalance(poolState.tokenAVault),
-        connection.getTokenAccountBalance(poolState.tokenBVault),
-      ]);
-      const reserveA = new BN(balA.value.amount);
-      const reserveB = new BN(balB.value.amount);
-      if (reserveA.isZero()) {
-        throw new Error("Pool has zero token A reserves; provide amountB explicitly");
+      tokenBAmount = new BN(
+        new Decimal(inputAmountToken).mul(Decimal.pow(10, decimalsB)).floor().toFixed(),
+      );
+    } else if (inputAmountSol !== undefined && inputAmountSol > 0) {
+      // Only SOL provided — figure out which side SOL is, derive the other
+      const solIsTokenA = tokenAMint.toBase58() === WSOL_MINT;
+
+      if (solIsTokenA) {
+        tokenAAmount = new BN(
+          new Decimal(inputAmountSol).mul(Decimal.pow(10, decimalsA)).floor().toFixed(),
+        );
+        // Derive B proportionally: tokenBAmount = tokenAAmount * reserveB / reserveA
+        if (reserveA.isZero()) throw new Error("Pool has zero token A reserves");
+        tokenBAmount = tokenAAmount.mul(reserveB).div(reserveA);
+      } else {
+        // SOL is token B
+        tokenBAmount = new BN(
+          new Decimal(inputAmountSol).mul(Decimal.pow(10, decimalsB)).floor().toFixed(),
+        );
+        // Derive A proportionally: tokenAAmount = tokenBAmount * reserveA / reserveB
+        if (reserveB.isZero()) throw new Error("Pool has zero token B reserves");
+        tokenAAmount = tokenBAmount.mul(reserveA).div(reserveB);
       }
-      // tokenBAmount = tokenAAmount * reserveB / reserveA
-      tokenBAmount = tokenAAmount.mul(reserveB).div(reserveA);
+    } else {
+      // Only token amount provided — figure out which side is non-SOL
+      const solIsTokenA = tokenAMint.toBase58() === WSOL_MINT;
+
+      if (solIsTokenA) {
+        // Non-SOL token is B side
+        tokenBAmount = new BN(
+          new Decimal(inputAmountToken!).mul(Decimal.pow(10, decimalsB)).floor().toFixed(),
+        );
+        if (reserveB.isZero()) throw new Error("Pool has zero token B reserves");
+        tokenAAmount = tokenBAmount.mul(reserveA).div(reserveB);
+      } else {
+        // Non-SOL token is A side (or neither is SOL — treat token as A)
+        tokenAAmount = new BN(
+          new Decimal(inputAmountToken!).mul(Decimal.pow(10, decimalsA)).floor().toFixed(),
+        );
+        if (reserveA.isZero()) throw new Error("Pool has zero token A reserves");
+        tokenBAmount = tokenAAmount.mul(reserveB).div(reserveA);
+      }
     }
 
-    // Calculate liquidityDelta using the pool's current sqrt price
-    const sqrtPrice = calculateInitSqrtPrice(
-      tokenAAmount,
-      tokenBAmount,
-      poolState.sqrtMinPrice,
-      poolState.sqrtMaxPrice,
-    );
-
+    // Compute liquidityDelta using the pool's actual on-chain sqrtPrice
+    // This is the same pattern as zodiac/operator meteora-executor.ts
     const liquidityDelta = cpAmm.getLiquidityDelta({
       maxAmountTokenA: tokenAAmount,
       maxAmountTokenB: tokenBAmount,
-      sqrtPrice,
+      sqrtPrice: currentSqrtPrice,
       sqrtMinPrice: MIN_SQRT_PRICE,
       sqrtMaxPrice: MAX_SQRT_PRICE,
       tokenAInfo,
       tokenBInfo,
     });
 
+    if (liquidityDelta.isZero()) {
+      throw new Error("Computed liquidityDelta is zero — amount too small for this pool");
+    }
+
     // Generate a new position NFT keypair
     const positionNft = Keypair.generate();
 
-    // Slippage thresholds: accept some slippage on deposit
+    // Slippage thresholds
     const slippageBps = opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
     const tokenAThreshold = tokenAAmount.muln(10000 - slippageBps).divn(10000);
     const tokenBThreshold = tokenBAmount.muln(10000 - slippageBps).divn(10000);
+
+    console.log(`  tokenA:    ${tokenAAmount.toString()} (${tokenAMint.toBase58().slice(0, 8)}...)`);
+    console.log(`  tokenB:    ${tokenBAmount.toString()} (${tokenBMint.toBase58().slice(0, 8)}...)`);
+    console.log(`  liqDelta:  ${liquidityDelta.toString()}`);
 
     const addLiqTx = await cpAmm.createPositionAndAddLiquidity({
       owner: wallet.publicKey,
