@@ -136,7 +136,7 @@ describe("raydium-clmm", () => {
   });
 
   test("sell: 100% of RAY just bought", async () => {
-    await delay(5000);
+    await delay(10000); // CLMM buys may take longer to confirm
     const result = await adapter.sell({
       tokenMint: RAY,
       percentage: SELL_PERCENTAGE,

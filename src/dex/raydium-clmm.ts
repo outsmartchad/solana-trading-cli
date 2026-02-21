@@ -211,11 +211,11 @@ async function fetchClmmPoolState(connection: Connection, poolId: PublicKey): Pr
 
 function tickToStartIndex(tick: number, tickSpacing: number): number {
   const ticksInArray = tickSpacing * TICK_ARRAY_SIZE;
-  let startIndex = Math.floor(tick / ticksInArray) * ticksInArray;
-  if (tick < 0 && tick % ticksInArray !== 0) {
-    startIndex -= ticksInArray;
-  }
-  return startIndex;
+  // For both positive and negative ticks, floor division gives the correct start index.
+  // Math.floor(-20456 / 600) = -35, so startIndex = -35 * 600 = -21000.
+  // The tick -20456 is in range [-21000, -20400), which is correct.
+  // No special negative handling needed — Math.floor already rounds toward -∞.
+  return Math.floor(tick / ticksInArray) * ticksInArray;
 }
 
 function getNextTickArrayStartIndex(currentStartIndex: number, tickSpacing: number, zeroForOne: boolean): number {
@@ -485,7 +485,6 @@ async function buildClmmSwapInstructions(
   );
 
   const tickArrayBitmapExt = deriveTickArrayBitmapExtension(poolId);
-  const observationState = deriveObservationState(poolId);
 
   // Determine input/output vault mints
   const inputVaultMint = isBaseInput ? poolState.tokenMint0 : poolState.tokenMint1;
@@ -494,7 +493,7 @@ async function buildClmmSwapInstructions(
   const poolParams: ClmmSwapIxParams = {
     poolId,
     ammConfig: poolState.ammConfig,
-    observationState,
+    observationState: poolState.observationKey,
     tokenVault0: poolState.tokenVault0,
     tokenVault1: poolState.tokenVault1,
     tokenMint0: poolState.tokenMint0,
@@ -592,7 +591,6 @@ async function buildClmmSellInstructions(
   const outputAta = await getAssociatedTokenAddress(quoteMintPk, wallet.publicKey);
 
   const tickArrayBitmapExt = deriveTickArrayBitmapExtension(poolId);
-  const observationState = deriveObservationState(poolId);
 
   const inputVaultMint = isBaseInput ? poolState.tokenMint0 : poolState.tokenMint1;
   const outputVaultMint = isBaseInput ? poolState.tokenMint1 : poolState.tokenMint0;
@@ -600,7 +598,7 @@ async function buildClmmSellInstructions(
   const poolParams: ClmmSwapIxParams = {
     poolId,
     ammConfig: poolState.ammConfig,
-    observationState,
+    observationState: poolState.observationKey,
     tokenVault0: poolState.tokenVault0,
     tokenVault1: poolState.tokenVault1,
     tokenMint0: poolState.tokenMint0,

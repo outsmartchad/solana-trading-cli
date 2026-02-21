@@ -537,13 +537,12 @@ async function deriveClmmPoolAccounts(
   programId: PublicKey,
 ): Promise<ClmmPoolAccounts> {
   const poolState = await fetchClmmPoolState(connection, poolId, programId);
-  const observationState = deriveObservationState(programId, poolId);
 
   return {
     poolId,
     ammConfig: poolState.ammConfig,
     poolState: poolId,
-    observationState,
+    observationState: poolState.observationKey,
     tokenVault0: poolState.tokenVault0,
     tokenVault1: poolState.tokenVault1,
     tokenMint0: poolState.tokenMint0,
