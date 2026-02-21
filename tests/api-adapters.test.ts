@@ -1,7 +1,7 @@
 /**
  * Mainnet integration tests for API-based adapters.
  *
- * Covers: jupiter-ultra, dflow
+ * Covers: jupiter-ultra, jupiter-swap, dflow
  *
  * These adapters use external HTTP APIs and manage their own TX submission.
  * They require API keys:
@@ -67,6 +67,51 @@ describe("jupiter-ultra", () => {
       expect(result.txSignature).toBeTruthy();
     } catch (e: any) {
       console.log(`jupiter-ultra sell: ${e.message}`);
+    }
+  });
+});
+
+// ============================================================
+// jupiter-swap (Metis engine)
+// Capabilities: buy, sell
+// ============================================================
+describe("jupiter-swap", () => {
+  const adapter = getDexAdapter("jupiter-swap");
+
+  test("capabilities check", () => {
+    expect(adapter.capabilities.canBuy).toBe(true);
+    expect(adapter.capabilities.canSell).toBe(true);
+    expect(adapter.capabilities.canSnipe).toBe(false);
+    expect(adapter.capabilities.canFindPool).toBe(false);
+    expect(adapter.capabilities.canGetPrice).toBe(false);
+    expect(adapter.capabilities.isAggregator).toBe(true);
+  });
+
+  test("buy: 0.02 SOL worth of USDC via Jupiter Swap", async () => {
+    try {
+      const result = await adapter.buy({
+        tokenMint: USDC,
+        amountSol: BUY_AMOUNT_SOL,
+      });
+      logResult("jupiter-swap buy", result);
+      expect(result.txSignature).toBeTruthy();
+      expect(result.dex).toBe("jupiter-swap");
+    } catch (e: any) {
+      console.log(`jupiter-swap buy: ${e.message}`);
+    }
+  });
+
+  test("sell: 100% of USDC via Jupiter Swap", async () => {
+    await delay(5000);
+    try {
+      const result = await adapter.sell({
+        tokenMint: USDC,
+        percentage: SELL_PERCENTAGE,
+      });
+      logResult("jupiter-swap sell", result);
+      expect(result.txSignature).toBeTruthy();
+    } catch (e: any) {
+      console.log(`jupiter-swap sell: ${e.message}`);
     }
   });
 });
