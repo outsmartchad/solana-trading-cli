@@ -39,6 +39,7 @@ import {
   BuildSwapIxsResult,
   UnsupportedOperationError,
   PoolNotFoundError,
+  requireTokenMint,
   WSOL_MINT,
   USDC_MINT,
   DEFAULT_SLIPPAGE_BPS,
@@ -347,9 +348,10 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
   // ----- Core: buy -----
 
   async buy(params: BuyParams): Promise<SwapResult> {
+    const tokenMint = requireTokenMint(params, this.name);
     const connection = getConnection();
     const wallet = getWallet();
-    const tokenMint = new PublicKey(params.tokenMint);
+    const tokenMintPk = new PublicKey(tokenMint);
     const quoteMintPk = params.quoteMint ? new PublicKey(params.quoteMint) : WSOL_MINT_PK;
     const slippageBps = params.opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
     const priorityFee = params.opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
@@ -360,8 +362,8 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
     if (params.poolAddress) {
       poolId = new PublicKey(params.poolAddress);
     } else {
-      const found = await discoverAmmV4Pool(connection, params.tokenMint, quoteMintPk.toBase58());
-      if (!found) throw new PoolNotFoundError(this.name, params.tokenMint, params.quoteMint);
+      const found = await discoverAmmV4Pool(connection, tokenMint, quoteMintPk.toBase58());
+      if (!found) throw new PoolNotFoundError(this.name, tokenMint, params.quoteMint);
       poolId = new PublicKey(found.poolId);
     }
 
@@ -369,7 +371,7 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
     const poolAccounts = await derivePoolAccounts(connection, poolId);
 
     // Detect base token program
-    const baseTokenProgram = await getTokenProgramForMint(connection, tokenMint);
+    const baseTokenProgram = await getTokenProgramForMint(connection, tokenMintPk);
 
     // Calculate amounts
     const quoteDecimals = quoteMintPk.equals(WSOL_MINT_PK) ? 9 : 6;
@@ -406,7 +408,7 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
     // Build ATAs
     const inputAta = await getAssociatedTokenAddress(quoteMintPk, wallet.publicKey);
     const outputAta = await getAssociatedTokenAddress(
-      tokenMint,
+      tokenMintPk,
       wallet.publicKey,
       baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID),
       baseTokenProgram,
@@ -428,7 +430,7 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
       ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
       createAssociatedTokenAccountIdempotentInstruction(wallet.publicKey, inputAta, wallet.publicKey, quoteMintPk),
       createAssociatedTokenAccountIdempotentInstruction(
-        wallet.publicKey, outputAta, wallet.publicKey, tokenMint,
+        wallet.publicKey, outputAta, wallet.publicKey, tokenMintPk,
         baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID_PK,
       ),
     ];
@@ -466,9 +468,10 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
   // ----- Core: sell -----
 
   async sell(params: SellParams): Promise<SwapResult> {
+    const tokenMint = requireTokenMint(params, this.name);
     const connection = getConnection();
     const wallet = getWallet();
-    const tokenMint = new PublicKey(params.tokenMint);
+    const tokenMintPk = new PublicKey(tokenMint);
     const quoteMintPk = params.quoteMint ? new PublicKey(params.quoteMint) : WSOL_MINT_PK;
     const slippageBps = params.opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
     const priorityFee = params.opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
@@ -479,8 +482,8 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
     if (params.poolAddress) {
       poolId = new PublicKey(params.poolAddress);
     } else {
-      const found = await discoverAmmV4Pool(connection, params.tokenMint, quoteMintPk.toBase58());
-      if (!found) throw new PoolNotFoundError(this.name, params.tokenMint, params.quoteMint);
+      const found = await discoverAmmV4Pool(connection, tokenMint, quoteMintPk.toBase58());
+      if (!found) throw new PoolNotFoundError(this.name, tokenMint, params.quoteMint);
       poolId = new PublicKey(found.poolId);
     }
 
@@ -488,11 +491,11 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
     const poolAccounts = await derivePoolAccounts(connection, poolId);
 
     // Detect base token program
-    const baseTokenProgram = await getTokenProgramForMint(connection, tokenMint);
+    const baseTokenProgram = await getTokenProgramForMint(connection, tokenMintPk);
 
     // Get token balance
     const baseAta = await getAssociatedTokenAddress(
-      tokenMint,
+      tokenMintPk,
       wallet.publicKey,
       baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID),
       baseTokenProgram,
@@ -504,7 +507,7 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
     const sellAmount = BigInt(Math.floor((Number(balance) * params.percentage) / 100));
 
     if (sellAmount === 0n) {
-      throw new Error(`No balance to sell for ${params.tokenMint}`);
+      throw new Error(`No balance to sell for ${tokenMint}`);
     }
 
     // Compute minOut from reserves (reversed direction vs buy)
@@ -519,7 +522,7 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
 
       // Selling token → receiving quote. Determine direction.
       let estOut: bigint;
-      if (poolAccounts.coinMint.equals(tokenMint)) {
+      if (poolAccounts.coinMint.equals(tokenMintPk)) {
         // Selling coinMint → receiving pcMint
         const k = coinReserve * pcReserve;
         const newCoin = coinReserve + sellAmount;
@@ -550,7 +553,7 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
       ComputeBudgetProgram.setComputeUnitLimit({ units: computeUnits }),
       ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
       createAssociatedTokenAccountIdempotentInstruction(
-        wallet.publicKey, userInputAta, wallet.publicKey, tokenMint,
+        wallet.publicKey, userInputAta, wallet.publicKey, tokenMintPk,
         baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID_PK,
       ),
       createAssociatedTokenAccountIdempotentInstruction(wallet.publicKey, userOutputAta, wallet.publicKey, quoteMintPk),
@@ -575,7 +578,7 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
     // Human-readable sell amount
     let tokenDecimals = 9;
     try {
-      const mintData = await connection.getTokenSupply(tokenMint);
+      const mintData = await connection.getTokenSupply(tokenMintPk);
       tokenDecimals = mintData.value.decimals;
     } catch { /* fallback to 9 */ }
     const humanAmount = Number(sellAmount) / Math.pow(10, tokenDecimals);
@@ -584,7 +587,7 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
       txSignature: result.txSignature,
       confirmed: result.confirmed,
       amountIn: humanAmount,
-      amountInToken: params.tokenMint,
+      amountInToken: tokenMint,
       dex: this.name,
       poolAddress: poolId.toBase58(),
     };
@@ -683,10 +686,11 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
       throw new UnsupportedOperationError(this.name, "buildSwapIxs(sell)");
     }
 
+    const tokenMint = requireTokenMint(params, this.name);
     const connection = getConnection();
     const wallet = getWallet();
     const buyParams = params as BuyParams;
-    const tokenMint = new PublicKey(buyParams.tokenMint);
+    const tokenMintPk = new PublicKey(tokenMint);
     const quoteMintPk = buyParams.quoteMint ? new PublicKey(buyParams.quoteMint) : WSOL_MINT_PK;
 
     // Resolve pool
@@ -694,20 +698,20 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
     if (buyParams.poolAddress) {
       poolId = new PublicKey(buyParams.poolAddress);
     } else {
-      const found = await discoverAmmV4Pool(connection, buyParams.tokenMint, quoteMintPk.toBase58());
-      if (!found) throw new PoolNotFoundError(this.name, buyParams.tokenMint, buyParams.quoteMint);
+      const found = await discoverAmmV4Pool(connection, tokenMint, quoteMintPk.toBase58());
+      if (!found) throw new PoolNotFoundError(this.name, tokenMint, buyParams.quoteMint);
       poolId = new PublicKey(found.poolId);
     }
 
     const poolAccounts = await derivePoolAccounts(connection, poolId);
-    const baseTokenProgram = await getTokenProgramForMint(connection, tokenMint);
+    const baseTokenProgram = await getTokenProgramForMint(connection, tokenMintPk);
 
     const quoteDecimals = quoteMintPk.equals(WSOL_MINT_PK) ? 9 : 6;
     const amountIn = BigInt(Math.floor(buyParams.amountSol * 10 ** quoteDecimals));
 
     const inputAta = await getAssociatedTokenAddress(quoteMintPk, wallet.publicKey);
     const outputAta = await getAssociatedTokenAddress(
-      tokenMint,
+      tokenMintPk,
       wallet.publicKey,
       baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID),
       baseTokenProgram,
@@ -725,7 +729,7 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
     const instructions: TransactionInstruction[] = [
       createAssociatedTokenAccountIdempotentInstruction(wallet.publicKey, inputAta, wallet.publicKey, quoteMintPk),
       createAssociatedTokenAccountIdempotentInstruction(
-        wallet.publicKey, outputAta, wallet.publicKey, tokenMint,
+        wallet.publicKey, outputAta, wallet.publicKey, tokenMintPk,
         baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID_PK,
       ),
     ];

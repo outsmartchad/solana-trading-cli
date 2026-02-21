@@ -39,6 +39,7 @@ import {
   BuildSwapIxsResult,
   UnsupportedOperationError,
   PoolNotFoundError,
+  requireTokenMint,
   WSOL_MINT,
   USDC_MINT,
   USDT_MINT,
@@ -98,7 +99,8 @@ export class MeteoraDammV1Adapter implements IDexAdapter {
   // ----- Core: buy -----
 
   async buy(params: BuyParams): Promise<SwapResult> {
-    const { tokenMint, amountSol, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { amountSol, quoteMint: quoteMintParam, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
     const quoteMintStr = quoteMintParam ?? WSOL_MINT;
@@ -152,7 +154,8 @@ export class MeteoraDammV1Adapter implements IDexAdapter {
   // ----- Core: sell -----
 
   async sell(params: SellParams): Promise<SwapResult> {
-    const { tokenMint, percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
     const quoteMintStr = quoteMintParam ?? WSOL_MINT;
@@ -291,6 +294,7 @@ export class MeteoraDammV1Adapter implements IDexAdapter {
     }
 
     const buyParams = params as BuyParams;
+    const tokenMint = requireTokenMint(buyParams, this.name);
     const connection = getConnection();
     const wallet = getWallet();
     const quoteMintStr = buyParams.quoteMint ?? WSOL_MINT;
@@ -298,7 +302,7 @@ export class MeteoraDammV1Adapter implements IDexAdapter {
 
     const poolPk = buyParams.poolAddress
       ? new PublicKey(buyParams.poolAddress)
-      : await this.resolvePool(buyParams.tokenMint, quoteMintStr);
+      : await this.resolvePool(tokenMint, quoteMintStr);
 
     const ammInstance = await AmmImpl.create(connection, poolPk);
     const inputAmount = amountToLamports(buyParams.amountSol, quoteMintStr);

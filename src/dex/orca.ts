@@ -64,6 +64,7 @@ import {
   PriceInfo,
   BuildSwapIxsResult,
   UnsupportedOperationError,
+  requireTokenMint,
   WSOL_MINT,
   USDC_MINT,
   USDT_MINT,
@@ -325,7 +326,8 @@ export class OrcaAdapter implements IDexAdapter {
   // ---- Core: buy ----
 
   async buy(params: BuyParams): Promise<SwapResult> {
-    const { tokenMint, amountSol, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { amountSol, quoteMint: quoteMintParam, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
     const quoteMintStr = quoteMintParam ?? WSOL_MINT;
@@ -379,7 +381,8 @@ export class OrcaAdapter implements IDexAdapter {
   // ---- Core: sell ----
 
   async sell(params: SellParams): Promise<SwapResult> {
-    const { tokenMint, percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
     const quoteMintStr = quoteMintParam ?? WSOL_MINT;

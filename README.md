@@ -4,7 +4,7 @@
 
 ```bash
 npm install -g outsmart
-outsmart buy --dex raydium-cpmm --token <MINT> --amount 0.1
+outsmart buy --dex raydium-cpmm --pool <POOL> --amount 0.1
 ```
 
 > **This branch (`agent-trading-infra`) is under active development.** For the stable version, use [`typescript-main`](https://github.com/outsmartchad/outsmart-cli/tree/typescript-main).
@@ -54,11 +54,14 @@ See `.env.example` for all available options (TX landing provider keys, trading 
 ### 3. Trade
 
 ```bash
-# Buy 0.1 SOL worth of a token
-outsmart buy --dex raydium-cpmm --token <MINT> --amount 0.1
+# Buy 0.1 SOL worth of a token (token auto-detected from pool)
+outsmart buy --dex raydium-cpmm --pool <POOL> --amount 0.1
 
 # Sell 100% of held balance
-outsmart sell --dex jupiter-ultra --token <MINT> --pct 100
+outsmart sell --dex raydium-cpmm --pool <POOL> --pct 100
+
+# Swap aggregator (no pool needed, just token)
+outsmart buy --dex jupiter-ultra --token <MINT> --amount 0.1
 
 # Check token info
 outsmart info --token <MINT>
@@ -73,35 +76,35 @@ outsmart info --token <MINT>
 Buy tokens with SOL (or a quote token).
 
 ```bash
-outsmart buy --dex <name> --token <MINT> --amount <SOL>
-outsmart buy --dex raydium-cpmm --token EPjF...Dt1v --amount 0.1
-outsmart buy --dex meteora-damm-v2 --token <MINT> --amount 1 --pool <POOL> --tip 0.001
+outsmart buy --dex <name> --pool <POOL> --amount <SOL>
+outsmart buy --dex raydium-cpmm --pool <POOL> --amount 0.1
+outsmart buy --dex meteora-damm-v2 --pool <POOL> --amount 1 --tip 0.001
 outsmart buy --dex jupiter-ultra --token <MINT> --amount 0.5 --slippage 500
 ```
 
 | Flag | Description |
 |------|-------------|
 | `-d, --dex <name>` | DEX adapter name (required) |
-| `-t, --token <mint>` | Token mint address (required) |
 | `-a, --amount <sol>` | SOL amount to spend (required) |
-| `-p, --pool <address>` | Pool address (auto-discovered if omitted) |
+| `-p, --pool <address>` | Pool address (required for on-chain DEXes) |
+| `-t, --token <mint>` | Token mint (auto-detected from pool; required for aggregators or non-SOL quote pools) |
 
 ### sell
 
 Sell tokens for SOL (or a quote token). Specify what percentage of your balance to sell.
 
 ```bash
-outsmart sell --dex <name> --token <MINT> --pct <0-100>
-outsmart sell --dex raydium-cpmm --token <MINT> --pct 100
+outsmart sell --dex <name> --pool <POOL> --pct <0-100>
+outsmart sell --dex raydium-cpmm --pool <POOL> --pct 100
 outsmart sell --dex dflow --token <MINT> --pct 50 --slippage 300
 ```
 
 | Flag | Description |
 |------|-------------|
 | `-d, --dex <name>` | DEX adapter name (required) |
-| `-t, --token <mint>` | Token mint address (required) |
 | `--pct <percentage>` | Percentage of balance to sell, 0-100 (required) |
-| `-p, --pool <address>` | Pool address (auto-discovered if omitted) |
+| `-p, --pool <address>` | Pool address (required for on-chain DEXes) |
+| `-t, --token <mint>` | Token mint (auto-detected from pool; required for aggregators or non-SOL quote pools) |
 
 ### add-liq
 

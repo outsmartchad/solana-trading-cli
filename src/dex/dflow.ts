@@ -37,6 +37,7 @@ import {
   SellParams,
   SwapResult,
   UnsupportedOperationError,
+  requireTokenMint,
   WSOL_MINT,
   DEFAULT_SLIPPAGE_BPS,
 } from "./types";
@@ -183,7 +184,8 @@ export class DFlowAdapter implements IDexAdapter {
   // ----- Core: buy -----
 
   async buy(params: BuyParams): Promise<SwapResult> {
-    const { tokenMint, amountSol, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { amountSol, opts } = params;
     const wallet = getWallet();
     const slippageBps = opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
 
@@ -214,7 +216,8 @@ export class DFlowAdapter implements IDexAdapter {
   // ----- Core: sell -----
 
   async sell(params: SellParams): Promise<SwapResult> {
-    const { tokenMint, percentage, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { percentage, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
     const slippageBps = opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;

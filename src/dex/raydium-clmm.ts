@@ -41,6 +41,7 @@ import {
   BuildSwapIxsResult,
   UnsupportedOperationError,
   PoolNotFoundError,
+  requireTokenMint,
   WSOL_MINT,
   USDC_MINT,
   DEFAULT_SLIPPAGE_BPS,
@@ -653,9 +654,10 @@ class RaydiumClmmAdapter implements IDexAdapter {
   // ----- Core: buy -----
 
   async buy(params: BuyParams): Promise<SwapResult> {
+    const tokenMint = requireTokenMint(params, this.name);
     const connection = getConnection();
     const wallet = getWallet();
-    const tokenMint = new PublicKey(params.tokenMint);
+    const tokenMintPk = new PublicKey(tokenMint);
     const quoteMintPk = params.quoteMint ? new PublicKey(params.quoteMint) : WSOL_MINT_PK;
     const priorityFee = params.opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
     const computeUnits = params.opts?.computeUnitLimit ?? 300_000;
@@ -665,8 +667,8 @@ class RaydiumClmmAdapter implements IDexAdapter {
     if (params.poolAddress) {
       poolId = new PublicKey(params.poolAddress);
     } else {
-      const found = await discoverClmmPool(connection, tokenMint, quoteMintPk);
-      if (!found) throw new PoolNotFoundError(this.name, params.tokenMint, params.quoteMint);
+      const found = await discoverClmmPool(connection, tokenMintPk, quoteMintPk);
+      if (!found) throw new PoolNotFoundError(this.name, tokenMint, params.quoteMint);
       poolId = found;
     }
 
@@ -675,7 +677,7 @@ class RaydiumClmmAdapter implements IDexAdapter {
     const amountIn = BigInt(Math.floor(params.amountSol * 10 ** quoteDecimals));
 
     const ixs = await buildClmmSwapInstructions(
-      connection, wallet, tokenMint, quoteMintPk, poolId,
+      connection, wallet, tokenMintPk, quoteMintPk, poolId,
       amountIn, 0n, priorityFee, true,
     );
 
@@ -698,9 +700,10 @@ class RaydiumClmmAdapter implements IDexAdapter {
   // ----- Core: sell -----
 
   async sell(params: SellParams): Promise<SwapResult> {
+    const tokenMint = requireTokenMint(params, this.name);
     const connection = getConnection();
     const wallet = getWallet();
-    const tokenMint = new PublicKey(params.tokenMint);
+    const tokenMintPk = new PublicKey(tokenMint);
     const quoteMintPk = params.quoteMint ? new PublicKey(params.quoteMint) : WSOL_MINT_PK;
     const priorityFee = params.opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
     const computeUnits = params.opts?.computeUnitLimit ?? 300_000;
@@ -710,27 +713,27 @@ class RaydiumClmmAdapter implements IDexAdapter {
     if (params.poolAddress) {
       poolId = new PublicKey(params.poolAddress);
     } else {
-      const found = await discoverClmmPool(connection, tokenMint, quoteMintPk);
-      if (!found) throw new PoolNotFoundError(this.name, params.tokenMint, params.quoteMint);
+      const found = await discoverClmmPool(connection, tokenMintPk, quoteMintPk);
+      if (!found) throw new PoolNotFoundError(this.name, tokenMint, params.quoteMint);
       poolId = found;
     }
 
     // Get token balance
-    const balance = await getTokenBalance(connection, tokenMint, wallet.publicKey);
+    const balance = await getTokenBalance(connection, tokenMintPk, wallet.publicKey);
     const sellAmount = (balance.amount * BigInt(Math.floor(params.percentage))) / 100n;
     if (sellAmount === 0n) {
       return {
         txSignature: "",
         confirmed: false,
         amountIn: 0,
-        amountInToken: params.tokenMint,
+        amountInToken: tokenMint,
         dex: this.name,
         poolAddress: poolId.toBase58(),
       };
     }
 
     const ixs = await buildClmmSellInstructions(
-      connection, wallet, tokenMint, quoteMintPk, poolId,
+      connection, wallet, tokenMintPk, quoteMintPk, poolId,
       sellAmount, 0n, priorityFee, true,
     );
 
@@ -744,7 +747,7 @@ class RaydiumClmmAdapter implements IDexAdapter {
       txSignature: result.txSignature,
       confirmed: result.confirmed,
       amountIn: humanSellAmount,
-      amountInToken: params.tokenMint,
+      amountInToken: tokenMint,
       dex: this.name,
       poolAddress: poolId.toBase58(),
     };
@@ -789,18 +792,19 @@ class RaydiumClmmAdapter implements IDexAdapter {
   // ----- Build swap IXs -----
 
   async buildSwapIxs(params: BuyParams | SellParams): Promise<BuildSwapIxsResult> {
+    const tokenMint = requireTokenMint(params, this.name);
     const connection = getConnection();
     const wallet = getWallet();
     const isBuy = "amountSol" in params;
-    const tokenMint = new PublicKey(params.tokenMint);
+    const tokenMintPk = new PublicKey(tokenMint);
     const quoteMintPk = params.quoteMint ? new PublicKey(params.quoteMint) : WSOL_MINT_PK;
 
     let poolId: PublicKey;
     if (params.poolAddress) {
       poolId = new PublicKey(params.poolAddress);
     } else {
-      const found = await discoverClmmPool(connection, tokenMint, quoteMintPk);
-      if (!found) throw new PoolNotFoundError(this.name, params.tokenMint, params.quoteMint);
+      const found = await discoverClmmPool(connection, tokenMintPk, quoteMintPk);
+      if (!found) throw new PoolNotFoundError(this.name, tokenMint, params.quoteMint);
       poolId = found;
     }
 
@@ -811,15 +815,15 @@ class RaydiumClmmAdapter implements IDexAdapter {
       const quoteDecimals = quoteMintPk.equals(WSOL_MINT_PK) ? 9 : 6;
       const amountIn = BigInt(Math.floor(buyParams.amountSol * 10 ** quoteDecimals));
       instructions = await buildClmmSwapInstructions(
-        connection, wallet, tokenMint, quoteMintPk, poolId,
+        connection, wallet, tokenMintPk, quoteMintPk, poolId,
         amountIn, 0n, 0, false,
       );
     } else {
       const sellParams = params as SellParams;
-      const balance = await getTokenBalance(connection, tokenMint, wallet.publicKey);
+      const balance = await getTokenBalance(connection, tokenMintPk, wallet.publicKey);
       const sellAmount = (balance.amount * BigInt(Math.floor(sellParams.percentage))) / 100n;
       instructions = await buildClmmSellInstructions(
-        connection, wallet, tokenMint, quoteMintPk, poolId,
+        connection, wallet, tokenMintPk, quoteMintPk, poolId,
         sellAmount, 0n, 0, false,
       );
     }

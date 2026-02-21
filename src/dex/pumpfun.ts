@@ -54,6 +54,7 @@ import {
   PriceInfo,
   BuildSwapIxsResult,
   PoolNotFoundError,
+  requireTokenMint,
   WSOL_MINT,
   DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS,
   DEFAULT_COMPUTE_UNIT_LIMIT,
@@ -443,7 +444,8 @@ export class PumpFunAdapter implements IDexAdapter {
   // ----- Core: buy -----
 
   async buy(params: BuyParams): Promise<SwapResult> {
-    const { tokenMint, amountSol, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { amountSol, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
     const mintPk = new PublicKey(tokenMint);
@@ -505,7 +507,8 @@ export class PumpFunAdapter implements IDexAdapter {
   // ----- Core: sell -----
 
   async sell(params: SellParams): Promise<SwapResult> {
-    const { tokenMint, percentage, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { percentage, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
     const mintPk = new PublicKey(tokenMint);
@@ -619,13 +622,14 @@ export class PumpFunAdapter implements IDexAdapter {
   // ----- buildSwapIxs -----
 
   async buildSwapIxs(params: BuyParams | SellParams): Promise<BuildSwapIxsResult> {
+    const tokenMint = requireTokenMint(params, this.name);
     const connection = getConnection();
     const wallet = getWallet();
 
     if ("percentage" in params) {
       // Sell
       const p = params as SellParams;
-      const mintPk = new PublicKey(p.tokenMint);
+      const mintPk = new PublicKey(tokenMint);
       const bondingCurve = p.poolAddress ? new PublicKey(p.poolAddress) : getBondingCurvePda(mintPk);
 
       const accountInfo = await connection.getAccountInfo(bondingCurve);
@@ -646,7 +650,7 @@ export class PumpFunAdapter implements IDexAdapter {
 
     // Buy
     const p = params as BuyParams;
-    const mintPk = new PublicKey(p.tokenMint);
+    const mintPk = new PublicKey(tokenMint);
     const bondingCurve = p.poolAddress ? new PublicKey(p.poolAddress) : getBondingCurvePda(mintPk);
 
     const accountInfo = await connection.getAccountInfo(bondingCurve);

@@ -34,6 +34,7 @@ import {
   SellParams,
   SwapResult,
   UnsupportedOperationError,
+  requireTokenMint,
   WSOL_MINT,
   DEFAULT_SLIPPAGE_BPS,
 } from "./types";
@@ -420,7 +421,8 @@ export class JupiterUltraAdapter implements IDexAdapter {
   // ----- Core: buy -----
 
   async buy(params: BuyParams): Promise<SwapResult> {
-    const { tokenMint, amountSol, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { amountSol, opts } = params;
     const slippageBps = opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
 
     // Convert SOL to lamports
@@ -457,7 +459,8 @@ export class JupiterUltraAdapter implements IDexAdapter {
   // ----- Core: sell -----
 
   async sell(params: SellParams): Promise<SwapResult> {
-    const { tokenMint, percentage, quoteMint: quoteMintParam, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { percentage, quoteMint: quoteMintParam, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
     const slippageBps = opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;

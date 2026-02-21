@@ -66,8 +66,13 @@ export interface SwapOpts {
 // ---------------------------------------------------------------------------
 
 export interface BuyParams {
-  /** Token mint address to buy (base58 string) */
-  tokenMint: string;
+  /**
+   * Token mint address to buy (base58 string).
+   *
+   * Optional when poolAddress is provided — the adapter or CLI can decode
+   * the pool account to determine the non-SOL token mint automatically.
+   */
+  tokenMint?: string;
 
   /** Amount of SOL (or quote token) to spend, in human-readable units */
   amountSol: number;
@@ -95,8 +100,13 @@ export interface BuyParams {
 // ---------------------------------------------------------------------------
 
 export interface SellParams {
-  /** Token mint address to sell (base58 string) */
-  tokenMint: string;
+  /**
+   * Token mint address to sell (base58 string).
+   *
+   * Optional when poolAddress is provided — the adapter or CLI can decode
+   * the pool account to determine the non-SOL token mint automatically.
+   */
+  tokenMint?: string;
 
   /**
    * Percentage of held token balance to sell (0-100).
@@ -809,6 +819,25 @@ export class PoolNotFoundError extends Error {
 // ---------------------------------------------------------------------------
 // Common constants
 // ---------------------------------------------------------------------------
+
+/**
+ * Assert that tokenMint is provided, returning it as a non-optional string.
+ * Adapters call this at the top of buy()/sell() to narrow the type.
+ * The CLI resolves tokenMint from pool state before calling adapters,
+ * so this should never throw in normal usage.
+ */
+export function requireTokenMint(
+  params: { tokenMint?: string },
+  adapterName: string,
+): string {
+  if (!params.tokenMint) {
+    throw new Error(
+      `${adapterName}: tokenMint is required. ` +
+      `Provide --token <mint> or use a pool with a SOL side for auto-detection.`,
+    );
+  }
+  return params.tokenMint;
+}
 
 /** Wrapped SOL mint address */
 export const WSOL_MINT = "So11111111111111111111111111111111111111112";

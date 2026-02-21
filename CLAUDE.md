@@ -45,7 +45,13 @@ Only `outsmartchad` account is active on `gh`. Run `gh auth setup-git` if needed
 
 ## CLI UX Design
 
-**On-chain DEX adapters** require `--pool` AND `--token`:
+**On-chain DEX adapters** require `--pool`. `--token` is **auto-detected** from pool state:
+```
+outsmart buy  --dex meteora-dlmm --pool <POOL> --amount 0.1
+outsmart sell --dex meteora-dlmm --pool <POOL> --pct 100
+```
+
+For non-SOL quote pools (e.g. USDC/TOKEN), specify `--token` explicitly:
 ```
 outsmart buy --dex meteora-dlmm --pool <POOL> --token <MINT> --amount 0.1
 ```
@@ -55,7 +61,7 @@ outsmart buy --dex meteora-dlmm --pool <POOL> --token <MINT> --amount 0.1
 outsmart buy --dex jupiter-ultra --token <MINT> --amount 0.1
 ```
 
-Enforced via `isAggregator` capability flag. On-chain adapters only handle WSOL/token pools.
+Token auto-detection works by calling `getPrice(pool)` which decodes the pool account and returns both mints. The CLI picks the non-WSOL side.
 
 ## Adapter Patterns
 

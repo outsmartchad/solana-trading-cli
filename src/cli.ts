@@ -14,9 +14,12 @@ const _origWarn = process.stderr.write.bind(process.stderr);
  * 17 DEX adapters, 12 TX landing providers, one unified interface.
  *
  * Usage:
- *   # On-chain DEX — requires pool address + token mint
+ *   # On-chain DEX — pool address required, token auto-detected from pool
+ *   outsmart buy  --dex meteora-dlmm --pool <POOL> --amount 0.1
+ *   outsmart sell --dex meteora-dlmm --pool <POOL> --pct 100
+ *
+ *   # On-chain DEX — explicit token (for non-SOL quote pools)
  *   outsmart buy  --dex meteora-dlmm --pool <POOL> --token <MINT> --amount 0.1
- *   outsmart sell --dex meteora-dlmm --pool <POOL> --token <MINT> --pct 100
  *
  *   # Swap aggregator — requires token mint only (finds best route automatically)
  *   outsmart buy  --dex jupiter-ultra --token <MINT> --amount 0.1
@@ -107,6 +110,35 @@ function printResult(result: SwapResult): void {
   console.log();
 }
 
+/**
+ * Resolve the token mint from pool state when --token is omitted.
+ *
+ * Calls adapter.getPrice(pool) which decodes the pool account and returns
+ * baseMint + quoteMint. We return whichever is NOT WSOL. If neither is WSOL
+ * (e.g. USDC/TOKEN pool), we error and ask the user to specify --token.
+ */
+async function resolveTokenMint(
+  adapter: import("./dex/types").IDexAdapter,
+  poolAddress: string,
+): Promise<string> {
+  if (!adapter.capabilities.canGetPrice || !adapter.getPrice) {
+    die(`${adapter.name} cannot auto-detect token from pool — please provide --token <mint>`);
+  }
+
+  const price = await adapter.getPrice(poolAddress);
+  const { baseMint, quoteMint } = price;
+
+  // Pick the non-SOL side
+  if (quoteMint === WSOL_MINT) return baseMint;
+  if (baseMint === WSOL_MINT) return quoteMint;
+
+  // Neither side is SOL — ambiguous
+  die(
+    `Pool ${poolAddress} has no SOL side (${baseMint} / ${quoteMint}).\n`
+    + `  Please specify --token <mint> to indicate which token to trade.`,
+  );
+}
+
 function buildSwapOpts(cmd: {
   slippage?: string;
   priority?: string;
@@ -177,17 +209,21 @@ const buyCmd = new Command("buy")
         die(`${adapter.name} is a swap aggregator — --token <mint> is required.\n  Example: outsmart buy --dex ${adapter.name} --token <MINT> --amount 0.1`);
       }
     } else {
-      // On-chain DEXes: need both --pool and --token
+      // On-chain DEXes: need --pool (--token is optional, auto-resolved from pool)
       if (!cmdOpts.pool) {
-        die(`${adapter.name} is an on-chain DEX — --pool <address> is required.\n  Example: outsmart buy --dex ${adapter.name} --pool <POOL> --token <MINT> --amount 0.1`);
-      }
-      if (!cmdOpts.token) {
-        die(`${adapter.name} is an on-chain DEX — --token <mint> is required.\n  Example: outsmart buy --dex ${adapter.name} --pool <POOL> --token <MINT> --amount 0.1`);
+        die(`${adapter.name} is an on-chain DEX — --pool <address> is required.\n  Example: outsmart buy --dex ${adapter.name} --pool <POOL> --amount 0.1`);
       }
     }
 
+    // Auto-resolve token mint from pool state if not provided
+    let tokenMint: string = cmdOpts.token;
+    if (!tokenMint && cmdOpts.pool) {
+      tokenMint = await resolveTokenMint(adapter, cmdOpts.pool);
+      console.log(`  auto-detected token: ${tokenMint}`);
+    }
+
     const params: BuyParams = {
-      tokenMint: cmdOpts.token,
+      tokenMint,
       amountSol: Number(cmdOpts.amount),
       poolAddress: cmdOpts.pool,
       quoteMint: cmdOpts.quote,
@@ -225,17 +261,21 @@ const sellCmd = new Command("sell")
         die(`${adapter.name} is a swap aggregator — --token <mint> is required.\n  Example: outsmart sell --dex ${adapter.name} --token <MINT> --pct 100`);
       }
     } else {
-      // On-chain DEXes: need both --pool and --token
+      // On-chain DEXes: need --pool (--token is optional, auto-resolved from pool)
       if (!cmdOpts.pool) {
-        die(`${adapter.name} is an on-chain DEX — --pool <address> is required.\n  Example: outsmart sell --dex ${adapter.name} --pool <POOL> --token <MINT> --pct 100`);
-      }
-      if (!cmdOpts.token) {
-        die(`${adapter.name} is an on-chain DEX — --token <mint> is required.\n  Example: outsmart sell --dex ${adapter.name} --pool <POOL> --token <MINT> --pct 100`);
+        die(`${adapter.name} is an on-chain DEX — --pool <address> is required.\n  Example: outsmart sell --dex ${adapter.name} --pool <POOL> --pct 100`);
       }
     }
 
+    // Auto-resolve token mint from pool state if not provided
+    let tokenMint: string = cmdOpts.token;
+    if (!tokenMint && cmdOpts.pool) {
+      tokenMint = await resolveTokenMint(adapter, cmdOpts.pool);
+      console.log(`  auto-detected token: ${tokenMint}`);
+    }
+
     const params: SellParams = {
-      tokenMint: cmdOpts.token,
+      tokenMint,
       percentage: Number(cmdOpts.pct),
       poolAddress: cmdOpts.pool,
       quoteMint: cmdOpts.quote,
@@ -977,7 +1017,7 @@ program
 
     console.log();
     console.log("  You're ready to trade:");
-    console.log("    outsmart buy --dex meteora-dlmm --pool <POOL> --amount 0.1");
+    console.log("    outsmart buy --dex raydium-cpmm --pool <POOL> --amount 0.1");
     console.log("    outsmart buy --dex jupiter-ultra --token <MINT> --amount 0.1");
     console.log("    outsmart list-dex");
     console.log();

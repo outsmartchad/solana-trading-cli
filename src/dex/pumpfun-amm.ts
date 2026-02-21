@@ -56,6 +56,7 @@ import {
   PriceInfo,
   BuildSwapIxsResult,
   PoolNotFoundError,
+  requireTokenMint,
   WSOL_MINT,
   DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS,
   DEFAULT_COMPUTE_UNIT_LIMIT,
@@ -490,7 +491,8 @@ export class PumpFunAmmAdapter implements IDexAdapter {
   // ----- Core: buy -----
 
   async buy(params: BuyParams): Promise<SwapResult> {
-    const { tokenMint, amountSol, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { amountSol, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
 
@@ -608,7 +610,8 @@ export class PumpFunAmmAdapter implements IDexAdapter {
   // ----- Core: sell -----
 
   async sell(params: SellParams): Promise<SwapResult> {
-    const { tokenMint, percentage, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { percentage, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
 

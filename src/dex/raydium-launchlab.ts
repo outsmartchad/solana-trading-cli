@@ -39,6 +39,7 @@ import {
   BuildSwapIxsResult,
   UnsupportedOperationError,
   PoolNotFoundError,
+  requireTokenMint,
   WSOL_MINT,
   USDC_MINT,
   DEFAULT_SLIPPAGE_BPS,
@@ -338,9 +339,10 @@ class RaydiumLaunchLabAdapter implements IDexAdapter {
   // ----- Core: buy -----
 
   async buy(params: BuyParams): Promise<SwapResult> {
+    const tokenMint = requireTokenMint(params, this.name);
     const connection = getConnection();
     const wallet = getWallet();
-    const tokenMint = new PublicKey(params.tokenMint);
+    const tokenMintPk = new PublicKey(tokenMint);
     const quoteMintPk = params.quoteMint ? new PublicKey(params.quoteMint) : WSOL_MINT_PK;
     const priorityFee = params.opts?.priorityFeeMicroLamports ?? 5_000_000;
     const computeUnits = params.opts?.computeUnitLimit ?? 300_000;
@@ -350,12 +352,12 @@ class RaydiumLaunchLabAdapter implements IDexAdapter {
     if (params.poolAddress) {
       poolId = new PublicKey(params.poolAddress);
     } else {
-      const found = await discoverLaunchpadPool(connection, tokenMint, quoteMintPk);
-      if (!found) throw new PoolNotFoundError(this.name, params.tokenMint, params.quoteMint);
+      const found = await discoverLaunchpadPool(connection, tokenMintPk, quoteMintPk);
+      if (!found) throw new PoolNotFoundError(this.name, tokenMint, params.quoteMint);
       poolId = found;
     }
 
-    // Fetch pool state
+    // Fetch pool state (tokenMintPk used only for pool discovery above; pool state has its own mints)
     const poolState = await fetchLaunchpadPoolState(connection, poolId);
 
     // Derive PDAs

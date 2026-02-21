@@ -36,6 +36,7 @@ import {
   BuildSwapIxsResult,
   UnsupportedOperationError,
   PoolNotFoundError,
+  requireTokenMint,
   WSOL_MINT,
   USDC_MINT,
   DEFAULT_SLIPPAGE_BPS,
@@ -372,9 +373,10 @@ class RaydiumCpmmAdapter implements IDexAdapter {
   // ----- Core: buy -----
 
   async buy(params: BuyParams): Promise<SwapResult> {
+    const tokenMint = requireTokenMint(params, this.name);
     const connection = getConnection();
     const wallet = getWallet();
-    const tokenMint = new PublicKey(params.tokenMint);
+    const tokenMintPk = new PublicKey(tokenMint);
     const quoteMintPk = params.quoteMint ? new PublicKey(params.quoteMint) : WSOL_MINT_PK;
     const slippageBps = params.opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
     const priorityFee = params.opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
@@ -387,25 +389,25 @@ class RaydiumCpmmAdapter implements IDexAdapter {
     if (params.poolAddress) {
       poolId = new PublicKey(params.poolAddress);
       const poolInfo = await connection.getAccountInfo(poolId);
-      if (!poolInfo) throw new PoolNotFoundError(this.name, params.tokenMint, params.quoteMint);
+      if (!poolInfo) throw new PoolNotFoundError(this.name, tokenMint, params.quoteMint);
       ammConfig = decodePoolAmmConfig(poolInfo.data);
     } else {
-      const result = await discoverCpmmPool(connection, tokenMint, quoteMintPk);
-      if (!result) throw new PoolNotFoundError(this.name, params.tokenMint, params.quoteMint);
+      const result = await discoverCpmmPool(connection, tokenMintPk, quoteMintPk);
+      if (!result) throw new PoolNotFoundError(this.name, tokenMint, params.quoteMint);
       poolId = result.poolId;
       ammConfig = result.ammConfig;
     }
 
     // Detect base token program
-    const baseTokenProgram = await getTokenProgramForMint(connection, tokenMint);
+    const baseTokenProgram = await getTokenProgramForMint(connection, tokenMintPk);
 
     // Build SDK config
     const cfg: CpmmSdkConfig = {
       ammConfig,
       poolState: poolId,
-      baseMint: tokenMint,
+      baseMint: tokenMintPk,
       quoteMint: quoteMintPk,
-      baseVault: getVaultPda(poolId, tokenMint),
+      baseVault: getVaultPda(poolId, tokenMintPk),
       quoteVault: getVaultPda(poolId, quoteMintPk),
       baseTokenProgram,
       quoteTokenProgram: TOKEN_PROGRAM_ID,
@@ -418,7 +420,7 @@ class RaydiumCpmmAdapter implements IDexAdapter {
     // Get reserves for slippage calculation
     let minOut = 0n;
     try {
-      const reserves = await getPoolReserves(connection, poolId, tokenMint, quoteMintPk);
+      const reserves = await getPoolReserves(connection, poolId, tokenMintPk, quoteMintPk);
       const estOut = computeSwapOutAmount(reserves.quote, reserves.base, amountIn);
       minOut = (estOut * BigInt(10000 - slippageBps)) / 10000n;
     } catch {
@@ -428,7 +430,7 @@ class RaydiumCpmmAdapter implements IDexAdapter {
     // Build ATAs
     const inputAta = await getAssociatedTokenAddress(quoteMintPk, wallet.publicKey);
     const outputAta = await getAssociatedTokenAddress(
-      tokenMint,
+      tokenMintPk,
       wallet.publicKey,
       baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID),
       baseTokenProgram,
@@ -440,7 +442,7 @@ class RaydiumCpmmAdapter implements IDexAdapter {
       ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
       createAssociatedTokenAccountIdempotentInstruction(wallet.publicKey, inputAta, wallet.publicKey, quoteMintPk),
       createAssociatedTokenAccountIdempotentInstruction(
-        wallet.publicKey, outputAta, wallet.publicKey, tokenMint,
+        wallet.publicKey, outputAta, wallet.publicKey, tokenMintPk,
         baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
       ),
     ];
@@ -455,7 +457,7 @@ class RaydiumCpmmAdapter implements IDexAdapter {
     }
 
     // Swap instruction
-    ixs.push(createCpmmBuyIx(cfg, wallet.publicKey, tokenMint, inputAta, outputAta, amountIn, minOut));
+    ixs.push(createCpmmBuyIx(cfg, wallet.publicKey, tokenMintPk, inputAta, outputAta, amountIn, minOut));
 
     // Close WSOL ATA after swap
     if (quoteMintPk.equals(WSOL_MINT_PK)) {
@@ -478,9 +480,10 @@ class RaydiumCpmmAdapter implements IDexAdapter {
   // ----- Core: sell -----
 
   async sell(params: SellParams): Promise<SwapResult> {
+    const tokenMint = requireTokenMint(params, this.name);
     const connection = getConnection();
     const wallet = getWallet();
-    const tokenMint = new PublicKey(params.tokenMint);
+    const tokenMintPk = new PublicKey(tokenMint);
     const quoteMintPk = params.quoteMint ? new PublicKey(params.quoteMint) : WSOL_MINT_PK;
     const slippageBps = params.opts?.slippageBps ?? DEFAULT_SLIPPAGE_BPS;
     const priorityFee = params.opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
@@ -493,25 +496,25 @@ class RaydiumCpmmAdapter implements IDexAdapter {
     if (params.poolAddress) {
       poolId = new PublicKey(params.poolAddress);
       const poolInfo = await connection.getAccountInfo(poolId);
-      if (!poolInfo) throw new PoolNotFoundError(this.name, params.tokenMint, params.quoteMint);
+      if (!poolInfo) throw new PoolNotFoundError(this.name, tokenMint, params.quoteMint);
       ammConfig = decodePoolAmmConfig(poolInfo.data);
     } else {
-      const result = await discoverCpmmPool(connection, tokenMint, quoteMintPk);
-      if (!result) throw new PoolNotFoundError(this.name, params.tokenMint, params.quoteMint);
+      const result = await discoverCpmmPool(connection, tokenMintPk, quoteMintPk);
+      if (!result) throw new PoolNotFoundError(this.name, tokenMint, params.quoteMint);
       poolId = result.poolId;
       ammConfig = result.ammConfig;
     }
 
     // Get token balance and compute sell amount
-    const baseTokenProgram = await getTokenProgramForMint(connection, tokenMint);
-    const balance = await getTokenBalance(connection, tokenMint, wallet.publicKey);
+    const baseTokenProgram = await getTokenProgramForMint(connection, tokenMintPk);
+    const balance = await getTokenBalance(connection, tokenMintPk, wallet.publicKey);
     const sellAmount = (balance.amount * BigInt(Math.floor(params.percentage))) / 100n;
     if (sellAmount === 0n) {
       return {
         txSignature: "",
         confirmed: false,
         amountIn: 0,
-        amountInToken: params.tokenMint,
+        amountInToken: tokenMint,
         dex: this.name,
         poolAddress: poolId.toBase58(),
       };
@@ -520,7 +523,7 @@ class RaydiumCpmmAdapter implements IDexAdapter {
     // Compute min out
     let minOut = 0n;
     try {
-      const reserves = await getPoolReserves(connection, poolId, tokenMint, quoteMintPk);
+      const reserves = await getPoolReserves(connection, poolId, tokenMintPk, quoteMintPk);
       const estOut = computeSwapOutAmount(reserves.base, reserves.quote, sellAmount);
       minOut = (estOut * BigInt(10000 - slippageBps)) / 10000n;
     } catch {
@@ -531,9 +534,9 @@ class RaydiumCpmmAdapter implements IDexAdapter {
     const cfg: CpmmSdkConfig = {
       ammConfig,
       poolState: poolId,
-      baseMint: tokenMint,
+      baseMint: tokenMintPk,
       quoteMint: quoteMintPk,
-      baseVault: getVaultPda(poolId, tokenMint),
+      baseVault: getVaultPda(poolId, tokenMintPk),
       quoteVault: getVaultPda(poolId, quoteMintPk),
       baseTokenProgram,
       quoteTokenProgram: TOKEN_PROGRAM_ID,
@@ -541,7 +544,7 @@ class RaydiumCpmmAdapter implements IDexAdapter {
 
     // Build ATAs
     const inputAta = await getAssociatedTokenAddress(
-      tokenMint,
+      tokenMintPk,
       wallet.publicKey,
       baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID),
       baseTokenProgram,
@@ -554,10 +557,10 @@ class RaydiumCpmmAdapter implements IDexAdapter {
       ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
       createAssociatedTokenAccountIdempotentInstruction(wallet.publicKey, outputAta, wallet.publicKey, quoteMintPk),
       createAssociatedTokenAccountIdempotentInstruction(
-        wallet.publicKey, inputAta, wallet.publicKey, tokenMint,
+        wallet.publicKey, inputAta, wallet.publicKey, tokenMintPk,
         baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
       ),
-      createCpmmSellIx(cfg, wallet.publicKey, tokenMint, inputAta, outputAta, sellAmount, minOut),
+      createCpmmSellIx(cfg, wallet.publicKey, tokenMintPk, inputAta, outputAta, sellAmount, minOut),
     ];
 
     // Submit via RPC send+confirm
@@ -568,7 +571,7 @@ class RaydiumCpmmAdapter implements IDexAdapter {
       txSignature: result.txSignature,
       confirmed: result.confirmed,
       amountIn: humanSellAmount,
-      amountInToken: params.tokenMint,
+      amountInToken: tokenMint,
       dex: this.name,
       poolAddress: poolId.toBase58(),
     };
@@ -670,10 +673,11 @@ class RaydiumCpmmAdapter implements IDexAdapter {
   // ----- Build swap instructions (for nonce/orchestrator integration) -----
 
   async buildSwapIxs(params: BuyParams | SellParams): Promise<BuildSwapIxsResult> {
+    const tokenMint = requireTokenMint(params, this.name);
     const connection = getConnection();
     const wallet = getWallet();
     const isBuy = "amountSol" in params;
-    const tokenMint = new PublicKey(params.tokenMint);
+    const tokenMintPk = new PublicKey(tokenMint);
     const quoteMintPk = params.quoteMint ? new PublicKey(params.quoteMint) : WSOL_MINT_PK;
 
     // Discover pool
@@ -683,23 +687,23 @@ class RaydiumCpmmAdapter implements IDexAdapter {
     if (params.poolAddress) {
       poolId = new PublicKey(params.poolAddress);
       const poolInfo = await connection.getAccountInfo(poolId);
-      if (!poolInfo) throw new PoolNotFoundError(this.name, params.tokenMint, params.quoteMint);
+      if (!poolInfo) throw new PoolNotFoundError(this.name, tokenMint, params.quoteMint);
       ammConfig = decodePoolAmmConfig(poolInfo.data);
     } else {
-      const result = await discoverCpmmPool(connection, tokenMint, quoteMintPk);
-      if (!result) throw new PoolNotFoundError(this.name, params.tokenMint, params.quoteMint);
+      const result = await discoverCpmmPool(connection, tokenMintPk, quoteMintPk);
+      if (!result) throw new PoolNotFoundError(this.name, tokenMint, params.quoteMint);
       poolId = result.poolId;
       ammConfig = result.ammConfig;
     }
 
-    const baseTokenProgram = await getTokenProgramForMint(connection, tokenMint);
+    const baseTokenProgram = await getTokenProgramForMint(connection, tokenMintPk);
 
     const cfg: CpmmSdkConfig = {
       ammConfig,
       poolState: poolId,
-      baseMint: tokenMint,
+      baseMint: tokenMintPk,
       quoteMint: quoteMintPk,
-      baseVault: getVaultPda(poolId, tokenMint),
+      baseVault: getVaultPda(poolId, tokenMintPk),
       quoteVault: getVaultPda(poolId, quoteMintPk),
       baseTokenProgram,
       quoteTokenProgram: TOKEN_PROGRAM_ID,
@@ -714,7 +718,7 @@ class RaydiumCpmmAdapter implements IDexAdapter {
 
       const inputAta = await getAssociatedTokenAddress(quoteMintPk, wallet.publicKey);
       const outputAta = await getAssociatedTokenAddress(
-        tokenMint,
+        tokenMintPk,
         wallet.publicKey,
         baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID),
         baseTokenProgram,
@@ -723,7 +727,7 @@ class RaydiumCpmmAdapter implements IDexAdapter {
       instructions.push(
         createAssociatedTokenAccountIdempotentInstruction(wallet.publicKey, inputAta, wallet.publicKey, quoteMintPk),
         createAssociatedTokenAccountIdempotentInstruction(
-          wallet.publicKey, outputAta, wallet.publicKey, tokenMint,
+          wallet.publicKey, outputAta, wallet.publicKey, tokenMintPk,
           baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID,
         ),
       );
@@ -736,18 +740,18 @@ class RaydiumCpmmAdapter implements IDexAdapter {
         );
       }
 
-      instructions.push(createCpmmBuyIx(cfg, wallet.publicKey, tokenMint, inputAta, outputAta, amountIn, 0n));
+      instructions.push(createCpmmBuyIx(cfg, wallet.publicKey, tokenMintPk, inputAta, outputAta, amountIn, 0n));
 
       if (quoteMintPk.equals(WSOL_MINT_PK)) {
         instructions.push(createCloseAccountInstruction(inputAta, wallet.publicKey, wallet.publicKey, [], TOKEN_PROGRAM_ID));
       }
     } else {
       const sellParams = params as SellParams;
-      const balance = await getTokenBalance(connection, tokenMint, wallet.publicKey);
+      const balance = await getTokenBalance(connection, tokenMintPk, wallet.publicKey);
       const sellAmount = (balance.amount * BigInt(Math.floor(sellParams.percentage))) / 100n;
 
       const inputAta = await getAssociatedTokenAddress(
-        tokenMint,
+        tokenMintPk,
         wallet.publicKey,
         baseTokenProgram.equals(TOKEN_2022_PROGRAM_ID),
         baseTokenProgram,
@@ -756,7 +760,7 @@ class RaydiumCpmmAdapter implements IDexAdapter {
 
       instructions.push(
         createAssociatedTokenAccountIdempotentInstruction(wallet.publicKey, outputAta, wallet.publicKey, quoteMintPk),
-        createCpmmSellIx(cfg, wallet.publicKey, tokenMint, inputAta, outputAta, sellAmount, 0n),
+        createCpmmSellIx(cfg, wallet.publicKey, tokenMintPk, inputAta, outputAta, sellAmount, 0n),
       );
     }
 

@@ -61,6 +61,7 @@ import {
   BuildSwapIxsResult,
   UnsupportedOperationError,
   PoolNotFoundError,
+  requireTokenMint,
   WSOL_MINT,
   USDC_MINT,
   USDT_MINT,
@@ -153,7 +154,8 @@ export class MeteoraDbcAdapter implements IDexAdapter {
   // ----- Core: buy -----
 
   async buy(params: BuyParams): Promise<SwapResult> {
-    const { tokenMint, amountSol, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { amountSol, quoteMint: quoteMintParam, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
     const quoteMintStr = quoteMintParam ?? WSOL_MINT;
@@ -208,7 +210,8 @@ export class MeteoraDbcAdapter implements IDexAdapter {
   // ----- Core: sell -----
 
   async sell(params: SellParams): Promise<SwapResult> {
-    const { tokenMint, percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
     const quoteMintStr = quoteMintParam ?? WSOL_MINT;
@@ -346,9 +349,10 @@ export class MeteoraDbcAdapter implements IDexAdapter {
     if ("percentage" in params) {
       // Sell
       const p = params as SellParams;
+      const tokenMint = requireTokenMint(p, this.name);
       if (!p.poolAddress) throw new Error("poolAddress required for DBC buildSwapIxs");
       const poolPk = new PublicKey(p.poolAddress);
-      const baseMintPk = new PublicKey(p.tokenMint);
+      const baseMintPk = new PublicKey(tokenMint);
       const baseTokenProgram = await detectTokenProgram(baseMintPk);
       const ata = await getAssociatedTokenAddress(baseMintPk, wallet.publicKey, false, baseTokenProgram);
       const tokenAccount = await getAccount(connection, ata, "confirmed", baseTokenProgram);

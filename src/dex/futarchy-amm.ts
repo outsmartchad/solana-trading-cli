@@ -57,6 +57,7 @@ import {
   PriceInfo,
   BuildSwapIxsResult,
   UnsupportedOperationError,
+  requireTokenMint,
   WSOL_MINT,
   USDC_MINT,
   DEFAULT_SLIPPAGE_BPS,
@@ -363,7 +364,8 @@ export class FutarchyAmmAdapter implements IDexAdapter {
   // ----- Core: buy -----
 
   async buy(params: BuyParams): Promise<SwapResult> {
-    const { tokenMint, amountSol, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { amountSol, quoteMint: quoteMintParam, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
 
@@ -459,7 +461,8 @@ export class FutarchyAmmAdapter implements IDexAdapter {
   // ----- Core: sell -----
 
   async sell(params: SellParams): Promise<SwapResult> {
-    const { tokenMint, percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
 
@@ -634,6 +637,7 @@ export class FutarchyAmmAdapter implements IDexAdapter {
   // ----- buildSwapIxs (for orchestrator / nonce integration) -----
 
   async buildSwapIxs(params: BuyParams | SellParams): Promise<BuildSwapIxsResult> {
+    const tokenMint = requireTokenMint(params, this.name);
     if ("percentage" in params) {
       throw new UnsupportedOperationError(this.name, "buildSwapIxs(sell)");
     }
@@ -646,7 +650,7 @@ export class FutarchyAmmAdapter implements IDexAdapter {
     }
 
     const dao = new PublicKey(buyParams.poolAddress);
-    const baseMint = new PublicKey(buyParams.tokenMint);
+    const baseMint = new PublicKey(tokenMint);
     const quoteMintStr = buyParams.quoteMint ?? WSOL_MINT;
     const quoteMint = new PublicKey(quoteMintStr);
 

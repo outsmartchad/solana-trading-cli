@@ -78,6 +78,7 @@ import {
   TxResult,
   UnsupportedOperationError,
   PoolNotFoundError,
+  requireTokenMint,
   WSOL_MINT,
   USDC_MINT,
   USDT_MINT,
@@ -221,7 +222,8 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
   // ----- Core: buy -----
 
   async buy(params: BuyParams): Promise<SwapResult> {
-    const { tokenMint, amountSol, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { amountSol, quoteMint: quoteMintParam, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
     const quoteMintStr = quoteMintParam ?? WSOL_MINT;
@@ -294,7 +296,8 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
   // ----- Core: sell -----
 
   async sell(params: SellParams): Promise<SwapResult> {
-    const { tokenMint, percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
+    const tokenMint = requireTokenMint(params, this.name);
+    const { percentage, quoteMint: quoteMintParam, poolAddress, opts } = params;
     const connection = getConnection();
     const wallet = getWallet();
     const quoteMintStr = quoteMintParam ?? WSOL_MINT;
@@ -451,12 +454,13 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
     if ("percentage" in params) {
       // Sell path
       const sellParams = params as SellParams;
+      const tokenMint = requireTokenMint(sellParams, this.name);
       const quoteMintStr = sellParams.quoteMint ?? WSOL_MINT;
       const poolPk = sellParams.poolAddress
         ? new PublicKey(sellParams.poolAddress)
-        : await this.resolvePool(sellParams.tokenMint, quoteMintStr);
+        : await this.resolvePool(tokenMint, quoteMintStr);
 
-      const baseMintPk = new PublicKey(sellParams.tokenMint);
+      const baseMintPk = new PublicKey(tokenMint);
       const quoteMintPk = new PublicKey(quoteMintStr);
 
       // Get balance
@@ -491,12 +495,13 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
 
     // Buy path
     const buyParams = params as BuyParams;
+    const tokenMint = requireTokenMint(buyParams, this.name);
     const quoteMintStr = buyParams.quoteMint ?? WSOL_MINT;
     const poolPk = buyParams.poolAddress
       ? new PublicKey(buyParams.poolAddress)
-      : await this.resolvePool(buyParams.tokenMint, quoteMintStr);
+      : await this.resolvePool(tokenMint, quoteMintStr);
 
-    const baseMintPk = new PublicKey(buyParams.tokenMint);
+    const baseMintPk = new PublicKey(tokenMint);
     const quoteMintPk = new PublicKey(quoteMintStr);
     const inputAmount = amountToLamports(buyParams.amountSol, quoteMintStr);
 
