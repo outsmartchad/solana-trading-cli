@@ -1195,6 +1195,223 @@ program
   });
 
 // ---------------------------------------------------------------------------
+// outsmart wallet
+// ---------------------------------------------------------------------------
+
+import {
+  listWallets,
+  addWallet,
+  switchWallet,
+  removeWallet,
+  getActiveWallet,
+  migrateFromEnvIfNeeded,
+} from "./helpers/wallets";
+
+const walletCmd = new Command("wallet")
+  .description("Manage wallets — show, add, switch, remove")
+  .action(async () => {
+    // Default action: show current wallet
+    const active = getActiveWallet();
+    if (!active) {
+      die("No wallet configured. Run 'outsmart init' or 'outsmart wallet add --label <name>'.");
+    }
+
+    const { getConnection } = await import("./helpers/config");
+    const connection = getConnection();
+    const lamports = await connection.getBalance(active.keypair.publicKey);
+    const sol = lamports / 1e9;
+
+    console.log();
+    console.log(`  label:   ${active.label}`);
+    console.log(`  address: ${active.keypair.publicKey.toBase58()}`);
+    console.log(`  balance: ${sol.toFixed(6)} SOL`);
+    console.log();
+  });
+
+walletCmd
+  .command("list")
+  .description("List all saved wallets")
+  .action(async () => {
+    const wallets = listWallets();
+    if (wallets.length === 0) {
+      die("No wallets saved. Run 'outsmart init' or 'outsmart wallet add --label <name>'.");
+    }
+
+    const { getConnection } = await import("./helpers/config");
+    const connection = getConnection();
+
+    console.log();
+    console.log("  LABEL              ADDRESS                                         SOL");
+    console.log("  " + "─".repeat(78));
+
+    for (const w of wallets) {
+      const marker = w.isActive ? " *" : "  ";
+      let solStr = "";
+      try {
+        const { PublicKey } = await import("@solana/web3.js");
+        const lamports = await connection.getBalance(new PublicKey(w.publicKey));
+        solStr = (lamports / 1e9).toFixed(4);
+      } catch {
+        solStr = "err";
+      }
+      console.log(`${marker} ${w.label.padEnd(18)} ${w.publicKey}  ${solStr}`);
+    }
+
+    console.log();
+    console.log("  * = active wallet");
+    console.log();
+  });
+
+walletCmd
+  .command("add")
+  .description("Add a new wallet")
+  .requiredOption("-l, --label <name>", "label for this wallet")
+  .action(async (opts) => {
+    const readline = await import("readline");
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    const ask = (q: string): Promise<string> =>
+      new Promise((resolve) => rl.question(q, (a) => resolve(a.trim())));
+
+    const privateKey = await ask("  Private key (base58): ");
+    rl.close();
+
+    if (!privateKey) {
+      die("Aborted — no private key provided.");
+    }
+
+    try {
+      const pubkey = addWallet(opts.label, privateKey);
+      console.log();
+      console.log(`  Added wallet "${opts.label}": ${pubkey}`);
+      console.log(`  Switch to it: outsmart wallet switch ${opts.label}`);
+      console.log();
+    } catch (e: any) {
+      die(e.message);
+    }
+  });
+
+walletCmd
+  .command("switch <label>")
+  .description("Switch the active wallet")
+  .action(async (label: string) => {
+    try {
+      const pubkey = switchWallet(label);
+      console.log();
+      console.log(`  Switched to "${label}": ${pubkey}`);
+      console.log();
+    } catch (e: any) {
+      die(e.message);
+    }
+  });
+
+walletCmd
+  .command("remove <label>")
+  .description("Remove a saved wallet")
+  .action(async (label: string) => {
+    // Validate wallet exists before asking for confirmation
+    const wallets = listWallets();
+    const exists = wallets.find((w) => w.label === label);
+    if (!exists) {
+      die(`Wallet "${label}" not found.`);
+    }
+
+    const readline = await import("readline");
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    const ask = (q: string): Promise<string> =>
+      new Promise((resolve) => rl.question(q, (a) => resolve(a.trim())));
+
+    const confirm = await ask(`  Remove wallet "${label}" (${exists.publicKey})? (yes/no): `);
+    rl.close();
+
+    if (confirm.toLowerCase() !== "yes" && confirm.toLowerCase() !== "y") {
+      console.log("\n  Aborted.\n");
+      return;
+    }
+
+    try {
+      removeWallet(label);
+      console.log();
+      console.log(`  Removed wallet "${label}".`);
+      console.log();
+    } catch (e: any) {
+      die(e.message);
+    }
+  });
+
+program.addCommand(walletCmd);
+
+// ---------------------------------------------------------------------------
+// outsmart balance
+// ---------------------------------------------------------------------------
+
+const balanceCmd = new Command("balance")
+  .description("Show token balances for the active wallet")
+  .option("-t, --token <mint>", "specific token mint to check")
+  .action(async (opts) => {
+    const { getConnection, getWallet } = await import("./helpers/config");
+    const { PublicKey } = await import("@solana/web3.js");
+    const { getAssociatedTokenAddress } = await import("@solana/spl-token");
+
+    const connection = getConnection();
+    const wallet = getWallet();
+    const pubkey = wallet.publicKey;
+
+    console.log();
+    console.log(`  Wallet: ${pubkey.toBase58()}`);
+    console.log();
+
+    if (opts.token) {
+      // Show specific token balance
+      validateBase58(opts.token, "--token");
+      const mintPk = new PublicKey(opts.token);
+      try {
+        const ata = await getAssociatedTokenAddress(mintPk, pubkey);
+        const res = await connection.getTokenAccountBalance(ata);
+        const symbol = formatMint(opts.token);
+        console.log(`  ${symbol.padEnd(10)} ${res.value.uiAmount ?? 0}`);
+      } catch {
+        console.log(`  ${formatMint(opts.token).padEnd(10)} 0`);
+      }
+      console.log();
+      return;
+    }
+
+    // Show SOL + stablecoin balances
+    const lamports = await connection.getBalance(pubkey);
+    const sol = lamports / 1e9;
+    console.log(`  ${"SOL".padEnd(10)} ${sol.toFixed(6)}`);
+
+    const stablecoins: [string, string][] = [
+      [USDC_MINT, "USDC"],
+      [USDT_MINT, "USDT"],
+      [USD1_MINT, "USD1"],
+    ];
+
+    for (const [mint, label] of stablecoins) {
+      try {
+        const mintPk = new PublicKey(mint);
+        const ata = await getAssociatedTokenAddress(mintPk, pubkey);
+        const res = await connection.getTokenAccountBalance(ata);
+        console.log(`  ${label.padEnd(10)} ${res.value.uiAmount ?? 0}`);
+      } catch {
+        console.log(`  ${label.padEnd(10)} 0`);
+      }
+    }
+
+    console.log();
+  });
+
+program.addCommand(balanceCmd);
+
+// ---------------------------------------------------------------------------
 // outsmart config
 // ---------------------------------------------------------------------------
 

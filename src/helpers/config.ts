@@ -47,23 +47,61 @@ export function loadKeypairFromFile(filename: string): Keypair {
 
 // --- Lazy wallet initialization ---
 // The wallet is NOT decoded at import time. Use getWallet() to access it.
+// Supports multi-wallet: checks wallets.json first, falls back to PRIVATE_KEY env.
 let _wallet: Keypair | null = null;
+let _walletKeyUsed: string | null = null; // track which key was used so switch works
 
 export function getWallet(): Keypair {
-  if (!_wallet) {
-    const key = process.env.PRIVATE_KEY;
-    if (!key) {
-      throw new Error(
-        "PRIVATE_KEY not set. Run 'outsmart init' to configure, or set PRIVATE_KEY in your environment."
-      );
+  // Check if the active key has changed (e.g. wallet switch)
+  const currentKey = process.env.PRIVATE_KEY || "";
+  if (_wallet && _walletKeyUsed === currentKey) {
+    return _wallet;
+  }
+
+  // Try to load from wallets.json first
+  try {
+    const walletsPath = path.join(
+      process.env.HOME || process.env.USERPROFILE || "~",
+      ".outsmart",
+      "wallets.json",
+    );
+    if (fs.existsSync(walletsPath)) {
+      const raw = fs.readFileSync(walletsPath, "utf-8");
+      const store = JSON.parse(raw);
+      if (store.active && store.wallets?.[store.active]?.privateKey) {
+        const key = store.wallets[store.active].privateKey;
+        _wallet = Keypair.fromSecretKey(bs58.decode(key));
+        _walletKeyUsed = currentKey;
+        return _wallet;
+      }
     }
-    try {
-      _wallet = Keypair.fromSecretKey(bs58.decode(key));
-    } catch (e) {
-      throw new Error("Invalid PRIVATE_KEY. Must be a valid base58-encoded Solana secret key.");
-    }
+  } catch {
+    // Fall through to PRIVATE_KEY
+  }
+
+  // Fall back to PRIVATE_KEY env var
+  const key = process.env.PRIVATE_KEY;
+  if (!key) {
+    throw new Error(
+      "No wallet configured. Run 'outsmart init' or 'outsmart wallet add --label <name>'."
+    );
+  }
+  try {
+    _wallet = Keypair.fromSecretKey(bs58.decode(key));
+    _walletKeyUsed = currentKey;
+  } catch (e) {
+    throw new Error("Invalid PRIVATE_KEY. Must be a valid base58-encoded Solana secret key.");
   }
   return _wallet;
+}
+
+/**
+ * Force reload wallet on next getWallet() call.
+ * Used after wallet switch to pick up the new active wallet.
+ */
+export function resetWalletCache(): void {
+  _wallet = null;
+  _walletKeyUsed = null;
 }
 
 // Backward compatibility: lazy getter that triggers on first access
