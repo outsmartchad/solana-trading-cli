@@ -88,6 +88,9 @@ export const ORCA_WHIRLPOOL_TOKEN = "8Jx8AAHj86wbQgUTjGuj6GTTL5Ps3cqxKRTvpaJApum
 export const FUTARCHY_AMM_POOL = "3D854kknnQhu9xVaRNV154oZ9oN2WF3tXsq3LDu7fFMn";
 export const FUTARCHY_AMM_TOKEN = "BANKJmvhT8tiJRsBSS1n2HryMBPvT5Ze4HU95DUAmeta";
 
+/** Byreal CLMM: token/USDC pool */
+export const BYREAL_CLMM_POOL = "5ZEnkehj47hWCAS3SzdEFY6PES1as2WJu3Gf3CWQwTRD";
+
 // ---------------------------------------------------------------------------
 // Test amounts
 //

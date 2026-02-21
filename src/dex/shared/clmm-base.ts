@@ -89,6 +89,11 @@ const EXTENSION_TICKARRAY_BITMAP_SIZE = 14;
 // PDA derivation — CLMM pool accounts
 // ---------------------------------------------------------------------------
 
+/**
+ * Convert i32 to 4-byte big-endian buffer.
+ * Note: Byreal & PancakeSwap CLMM forks use big-endian for tick array
+ * start index in PDA derivation (differs from Raydium CLMM which uses LE).
+ */
 function i32ToBytes(num: number): Buffer {
   const buf = Buffer.alloc(4);
   buf.writeInt32BE(num, 0);
@@ -112,7 +117,7 @@ function deriveTickArrayBitmapExtension(
   poolId: PublicKey,
 ): PublicKey {
   const [addr] = PublicKey.findProgramAddressSync(
-    [Buffer.from("tick_array_bitmap_extension"), poolId.toBuffer()],
+    [Buffer.from("pool_tick_array_bitmap_extension"), poolId.toBuffer()],
     programId,
   );
   return addr;
@@ -234,11 +239,12 @@ function decodePoolState(data: Buffer): ClmmPoolState {
   // rewardInfos [3 * 169 bytes = 507 bytes]
   offset += 507;
 
-  // tickArrayBitmap [16 * 16 bytes = 256 bytes]
+  // tickArrayBitmap [16 * u64 = 16 * 8 bytes = 128 bytes]
+  // Note: This is [u64; 16], NOT [u128; 16]. Each element is 8 bytes.
   const tickArrayBitmap: BN[] = [];
   for (let i = 0; i < 16; i++) {
-    tickArrayBitmap.push(new BN(data.subarray(offset, offset + 16), "le"));
-    offset += 16;
+    tickArrayBitmap.push(new BN(data.subarray(offset, offset + 8), "le"));
+    offset += 8;
   }
 
   return {
@@ -282,6 +288,8 @@ async function fetchClmmPoolState(
 interface ExBitmapInfo {
   poolId: PublicKey;
   exBitmapAddress: PublicKey;
+  /** Whether the bitmap extension account exists on-chain */
+  exists: boolean;
   positiveTickArrayBitmap: BN[][];
   negativeTickArrayBitmap: BN[][];
 }
@@ -303,6 +311,7 @@ async function getTickArrayBitmapExtension(
     return {
       poolId,
       exBitmapAddress,
+      exists: false,
       positiveTickArrayBitmap: emptyBitmaps,
       negativeTickArrayBitmap: emptyBitmaps,
     };
@@ -336,6 +345,7 @@ async function getTickArrayBitmapExtension(
   return {
     poolId,
     exBitmapAddress,
+    exists: true,
     positiveTickArrayBitmap,
     negativeTickArrayBitmap,
   };
@@ -344,13 +354,6 @@ async function getTickArrayBitmapExtension(
 // ---------------------------------------------------------------------------
 // Tick array bitmap search
 // ---------------------------------------------------------------------------
-
-function tickArrayStartIndexRange(tickSpacing: number): { min: number; max: number } {
-  const ticksPerArray = tickSpacing * TICK_ARRAY_SIZE;
-  const min = Math.ceil(MIN_TICK / ticksPerArray) * ticksPerArray;
-  const max = Math.floor(MAX_TICK / ticksPerArray) * ticksPerArray;
-  return { min, max };
-}
 
 function getNextTickArrayStartIndex(
   currentStartIndex: number,
@@ -375,54 +378,122 @@ function getTickArrayStartIndexForTick(
   return startIndex;
 }
 
-function mergeTickArrayBitmap(
-  poolBitmap: BN[],
-  exPositive: BN[][],
-  exNegative: BN[][],
-): BN[] {
-  // Pool bitmap: 16 * u64 (already 16 BN elements)
-  // Extension positive: EXTENSION_TICKARRAY_BITMAP_SIZE * 8 * u64
-  // Extension negative: EXTENSION_TICKARRAY_BITMAP_SIZE * 8 * u64
-  // Total negative (extension) + pool bitmap (8 negative + 8 positive) + positive (extension)
-  const merged: BN[] = [];
-
-  // Negative extension (reversed)
-  for (let i = exNegative.length - 1; i >= 0; i--) {
-    merged.push(...exNegative[i]);
+/**
+ * Merge an array of u64 BNs into a single large BN.
+ * Matches the reference SDK: b = sum(bns[i] << (64 * i))
+ */
+function mergeTickArrayBitmapToSingleBN(bns: BN[]): BN {
+  let b = new BN(0);
+  for (let i = 0; i < bns.length; i++) {
+    b = b.add(bns[i].shln(64 * i));
   }
-
-  // Pool bitmap (first 8 = negative, last 8 = positive)
-  merged.push(...poolBitmap);
-
-  // Positive extension
-  for (let i = 0; i < exPositive.length; i++) {
-    merged.push(...exPositive[i]);
-  }
-
-  return merged;
+  return b;
 }
 
+/**
+ * Check if a tick array is initialized using the pool's default bitmap.
+ * The default bitmap covers tick arrays within ±(tickSpacing * 60 * 512) of 0.
+ *
+ * Matches reference: compressed = floor(tick / multiplier) + 512
+ *                     bitPos = abs(compressed)
+ *                     isInit = bitmap.testn(bitPos)
+ */
 function checkTickArrayIsInitialized(
-  mergedBitmap: BN[],
+  bitmap: BN,
+  tick: number,
+  tickSpacing: number,
+): { isInitialized: boolean; startIndex: number } {
+  const multiplier = tickSpacing * TICK_ARRAY_SIZE;
+  const compressed = Math.floor(tick / multiplier) + 512;
+  const bitPos = Math.abs(compressed);
+  return {
+    isInitialized: bitmap.testn(bitPos),
+    startIndex: (bitPos - 512) * multiplier,
+  };
+}
+
+/**
+ * Check if tick indices overflow the default bitmap range.
+ * If so, the extension bitmap must be used.
+ */
+function isOverflowDefaultTickarrayBitmap(tickSpacing: number, tickIndices: number[]): boolean {
+  const ticksInOneBitmap = tickSpacing * TICK_ARRAY_SIZE * TICK_ARRAY_BITMAP_SIZE;
+  const maxTickBoundary = ticksInOneBitmap;
+  const minTickBoundary = -maxTickBoundary;
+
+  for (const tickIndex of tickIndices) {
+    const tickArrayStartIndex = getTickArrayStartIndexForTick(tickIndex, tickSpacing);
+    if (tickArrayStartIndex >= maxTickBoundary || tickArrayStartIndex < minTickBoundary) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Get the offset index into the extension bitmap array for a given tick index.
+ */
+function getBitmapOffset(tickIndex: number, tickSpacing: number): number {
+  const ticksInOneBitmap = tickSpacing * TICK_ARRAY_SIZE * TICK_ARRAY_BITMAP_SIZE;
+  let offset = Math.floor(Math.abs(tickIndex) / ticksInOneBitmap) - 1;
+  if (tickIndex < 0 && Math.abs(tickIndex) % ticksInOneBitmap === 0) offset--;
+  return offset;
+}
+
+/**
+ * Check if a tick array is initialized using the extension bitmap.
+ * Used for tick arrays outside the default bitmap range.
+ */
+function checkTickArrayIsInitInExtension(
   tickArrayStartIndex: number,
   tickSpacing: number,
-): boolean {
-  const ticksPerArray = tickSpacing * TICK_ARRAY_SIZE;
-  if (ticksPerArray === 0) return false;
-  const arrayIndex = Math.floor(tickArrayStartIndex / ticksPerArray);
-  const bitmapOffset = arrayIndex + TICK_ARRAY_BITMAP_SIZE - 1;
+  exBitmapInfo: { positiveTickArrayBitmap: BN[][]; negativeTickArrayBitmap: BN[][] },
+): { isInitialized: boolean; startIndex: number } {
+  const offset = getBitmapOffset(tickArrayStartIndex, tickSpacing);
+  const tickarrayBitmap = tickArrayStartIndex < 0
+    ? exBitmapInfo.negativeTickArrayBitmap[offset]
+    : exBitmapInfo.positiveTickArrayBitmap[offset];
 
-  if (bitmapOffset < 0 || bitmapOffset >= mergedBitmap.length * 64) {
-    return false;
+  if (!tickarrayBitmap) {
+    return { isInitialized: false, startIndex: tickArrayStartIndex };
   }
 
-  const wordIndex = Math.floor(bitmapOffset / 64);
-  const bitIndex = bitmapOffset % 64;
+  const ticksInOneBitmap = tickSpacing * TICK_ARRAY_SIZE * TICK_ARRAY_BITMAP_SIZE;
+  const tickArrayOffsetInBitmap = Math.floor(
+    (Math.abs(tickArrayStartIndex) % ticksInOneBitmap) / (tickSpacing * TICK_ARRAY_SIZE),
+  );
 
-  if (wordIndex >= mergedBitmap.length) return false;
+  const merged = mergeTickArrayBitmapToSingleBN(tickarrayBitmap);
+  return {
+    isInitialized: merged.testn(tickArrayOffsetInBitmap),
+    startIndex: tickArrayStartIndex,
+  };
+}
 
-  const word = mergedBitmap[wordIndex];
-  return !word.shrn(bitIndex).and(new BN(1)).isZero();
+/**
+ * Check if a specific tick array start index is initialized, using
+ * either the default bitmap or extension bitmap depending on range.
+ */
+function isTickArrayInitialized(
+  tickArrayStartIndex: number,
+  tickSpacing: number,
+  poolBitmap: BN[],
+  exBitmapInfo: { positiveTickArrayBitmap: BN[][]; negativeTickArrayBitmap: BN[][] },
+): boolean {
+  const isOverflow = isOverflowDefaultTickarrayBitmap(tickSpacing, [tickArrayStartIndex]);
+
+  if (isOverflow) {
+    const result = checkTickArrayIsInitInExtension(
+      tickArrayStartIndex,
+      tickSpacing,
+      exBitmapInfo,
+    );
+    return result.isInitialized;
+  } else {
+    const merged = mergeTickArrayBitmapToSingleBN(poolBitmap);
+    const result = checkTickArrayIsInitialized(merged, tickArrayStartIndex, tickSpacing);
+    return result.isInitialized;
+  }
 }
 
 interface FirstTickArrayResult {
@@ -431,7 +502,16 @@ interface FirstTickArrayResult {
   nextAccountMeta?: PublicKey;
 }
 
-function findFirstInitializedTickArrayFromBitmap(
+/**
+ * Find the first initialized tick array, starting from the current tick's array.
+ *
+ * Algorithm (matches reference tick-array-sdk.ts):
+ * 1. Check if the current tick's tick array is initialized in the bitmap.
+ * 2. If yes, verify it exists on-chain and return it.
+ * 3. If no, walk in the swap direction to find the next initialized one.
+ */
+async function findFirstInitializedTickArrayFromBitmap(
+  connection: Connection,
   programId: PublicKey,
   poolId: PublicKey,
   poolState: {
@@ -441,39 +521,77 @@ function findFirstInitializedTickArrayFromBitmap(
     exBitmapInfo: { positiveTickArrayBitmap: BN[][]; negativeTickArrayBitmap: BN[][] };
   },
   zeroForOne: boolean,
-): FirstTickArrayResult {
-  const mergedBitmap = mergeTickArrayBitmap(
-    poolState.tickArrayBitmap,
-    poolState.exBitmapInfo.positiveTickArrayBitmap,
-    poolState.exBitmapInfo.negativeTickArrayBitmap,
-  );
-
+): Promise<FirstTickArrayResult> {
   const currentStartIndex = getTickArrayStartIndexForTick(
     poolState.tickCurrent,
     poolState.tickSpacing,
   );
 
-  const { min: minStart, max: maxStart } = tickArrayStartIndexRange(poolState.tickSpacing);
-  const maxSearchDistance = 20;
+  // Step 1: Check if the current tick's array is initialized
+  const isOverflow = isOverflowDefaultTickarrayBitmap(poolState.tickSpacing, [poolState.tickCurrent]);
 
-  let searchIndex = currentStartIndex;
-  for (let i = 0; i < maxSearchDistance; i++) {
-    if (searchIndex < minStart || searchIndex > maxStart) break;
+  let isInit = false;
+  let startIndex = currentStartIndex;
 
-    if (checkTickArrayIsInitialized(mergedBitmap, searchIndex, poolState.tickSpacing)) {
-      const tickArrayAddr = deriveTickArray(programId, poolId, searchIndex);
+  if (isOverflow) {
+    const result = checkTickArrayIsInitInExtension(
+      currentStartIndex,
+      poolState.tickSpacing,
+      poolState.exBitmapInfo,
+    );
+    isInit = result.isInitialized;
+    startIndex = result.startIndex;
+  } else {
+    const merged = mergeTickArrayBitmapToSingleBN(poolState.tickArrayBitmap);
+    const result = checkTickArrayIsInitialized(merged, poolState.tickCurrent, poolState.tickSpacing);
+    isInit = result.isInitialized;
+    startIndex = result.startIndex;
+  }
+
+  if (isInit) {
+    // Verify on-chain before returning
+    const tickArrayAddr = deriveTickArray(programId, poolId, startIndex);
+    const info = await connection.getAccountInfo(tickArrayAddr);
+    if (info && info.owner.equals(programId)) {
       return {
         isExist: true,
-        startIndex: searchIndex,
+        startIndex,
         nextAccountMeta: tickArrayAddr,
       };
     }
+  }
 
-    searchIndex = getNextTickArrayStartIndex(
+  // Step 2: Walk in the swap direction to find the next initialized tick array
+  const ticksPerArray = poolState.tickSpacing * TICK_ARRAY_SIZE;
+  const maxSearchDistance = 20;
+  let searchIndex = currentStartIndex;
+
+  for (let i = 0; i < maxSearchDistance; i++) {
+    searchIndex = zeroForOne
+      ? searchIndex - ticksPerArray
+      : searchIndex + ticksPerArray;
+
+    if (searchIndex < MIN_TICK || searchIndex > MAX_TICK) break;
+
+    const initCheck = isTickArrayInitialized(
       searchIndex,
       poolState.tickSpacing,
-      zeroForOne,
+      poolState.tickArrayBitmap,
+      poolState.exBitmapInfo,
     );
+
+    if (initCheck) {
+      // Verify on-chain
+      const tickArrayAddr = deriveTickArray(programId, poolId, searchIndex);
+      const info = await connection.getAccountInfo(tickArrayAddr);
+      if (info && info.owner.equals(programId)) {
+        return {
+          isExist: true,
+          startIndex: searchIndex,
+          nextAccountMeta: tickArrayAddr,
+        };
+      }
+    }
   }
 
   return { isExist: false, startIndex: currentStartIndex };
@@ -554,6 +672,16 @@ async function deriveClmmPoolAccounts(
 // Swap IX builder
 // ---------------------------------------------------------------------------
 
+/**
+ * Create a CLMM swap_v2 instruction.
+ *
+ * @param zeroForOne  - Swap direction: true = token0→token1, false = token1→token0.
+ *                      Determines which vault is input/output.
+ * @param isExactInput - true = `amount` is the exact input (typical case).
+ *                       false = `amount` is the exact output desired.
+ *                       For isExactInput=true,  otherAmountThreshold = min output (0 = unlimited).
+ *                       For isExactInput=false, otherAmountThreshold = max input (u64::MAX = unlimited).
+ */
 function createClmmSwapIx(
   programId: PublicKey,
   poolAccounts: ClmmPoolAccounts,
@@ -563,14 +691,15 @@ function createClmmSwapIx(
   amount: bigint,
   otherAmountThreshold: bigint,
   sqrtPriceLimitX64: BN,
-  isBaseInput: boolean,
+  zeroForOne: boolean,
+  isExactInput: boolean,
   tickArrays: PublicKey[],
   inputVaultMint: PublicKey,
   outputVaultMint: PublicKey,
-  tickArrayBitmapExtension: PublicKey,
+  tickArrayBitmapExtension: PublicKey | null,
 ): TransactionInstruction {
-  const inputVault = isBaseInput ? poolAccounts.tokenVault0 : poolAccounts.tokenVault1;
-  const outputVault = isBaseInput ? poolAccounts.tokenVault1 : poolAccounts.tokenVault0;
+  const inputVault = zeroForOne ? poolAccounts.tokenVault0 : poolAccounts.tokenVault1;
+  const outputVault = zeroForOne ? poolAccounts.tokenVault1 : poolAccounts.tokenVault0;
 
   const accounts = [
     { pubkey: payer, isSigner: true, isWritable: true },
@@ -588,7 +717,7 @@ function createClmmSwapIx(
     { pubkey: outputVaultMint, isSigner: false, isWritable: false },
   ];
 
-  // Remaining accounts: bitmap extension + tick arrays
+  // Remaining accounts: bitmap extension (only if exists on-chain) + tick arrays
   const remainingAccounts = [];
   if (tickArrayBitmapExtension) {
     remainingAccounts.push({
@@ -617,7 +746,7 @@ function createClmmSwapIx(
   const sqrtPriceBytes = sqrtPriceLimitX64.toArrayLike(Buffer, "le", 16);
   sqrtPriceBytes.copy(data, off);
   off += 16;
-  data.writeUInt8(isBaseInput ? 1 : 0, off);
+  data.writeUInt8(isExactInput ? 1 : 0, off);
 
   return new TransactionInstruction({
     keys: [...accounts, ...remainingAccounts],
@@ -654,6 +783,35 @@ function sqrtPriceX64ToPrice(sqrtPriceX64: BN, decimalsA: number, decimalsB: num
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Compute the sqrt price limit for a swap.
+ * zeroForOne=true (price decreasing): limit = MIN_SQRT_PRICE_X64 + 1
+ * zeroForOne=false (price increasing): limit = MAX_SQRT_PRICE_X64 - 1
+ */
+function computeSqrtPriceLimit(currentSqrtPrice: BN, zeroForOne: boolean): BN {
+  if (zeroForOne) {
+    const minPlusOne = MIN_SQRT_PRICE_X64.add(new BN(1));
+    if (minPlusOne.lt(currentSqrtPrice)) {
+      return minPlusOne;
+    }
+    const fallback = currentSqrtPrice.sub(new BN(1));
+    if (fallback.lte(MIN_SQRT_PRICE_X64)) {
+      return MIN_SQRT_PRICE_X64.add(new BN(1));
+    }
+    return fallback;
+  } else {
+    const maxMinusOne = MAX_SQRT_PRICE_X64.sub(new BN(1));
+    if (maxMinusOne.gt(currentSqrtPrice)) {
+      return maxMinusOne;
+    }
+    const fallback = currentSqrtPrice.add(new BN(1));
+    if (fallback.gte(MAX_SQRT_PRICE_X64)) {
+      return MAX_SQRT_PRICE_X64.sub(new BN(1));
+    }
+    return fallback;
+  }
+}
 
 function quoteDecimals(quoteMintStr: string): number {
   return SIX_DECIMAL_MINTS.has(quoteMintStr) ? 6 : 9;
@@ -911,65 +1069,17 @@ export class ClmmBaseAdapter implements IDexAdapter {
     };
   }
 
-  // ---- Internal: build raw swap instructions ----
+  // ---- Internal: resolve tick arrays for swap ----
 
-  private async doBuildSwapIxs(
-    tokenMint: string,
-    amountSol: number,
-    quoteMintStr: string,
-    poolAddress: string,
-  ): Promise<BuildSwapIxsResult> {
-    const connection = getConnection();
-    const wallet = getWallet();
-    const poolId = new PublicKey(poolAddress);
-    const baseMint = new PublicKey(tokenMint);
-    const quoteMint = new PublicKey(quoteMintStr);
-
-    // 1. Derive pool accounts
-    const poolAccounts = await deriveClmmPoolAccounts(connection, poolId, this.programId);
-
-    // 2. Fetch pool state
-    const poolState = await fetchClmmPoolState(connection, poolId, this.programId);
-
-    // 3. Determine swap direction
-    const inputMint = quoteMint;
-    const outputMint = baseMint;
-    const isBaseInput = poolState.tokenMint0.equals(inputMint);
-
-    // 4. Calculate amount
-    const amountIn = amountToSmallestUnit(amountSol, quoteMintStr);
-
-    // 5. Sqrt price limit
-    const currentSqrtPrice = poolState.sqrtPriceX64;
-    let sqrtPriceLimitX64: BN;
-    if (isBaseInput) {
-      const minPlusOne = MIN_SQRT_PRICE_X64.add(new BN(1));
-      sqrtPriceLimitX64 = minPlusOne.lt(currentSqrtPrice)
-        ? minPlusOne
-        : currentSqrtPrice.sub(new BN(1));
-      if (sqrtPriceLimitX64.lte(MIN_SQRT_PRICE_X64)) {
-        sqrtPriceLimitX64 = MIN_SQRT_PRICE_X64.add(new BN(1));
-      }
-    } else {
-      const maxMinusOne = MAX_SQRT_PRICE_X64.sub(new BN(1));
-      sqrtPriceLimitX64 = maxMinusOne.gt(currentSqrtPrice)
-        ? maxMinusOne
-        : currentSqrtPrice.add(new BN(1));
-      if (sqrtPriceLimitX64.gte(MAX_SQRT_PRICE_X64)) {
-        sqrtPriceLimitX64 = MAX_SQRT_PRICE_X64.sub(new BN(1));
-      }
-    }
-
-    // 6. Get bitmap extension
-    const exBitmapInfo = await getTickArrayBitmapExtension(
-      this.programId,
-      poolId,
+  private async resolveTickArrays(
+    connection: Connection,
+    poolId: PublicKey,
+    poolState: ClmmPoolState,
+    exBitmapInfo: ExBitmapInfo,
+    zeroForOne: boolean,
+  ): Promise<{ tickArrays: PublicKey[]; firstResult: FirstTickArrayResult }> {
+    let firstResult = await findFirstInitializedTickArrayFromBitmap(
       connection,
-    );
-
-    // 7. Find initialized tick arrays
-    const zeroForOne = isBaseInput;
-    let firstResult = findFirstInitializedTickArrayFromBitmap(
       this.programId,
       poolId,
       {
@@ -1021,6 +1131,59 @@ export class ClmmBaseAdapter implements IDexAdapter {
       }
     }
 
+    return { tickArrays, firstResult };
+  }
+
+  // ---- Internal: build raw swap instructions ----
+
+  private async doBuildSwapIxs(
+    tokenMint: string,
+    amountSol: number,
+    quoteMintStr: string,
+    poolAddress: string,
+  ): Promise<BuildSwapIxsResult> {
+    const connection = getConnection();
+    const wallet = getWallet();
+    const poolId = new PublicKey(poolAddress);
+    const baseMint = new PublicKey(tokenMint);
+    const quoteMint = new PublicKey(quoteMintStr);
+
+    // 1. Derive pool accounts
+    const poolAccounts = await deriveClmmPoolAccounts(connection, poolId, this.programId);
+
+    // 2. Fetch pool state
+    const poolState = await fetchClmmPoolState(connection, poolId, this.programId);
+
+    // 3. Determine swap direction
+    // inputMint is what we're spending (quoteMint), outputMint is what we're receiving (baseMint)
+    const inputMint = quoteMint;
+    const outputMint = baseMint;
+    // zeroForOne = true means token0→token1 (price decreasing)
+    // zeroForOne = false means token1→token0 (price increasing)
+    const zeroForOne = poolState.tokenMint0.equals(inputMint);
+
+    // 4. Calculate amount
+    const amountIn = amountToSmallestUnit(amountSol, quoteMintStr);
+
+    // 5. Sqrt price limit
+    const sqrtPriceLimitX64 = computeSqrtPriceLimit(poolState.sqrtPriceX64, zeroForOne);
+
+    // 6. Get bitmap extension
+    const exBitmapInfo = await getTickArrayBitmapExtension(
+      this.programId,
+      poolId,
+      connection,
+    );
+
+    // 7. Find initialized tick arrays
+    const { tickArrays } = await this.resolveTickArrays(
+      connection,
+      poolId,
+      poolState,
+      exBitmapInfo,
+      zeroForOne,
+    );
+
     // 8. Get user ATAs
     const inputMintTokenProgram = await getTokenProgramForMint(connection, inputMint);
     const outputMintTokenProgram = await getTokenProgramForMint(connection, outputMint);
@@ -1038,9 +1201,9 @@ export class ClmmBaseAdapter implements IDexAdapter {
       outputMintTokenProgram,
     );
 
-    // 9. Build swap IX
-    const inputVaultMint = isBaseInput ? poolState.tokenMint0 : poolState.tokenMint1;
-    const outputVaultMint = isBaseInput ? poolState.tokenMint1 : poolState.tokenMint0;
+    // 9. Build swap IX (always exact-input mode: is_base_input=true, threshold=0)
+    const inputVaultMint = zeroForOne ? poolState.tokenMint0 : poolState.tokenMint1;
+    const outputVaultMint = zeroForOne ? poolState.tokenMint1 : poolState.tokenMint0;
 
     const swapIx = createClmmSwapIx(
       this.programId,
@@ -1049,13 +1212,14 @@ export class ClmmBaseAdapter implements IDexAdapter {
       inputAta,
       outputAta,
       amountIn,
-      BigInt(0), // unlimited slippage for raw IX
+      BigInt(0), // min output = 0 (unlimited slippage)
       sqrtPriceLimitX64,
-      isBaseInput,
+      zeroForOne,
+      true, // isExactInput = true (amount is the input amount)
       tickArrays,
       inputVaultMint,
       outputVaultMint,
-      exBitmapInfo.exBitmapAddress,
+      exBitmapInfo.exists ? exBitmapInfo.exBitmapAddress : null,
     );
 
     // 10. Create ATA instructions
@@ -1166,28 +1330,11 @@ export class ClmmBaseAdapter implements IDexAdapter {
     // 3. For sell: input is baseMint (token being sold), output is quoteMint
     const inputMint = baseMint;
     const outputMint = quoteMint;
-    const isBaseInput = poolState.tokenMint0.equals(inputMint);
+    // zeroForOne = true means token0→token1. For sell, input is the token.
+    const zeroForOne = poolState.tokenMint0.equals(inputMint);
 
     // 4. Sqrt price limit
-    const currentSqrtPrice = poolState.sqrtPriceX64;
-    let sqrtPriceLimitX64: BN;
-    if (isBaseInput) {
-      const minPlusOne = MIN_SQRT_PRICE_X64.add(new BN(1));
-      sqrtPriceLimitX64 = minPlusOne.lt(currentSqrtPrice)
-        ? minPlusOne
-        : currentSqrtPrice.sub(new BN(1));
-      if (sqrtPriceLimitX64.lte(MIN_SQRT_PRICE_X64)) {
-        sqrtPriceLimitX64 = MIN_SQRT_PRICE_X64.add(new BN(1));
-      }
-    } else {
-      const maxMinusOne = MAX_SQRT_PRICE_X64.sub(new BN(1));
-      sqrtPriceLimitX64 = maxMinusOne.gt(currentSqrtPrice)
-        ? maxMinusOne
-        : currentSqrtPrice.add(new BN(1));
-      if (sqrtPriceLimitX64.gte(MAX_SQRT_PRICE_X64)) {
-        sqrtPriceLimitX64 = MAX_SQRT_PRICE_X64.sub(new BN(1));
-      }
-    }
+    const sqrtPriceLimitX64 = computeSqrtPriceLimit(poolState.sqrtPriceX64, zeroForOne);
 
     // 5. Get bitmap extension
     const exBitmapInfo = await getTickArrayBitmapExtension(
@@ -1197,57 +1344,13 @@ export class ClmmBaseAdapter implements IDexAdapter {
     );
 
     // 6. Find initialized tick arrays
-    const zeroForOne = isBaseInput;
-    let firstResult = findFirstInitializedTickArrayFromBitmap(
-      this.programId,
+    const { tickArrays } = await this.resolveTickArrays(
+      connection,
       poolId,
-      {
-        tickCurrent: poolState.tickCurrent,
-        tickSpacing: poolState.tickSpacing,
-        tickArrayBitmap: poolState.tickArrayBitmap,
-        exBitmapInfo: {
-          positiveTickArrayBitmap: exBitmapInfo.positiveTickArrayBitmap,
-          negativeTickArrayBitmap: exBitmapInfo.negativeTickArrayBitmap,
-        },
-      },
+      poolState,
+      exBitmapInfo,
       zeroForOne,
     );
-
-    if (!firstResult.isExist) {
-      firstResult = await findFirstInitializedTickArrayBruteForce(
-        connection,
-        this.programId,
-        poolId,
-        poolState.tickCurrent,
-        poolState.tickSpacing,
-        zeroForOne,
-      );
-    }
-
-    if (!firstResult.isExist || !firstResult.nextAccountMeta) {
-      throw new Error(
-        `No initialized tick array found for pool ${poolId.toBase58()}. ` +
-        `Current tick: ${poolState.tickCurrent}, Tick spacing: ${poolState.tickSpacing}`,
-      );
-    }
-
-    // Build tick array list (up to 4)
-    const tickArrays: PublicKey[] = [firstResult.nextAccountMeta];
-    let currentStartIndex = firstResult.startIndex;
-    for (let i = 1; i < 4; i++) {
-      currentStartIndex = getNextTickArrayStartIndex(
-        currentStartIndex,
-        poolState.tickSpacing,
-        zeroForOne,
-      );
-      const addr = deriveTickArray(this.programId, poolId, currentStartIndex);
-      const info = await connection.getAccountInfo(addr);
-      if (info && info.owner.equals(this.programId)) {
-        tickArrays.push(addr);
-      } else {
-        break;
-      }
-    }
 
     // 7. Get user ATAs
     const inputMintTokenProgram = await getTokenProgramForMint(connection, inputMint);
@@ -1266,9 +1369,9 @@ export class ClmmBaseAdapter implements IDexAdapter {
       outputMintTokenProgram,
     );
 
-    // 8. Build swap IX
-    const inputVaultMint = isBaseInput ? poolState.tokenMint0 : poolState.tokenMint1;
-    const outputVaultMint = isBaseInput ? poolState.tokenMint1 : poolState.tokenMint0;
+    // 8. Build swap IX (always exact-input mode: is_base_input=true, threshold=0)
+    const inputVaultMint = zeroForOne ? poolState.tokenMint0 : poolState.tokenMint1;
+    const outputVaultMint = zeroForOne ? poolState.tokenMint1 : poolState.tokenMint0;
 
     const swapIx = createClmmSwapIx(
       this.programId,
@@ -1277,13 +1380,14 @@ export class ClmmBaseAdapter implements IDexAdapter {
       inputAta,
       outputAta,
       BigInt(sellAmount.toString()),
-      BigInt(0), // min out — unlimited slippage
+      BigInt(0), // min output = 0 (unlimited slippage)
       sqrtPriceLimitX64,
-      isBaseInput,
+      zeroForOne,
+      true, // isExactInput = true (amount is the input amount)
       tickArrays,
       inputVaultMint,
       outputVaultMint,
-      exBitmapInfo.exBitmapAddress,
+      exBitmapInfo.exists ? exBitmapInfo.exBitmapAddress : null,
     );
 
     // 9. Compose full transaction
