@@ -14,8 +14,8 @@ import {
   BUY_AMOUNT_SOL,
   SELL_PERCENTAGE,
   WSOL,
-  USDC,
-  ORCA_SOL_USDC,
+  ORCA_WHIRLPOOL_POOL,
+  ORCA_WHIRLPOOL_TOKEN,
 } from "./helpers";
 
 beforeAll(async () => {
@@ -24,6 +24,8 @@ beforeAll(async () => {
 
 describe("orca", () => {
   const adapter = getDexAdapter("orca");
+  const pool = ORCA_WHIRLPOOL_POOL;
+  const token = ORCA_WHIRLPOOL_TOKEN;
 
   test("capabilities check", () => {
     expect(adapter.capabilities.canBuy).toBe(true);
@@ -33,31 +35,31 @@ describe("orca", () => {
     expect(adapter.capabilities.canFindPool).toBe(false);
   });
 
-  test("getPrice: SOL/USDC Whirlpool", async () => {
-    const price = await adapter.getPrice!(ORCA_SOL_USDC);
+  test("getPrice: Orca Whirlpool", async () => {
+    const price = await adapter.getPrice!(pool);
     logResult("orca getPrice", price);
     expect(price.price).toBeGreaterThan(0);
     expect(price.source).toBe("on-chain");
   });
 
-  test("buy: 0.001 SOL worth of USDC", async () => {
+  test("buy: 0.02 SOL worth of token", async () => {
     await delay();
     const result = await adapter.buy({
-      tokenMint: USDC,
+      tokenMint: token,
       amountSol: BUY_AMOUNT_SOL,
-      poolAddress: ORCA_SOL_USDC,
+      poolAddress: pool,
     });
     logResult("orca buy", result);
     expect(result.txSignature).toBeTruthy();
     expect(result.dex).toBe("orca");
   });
 
-  test("sell: 100% of USDC via Orca", async () => {
-    await delay(5000);
+  test("sell: 100% of token just bought", async () => {
+    await delay(10000);
     const result = await adapter.sell!({
-      tokenMint: USDC,
+      tokenMint: token,
       percentage: SELL_PERCENTAGE,
-      poolAddress: ORCA_SOL_USDC,
+      poolAddress: pool,
     });
     logResult("orca sell", result);
     expect(result.txSignature).toBeTruthy();

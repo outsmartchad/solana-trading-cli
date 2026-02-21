@@ -29,6 +29,7 @@ import {
   createCloseAccountInstruction,
   createSyncNativeInstruction,
   getAssociatedTokenAddress,
+  getAssociatedTokenAddressSync,
   getAccount,
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
@@ -331,6 +332,7 @@ export class OrcaAdapter implements IDexAdapter {
     const connection = getConnection();
     const wallet = getWallet();
     const quoteMintStr = quoteMintParam ?? WSOL_MINT;
+    const isInputWSOL = quoteMintStr === WSOL_MINT;
 
     if (!poolAddress) {
       throw new Error("orca: poolAddress is required (auto-discovery not yet supported)");
@@ -356,14 +358,54 @@ export class OrcaAdapter implements IDexAdapter {
 
     const web3Instructions = convertInstructions(instructions);
 
-    // Build full TX with compute budget
+    // Detect output token program
+    const outputMintPk = new PublicKey(tokenMint);
+    const outputTokenProgram = await getTokenProgramForMint(outputMintPk);
+
     const cuLimit = opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT;
     const cuPrice = opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
-    const allIxs: TransactionInstruction[] = [
-      ComputeBudgetProgram.setComputeUnitLimit({ units: cuLimit }),
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: cuPrice }),
-      ...web3Instructions,
-    ];
+
+    let allIxs: TransactionInstruction[];
+
+    if (isInputWSOL) {
+      // Orca SDK creates a temporary keypair for WSOL wrapping that we can't
+      // extract (CryptoKey is non-exportable). Handle WSOL wrapping ourselves:
+      // create user's WSOL ATA, wrap SOL, patch Orca's swap IX, close ATA.
+      const inputAta = getAssociatedTokenAddressSync(
+        new PublicKey(WSOL_MINT), wallet.publicKey, false, TOKEN_PROGRAM_ID,
+      );
+      const outputAta = getAssociatedTokenAddressSync(
+        outputMintPk, wallet.publicKey, false, outputTokenProgram,
+      );
+
+      const { swapIxs: patchedSwapIxs } = patchOrcaWsolAta(web3Instructions, inputAta);
+
+      allIxs = [
+        ComputeBudgetProgram.setComputeUnitLimit({ units: cuLimit }),
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: cuPrice }),
+        createAssociatedTokenAccountIdempotentInstruction(
+          wallet.publicKey, outputAta, wallet.publicKey, outputMintPk, outputTokenProgram,
+        ),
+        createAssociatedTokenAccountIdempotentInstruction(
+          wallet.publicKey, inputAta, wallet.publicKey, new PublicKey(WSOL_MINT), TOKEN_PROGRAM_ID,
+        ),
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: inputAta,
+          lamports: Math.floor(amountSol * LAMPORTS_PER_SOL),
+        }),
+        createSyncNativeInstruction(inputAta, TOKEN_PROGRAM_ID),
+        ...patchedSwapIxs,
+        createCloseAccountInstruction(inputAta, wallet.publicKey, wallet.publicKey, [], TOKEN_PROGRAM_ID),
+      ];
+    } else {
+      // Non-WSOL input: use SDK instructions directly (no temp keypair needed)
+      allIxs = [
+        ComputeBudgetProgram.setComputeUnitLimit({ units: cuLimit }),
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: cuPrice }),
+        ...web3Instructions,
+      ];
+    }
 
     // Submit via RPC send+confirm
     const result = await sendAndConfirmVtx(connection, allIxs, wallet);
@@ -428,14 +470,39 @@ export class OrcaAdapter implements IDexAdapter {
 
     const web3Instructions = convertInstructions(instructions);
 
-    // Build full TX with compute budget
+    const isOutputWSOL = quoteMintStr === WSOL_MINT;
     const cuLimit = opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT;
     const cuPrice = opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
-    const allIxs: TransactionInstruction[] = [
-      ComputeBudgetProgram.setComputeUnitLimit({ units: cuLimit }),
-      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: cuPrice }),
-      ...web3Instructions,
-    ];
+
+    let allIxs: TransactionInstruction[];
+
+    if (isOutputWSOL) {
+      // Orca SDK creates a temp keypair for output WSOL ATA (non-extractable
+      // CryptoKey). Handle WSOL output ourselves: create user's WSOL ATA,
+      // patch Orca swap IXs, close WSOL ATA after to unwrap SOL.
+      const userWsolAta = getAssociatedTokenAddressSync(
+        new PublicKey(WSOL_MINT), wallet.publicKey, false, TOKEN_PROGRAM_ID,
+      );
+
+      const { swapIxs: patchedSwapIxs } = patchOrcaWsolAta(web3Instructions, userWsolAta);
+
+      allIxs = [
+        ComputeBudgetProgram.setComputeUnitLimit({ units: cuLimit }),
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: cuPrice }),
+        createAssociatedTokenAccountIdempotentInstruction(
+          wallet.publicKey, userWsolAta, wallet.publicKey, new PublicKey(WSOL_MINT), TOKEN_PROGRAM_ID,
+        ),
+        ...patchedSwapIxs,
+        createCloseAccountInstruction(userWsolAta, wallet.publicKey, wallet.publicKey, [], TOKEN_PROGRAM_ID),
+      ];
+    } else {
+      // Non-WSOL output: SDK instructions should work as-is
+      allIxs = [
+        ComputeBudgetProgram.setComputeUnitLimit({ units: cuLimit }),
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: cuPrice }),
+        ...web3Instructions,
+      ];
+    }
 
     // Submit via RPC send+confirm
     const result = await sendAndConfirmVtx(connection, allIxs, wallet);
@@ -650,6 +717,17 @@ export class OrcaAdapter implements IDexAdapter {
     );
 
     const web3Instructions = convertInstructions(instructions);
+
+    // If input is WSOL, Orca SDK creates a temp keypair we can't sign with.
+    // Return only the patched whirlpool swap IX; caller must handle WSOL wrapping.
+    const isInputWSOL = quoteMintStr === WSOL_MINT;
+    if (isInputWSOL) {
+      const userWsolAta = getAssociatedTokenAddressSync(
+        new PublicKey(WSOL_MINT), wallet.publicKey, false, TOKEN_PROGRAM_ID,
+      );
+      const { swapIxs } = patchOrcaWsolAta(web3Instructions, userWsolAta);
+      return { instructions: swapIxs, signers: [] };
+    }
 
     return {
       instructions: web3Instructions,

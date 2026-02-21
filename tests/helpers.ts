@@ -80,6 +80,10 @@ export const METEORA_DLMM_MET_SOL = "AsSyvUnbfaZJPRrNh3kUuvZTeHKoMVWEoHz86f4Q5D9
 /** Orca Whirlpool: SOL/USDC */
 export const ORCA_SOL_USDC = "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE";
 
+/** Orca Whirlpool: SOL/pump-token pool for testing buy/sell */
+export const ORCA_WHIRLPOOL_POOL = "GpuWWgWuiWkn9fL6EQK55rdwQExkwQJsjuDmhnT3otdK";
+export const ORCA_WHIRLPOOL_TOKEN = "8Jx8AAHj86wbQgUTjGuj6GTTL5Ps3cqxKRTvpaJApump";
+
 // ---------------------------------------------------------------------------
 // Test amounts
 //
