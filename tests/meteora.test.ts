@@ -1,7 +1,7 @@
 /**
  * Mainnet integration tests for Meteora adapters.
  *
- * Covers: meteora-damm-v2, meteora-dlmm, meteora-dbc, meteora-lp-dlmm
+ * Covers: meteora-damm-v2, meteora-dlmm (swaps + LP), meteora-dbc
  *
  * NOTE: meteora-damm-v1 is excluded — legacy AMM program.
  *
@@ -166,13 +166,13 @@ describe("meteora-dbc", () => {
 });
 
 // ============================================================
-// meteora-lp-dlmm
+// meteora-dlmm LP operations
 // Capabilities: addLiquidity, removeLiquidity, claimFees, listPositions
 // Pool: MET/SOL (METEORA_DLMM_MET_SOL)
 // Flow: add → list → claim fees → remove 100%
 // ============================================================
-describe("meteora-lp-dlmm", () => {
-  const adapter = getDexAdapter("meteora-lp-dlmm");
+describe("meteora-dlmm LP", () => {
+  const adapter = getDexAdapter("meteora-dlmm");
   const pool = METEORA_DLMM_MET_SOL;
   let positionAddress: string | undefined;
 
@@ -181,8 +181,8 @@ describe("meteora-lp-dlmm", () => {
     expect(adapter.capabilities.canRemoveLiquidity).toBe(true);
     expect(adapter.capabilities.canClaimFees).toBe(true);
     expect(adapter.capabilities.canListPositions).toBe(true);
-    expect(adapter.capabilities.canBuy).toBe(false);
-    expect(adapter.capabilities.canSell).toBe(false);
+    expect(adapter.capabilities.canBuy).toBe(true);
+    expect(adapter.capabilities.canSell).toBe(true);
   });
 
   test("addLiquidity: one-sided SOL deposit (spot, 50 bins)", async () => {
@@ -193,18 +193,18 @@ describe("meteora-lp-dlmm", () => {
       strategy: "spot",
       bins: 50,
     });
-    logResult("meteora-lp-dlmm addLiquidity", result);
+    logResult("meteora-dlmm addLiquidity", result);
     expect(result.txSignature).toBeTruthy();
     expect(result.confirmed).toBe(true);
     expect(result.positionAddress).toBeTruthy();
-    expect(result.dex).toBe("meteora-lp-dlmm");
+    expect(result.dex).toBe("meteora-dlmm");
     positionAddress = result.positionAddress;
   });
 
   test("listPositions: verify position exists", async () => {
     await delay(5000);
     const positions = await adapter.listPositions!(pool);
-    logResult("meteora-lp-dlmm listPositions", positions);
+    logResult("meteora-dlmm listPositions", positions);
     expect(positions.length).toBeGreaterThan(0);
 
     // Find our position
@@ -212,7 +212,7 @@ describe("meteora-lp-dlmm", () => {
       const ours = positions.find((p) => p.positionAddress === positionAddress);
       expect(ours).toBeDefined();
       if (ours) {
-        expect(ours.dex).toBe("meteora-lp-dlmm");
+        expect(ours.dex).toBe("meteora-dlmm");
         expect(ours.poolAddress).toBe(pool);
         expect(ours.lowerBinId).toBeDefined();
         expect(ours.upperBinId).toBeDefined();
@@ -223,9 +223,9 @@ describe("meteora-lp-dlmm", () => {
   test("claimFees: claim from position", async () => {
     await delay();
     const result = await adapter.claimFees!(pool, positionAddress);
-    logResult("meteora-lp-dlmm claimFees", result);
+    logResult("meteora-dlmm claimFees", result);
     // May return null/no fees if position was just created, that's OK
-    expect(result.dex).toBe("meteora-lp-dlmm");
+    expect(result.dex).toBe("meteora-dlmm");
     // We don't assert confirmed=true because fees may be zero on a fresh position
   });
 
@@ -236,9 +236,9 @@ describe("meteora-lp-dlmm", () => {
       percentage: 100,
       positionAddress,
     });
-    logResult("meteora-lp-dlmm removeLiquidity", result);
+    logResult("meteora-dlmm removeLiquidity", result);
     expect(result.txSignature).toBeTruthy();
     expect(result.confirmed).toBe(true);
-    expect(result.dex).toBe("meteora-lp-dlmm");
+    expect(result.dex).toBe("meteora-dlmm");
   });
 });

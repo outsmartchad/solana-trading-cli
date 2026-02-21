@@ -152,9 +152,8 @@ Each module becomes a class implementing `IDexAdapter`:
 
 - `src/dex/meteora-damm-v1.ts` — buy, findPool, getPrice
 - `src/dex/meteora-damm-v2.ts` — buy, sell, snipe, findPool, getPrice, addLiquidity
-- `src/dex/meteora-dlmm.ts` — buy, snipe, findPool, getPrice
+- `src/dex/meteora-dlmm.ts` — buy, sell, snipe, getPrice, addLiquidity, removeLiquidity, claimFees, listPositions
 - `src/dex/meteora-dbc.ts` — buy, sell, snipe, findPool, getPrice
-- `src/dex/meteora-lp-dlmm.ts` — addLiquidity, removeLiquidity (LP management, 25k LOC)
 
 ### [ ] Phase 4 — CLMMs + Orca + Fusion (Agent 4, 4 modules)
 
@@ -287,7 +286,6 @@ The `outsmart snipe` command is a **background process** that listens for new li
 - `src/dex/meteora-damm-v2.ts` — Agent 3
 - `src/dex/meteora-dlmm.ts` — Agent 3
 - `src/dex/meteora-dbc.ts` — Agent 3
-- `src/dex/meteora-lp-dlmm.ts` — Agent 3
 - `src/dex/byreal-clmm.ts` — Agent 4
 - `src/dex/pancakeswap-clmm.ts` — Agent 4
 - `src/dex/orca.ts` — Agent 4
@@ -390,7 +388,7 @@ All phases 0-6 completed. 17 DEX adapters registered, CLI entry point working, l
       - `TxResult` — new fields: `positionAddress`, `poolAddress`, `dex`
       - `DexCapabilities` — new flags: `canClaimFees`, `canListPositions`
       - `IDexAdapter` — new optional methods: `claimFees()`, `listPositions()`
-    - Rewrote `meteora-lp-dlmm.ts`:
+    - Rewrote DLMM LP (originally `meteora-lp-dlmm.ts`, later merged into `meteora-dlmm.ts`):
       - Uses `sendAndConfirmVtx` instead of raw `sendAndConfirmTransaction`
       - Supports strategy selection (spot/curve/bid-ask) via SDK `StrategyType` enum
       - Supports bin count customization (1-70, default 50)
@@ -403,8 +401,8 @@ All phases 0-6 completed. 17 DEX adapters registered, CLI entry point working, l
     - Updated CLI (`cli.ts`):
       - `add-liq` redesigned: `--amount-sol`, `--amount-token`, `--strategy`, `--bins`, `--token` flags
       - `remove-liq` updated: `--position` flag for targeting specific positions
-      - New `claim-fees` command: `outsmart claim-fees --dex meteora-lp-dlmm --pool <POOL>`
-      - New `positions` command: `outsmart positions --dex meteora-lp-dlmm --pool <POOL>` (with `--json`)
+      - New `claim-fees` command: `outsmart claim-fees --dex meteora-dlmm --pool <POOL>`
+      - New `positions` command: `outsmart positions --dex meteora-dlmm --pool <POOL>` (with `--json`)
     - Updated `meteora-damm-v2.ts`:
       - `claimFees` signature aligned to interface `(poolAddress, positionAddress?)`
       - Added `canClaimFees: true` capability
@@ -429,7 +427,7 @@ All phases 0-6 completed. 17 DEX adapters registered, CLI entry point working, l
 | meteora-dlmm | sell | `spy1Ap...` | Confirmed |
 | meteora-dbc | buy | `61KpGL...` | Confirmed |
 | meteora-dbc | sell | `ZQwHuw...` | Confirmed |
-| meteora-lp-dlmm | addLiquidity | `5wheP...` | EXPIRED (block height exceeded) |
+| meteora-dlmm | addLiquidity | `5wheP...` | EXPIRED (block height exceeded) |
 
 #### What's Next
 

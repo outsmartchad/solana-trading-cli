@@ -43,7 +43,7 @@ import "./dex/meteora-damm-v1";
 import "./dex/meteora-damm-v2";
 import "./dex/meteora-dlmm";
 import "./dex/meteora-dbc";
-import "./dex/meteora-lp-dlmm";
+
 import "./dex/orca";
 import "./dex/byreal-clmm";
 import "./dex/pancakeswap-clmm";
@@ -342,7 +342,7 @@ program
 program
   .command("add-liq")
   .description("Add liquidity to a pool")
-  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-lp-dlmm)")
+  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-dlmm)")
   .requiredOption("-p, --pool <address>", "pool address")
   .option("--amount-sol <amount>", "amount of SOL to deposit")
   .option("--amount-token <amount>", "amount of non-SOL token to deposit")
@@ -421,7 +421,7 @@ program
 program
   .command("remove-liq")
   .description("Remove liquidity from a pool")
-  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-lp-dlmm)")
+  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-dlmm)")
   .requiredOption("-p, --pool <address>", "pool address")
   .requiredOption("--pct <percentage>", "percentage of LP position to remove (0-100)")
   .option("--position <address>", "specific position address to remove from (default: first found)")
@@ -468,7 +468,7 @@ program
 program
   .command("claim-fees")
   .description("Claim accumulated swap fees from LP positions")
-  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-lp-dlmm)")
+  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-dlmm)")
   .requiredOption("-p, --pool <address>", "pool address")
   .option("--position <address>", "specific position address to claim from (default: first found)")
   .action(async (cmdOpts) => {
@@ -501,7 +501,7 @@ program
 program
   .command("positions")
   .description("List LP positions in a pool")
-  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-lp-dlmm)")
+  .requiredOption("-d, --dex <name>", "DEX adapter name (e.g. meteora-dlmm)")
   .requiredOption("-p, --pool <address>", "pool address")
   .option("--json", "output as JSON")
   .action(async (cmdOpts) => {

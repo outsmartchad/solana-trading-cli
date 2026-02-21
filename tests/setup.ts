@@ -22,7 +22,7 @@ import "../src/dex/meteora-damm-v1";
 import "../src/dex/meteora-damm-v2";
 import "../src/dex/meteora-dlmm";
 import "../src/dex/meteora-dbc";
-import "../src/dex/meteora-lp-dlmm";
+
 import "../src/dex/orca";
 import "../src/dex/byreal-clmm";
 import "../src/dex/pancakeswap-clmm";

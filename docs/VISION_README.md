@@ -104,9 +104,8 @@ Any MCP-compatible agent — OpenClaw, Claude, or your own — can call these to
 | raydium-launchlab | Launchlab | x | | | x | x | |
 | meteora-damm-v1 | Dynamic AMM | x | x | x | x | x | |
 | meteora-damm-v2 | CpAmm | x | x | x | x | x | add/remove/claim |
-| meteora-dlmm | DLMM | x | x | x | | x | |
+| meteora-dlmm | DLMM | x | x | x | | x | add/remove/claim |
 | meteora-dbc | DBC | x | x | x | | x | |
-| meteora-lp-dlmm | DLMM LP | | | | | | add/remove |
 | orca | Whirlpool | x | x | x | | x | |
 | byreal-clmm | CLMM | x | x | x | | x | |
 | pancakeswap-clmm | CLMM | x | x | x | | x | |
@@ -201,19 +200,19 @@ Uses durable nonce accounts for concurrent TX landing to avoid duplicate buys.
 
 ```bash
 outsmart add-liq --dex meteora-damm-v2 --pool <POOL> --amount-a 1.0
-outsmart add-liq --dex meteora-lp-dlmm --pool <POOL> --amount-a 1.0 --amount-b 500
+outsmart add-liq --dex meteora-dlmm --pool <POOL> --amount-a 1.0 --amount-b 500
 ```
 
-Supported by: `meteora-damm-v2` (full-range positions with Token-2022 support), `meteora-lp-dlmm` (DLMM bin positions).
+Supported by: `meteora-damm-v2` (full-range positions with Token-2022 support), `meteora-dlmm` (DLMM bin positions).
 
 ### Remove Liquidity
 
 ```bash
 outsmart remove-liq --dex meteora-damm-v2 --pool <POOL> --pct 100
-outsmart remove-liq --dex meteora-lp-dlmm --pool <POOL> --pct 50
+outsmart remove-liq --dex meteora-dlmm --pool <POOL> --pct 50
 ```
 
-Supported by: `meteora-damm-v2` (full/partial removal + close position), `meteora-lp-dlmm` (remove with claim-and-close).
+Supported by: `meteora-damm-v2` (full/partial removal + close position), `meteora-dlmm` (remove with claim-and-close).
 
 ### Quote
 

@@ -1,6 +1,6 @@
 # outsmart
 
-**Solana trading CLI — buy, sell, and LP across 19 DEXes with 12 TX landing providers.**
+**Solana trading CLI — buy, sell, and LP across 18 DEXes with 12 TX landing providers.**
 
 ```bash
 npm install -g outsmart
@@ -109,7 +109,7 @@ Add liquidity to a pool.
 
 ```bash
 outsmart add-liq --dex meteora-damm-v2 --pool <POOL> --amount-sol 1.0
-outsmart add-liq --dex meteora-lp-dlmm --pool <POOL> --amount-sol 0.5 --amount-token 1000
+outsmart add-liq --dex meteora-dlmm --pool <POOL> --amount-sol 0.5 --amount-token 1000
 ```
 
 | Flag | Description |
@@ -128,7 +128,7 @@ Remove liquidity from a pool.
 
 ```bash
 outsmart remove-liq --dex meteora-damm-v2 --pool <POOL> --pct 100
-outsmart remove-liq --dex meteora-lp-dlmm --pool <POOL> --pct 50
+outsmart remove-liq --dex meteora-dlmm --pool <POOL> --pct 50
 ```
 
 | Flag | Description |
@@ -144,7 +144,7 @@ Claim accumulated swap fees from LP positions.
 
 ```bash
 outsmart claim-fees --dex meteora-damm-v2 --pool <POOL>
-outsmart claim-fees --dex meteora-lp-dlmm --pool <POOL> --position <POSITION>
+outsmart claim-fees --dex meteora-dlmm --pool <POOL> --position <POSITION>
 ```
 
 | Flag | Description |
@@ -159,7 +159,7 @@ List LP positions in a pool.
 
 ```bash
 outsmart positions --dex meteora-damm-v2 --pool <POOL>
-outsmart positions --dex meteora-lp-dlmm --pool <POOL> --json
+outsmart positions --dex meteora-dlmm --pool <POOL> --json
 ```
 
 | Flag | Description |
@@ -332,7 +332,7 @@ All swap commands (`buy`, `sell`) accept these options:
 
 ## DEX Adapters
 
-19 adapters covering every major Solana DEX protocol:
+18 adapters covering every major Solana DEX protocol:
 
 | Adapter | Protocol | Buy | Sell | Pool | Price | LP | Extra |
 |---------|----------|:---:|:----:|:----:|:-----:|:--:|-------|
@@ -342,9 +342,8 @@ All swap commands (`buy`, `sell`) accept these options:
 | raydium-launchlab | Launchlab | x | | x | x | | |
 | meteora-damm-v1 | Dynamic AMM | x | x | x | x | | |
 | meteora-damm-v2 | CpAmm | x | x | x | x | add/remove/claim/positions | create pool |
-| meteora-dlmm | DLMM | x | x | | x | | |
+| meteora-dlmm | DLMM | x | x | | x | add/remove/claim/positions | |
 | meteora-dbc | DBC | x | x | | x | | |
-| meteora-lp-dlmm | DLMM LP | | | | | add/remove/claim/positions | |
 | **pumpfun** | Bonding Curve | x | x | | x | | create coin |
 | **pumpfun-amm** | PumpSwap AMM | x | x | | x | | create pool |
 | orca | Whirlpool | x | x | | x | | |
@@ -491,7 +490,7 @@ src/
 │   ├── types.ts           # IDexAdapter interface
 │   ├── index.ts           # DexRegistry singleton
 │   ├── shared/clmm-base.ts
-│   └── 19 adapter files
+│   └── 18 adapter files
 ├── dexscreener/           # Market data (DexScreener API)
 ├── helpers/               # Config, wallet, Token-2022 utils
 └── transactions/

@@ -102,7 +102,7 @@ npm run test:meteora
 | meteora-damm-v2 | capabilities, getPrice, buy, sell | `9x7WTWq66KbMC1w7AUX72khNg31nQmWRE4N4cDvJY7JT` (MET/SOL) |
 | meteora-dlmm | getPrice, buy, sell | `AsSyvUnbfaZJPRrNh3kUuvZTeHKoMVWEoHz86f4Q5D9x` (MET/SOL) |
 | meteora-dbc | capabilities, getPrice, buy, sell | `DgxYpXJB2adQ9wFdyoCdnh5fNGfcLxXZsdkdqoyZZmwX` (GRACE/SOL) |
-| meteora-lp-dlmm | capabilities, addLiquidity, listPositions, claimFees, removeLiquidity | `AsSyvUnbfaZJPRrNh3kUuvZTeHKoMVWEoHz86f4Q5D9x` (MET/SOL) |
+| meteora-dlmm (LP) | capabilities, addLiquidity, listPositions, claimFees, removeLiquidity | `AsSyvUnbfaZJPRrNh3kUuvZTeHKoMVWEoHz86f4Q5D9x` (MET/SOL) |
 
 **Notes:**
 - DAMM v1 is excluded — legacy AMM program.
@@ -210,7 +210,7 @@ All pools are high-liquidity mainnet pairs. Defined in `tests/helpers.ts`.
 | Raydium CPMM SOL/USDC | `7JuwJuNU88gurFnyWeiyGKbFmExMWcmRZntn9imEzdny` | raydium-cpmm |
 | Raydium CLMM SOL/USDC | `2QdhepnKRTLjjSqPL1PtKNwqrUkoLee2B1d3S4TNagMs` | raydium-clmm |
 | Meteora DAMM v2 MET/SOL | `9x7WTWq66KbMC1w7AUX72khNg31nQmWRE4N4cDvJY7JT` | meteora-damm-v2 |
-| Meteora DLMM MET/SOL | `AsSyvUnbfaZJPRrNh3kUuvZTeHKoMVWEoHz86f4Q5D9x` | meteora-dlmm, meteora-lp-dlmm |
+| Meteora DLMM MET/SOL | `AsSyvUnbfaZJPRrNh3kUuvZTeHKoMVWEoHz86f4Q5D9x` | meteora-dlmm |
 | Meteora DBC GRACE/SOL | `DgxYpXJB2adQ9wFdyoCdnh5fNGfcLxXZsdkdqoyZZmwX` | meteora-dbc |
 | Orca Whirlpool SOL/USDC | `Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE` | orca |
 

@@ -1,5 +1,5 @@
 /**
- * Registry smoke tests — verify all 19 DEX adapters are loaded
+ * Registry smoke tests — verify all 18 DEX adapters are loaded
  * and their capabilities match expectations.
  *
  * These tests do NOT make RPC calls or spend SOL.
@@ -16,7 +16,6 @@ const EXPECTED_ADAPTERS = [
   "meteora-damm-v2",
   "meteora-dlmm",
   "meteora-dbc",
-  "meteora-lp-dlmm",
   "byreal-clmm",
   "pancakeswap-clmm",
   "orca",
@@ -30,11 +29,11 @@ const EXPECTED_ADAPTERS = [
 ];
 
 describe("DexRegistry", () => {
-  test("all 19 adapters are registered", () => {
+  test("all 18 adapters are registered", () => {
     const adapters = listDexAdapters();
     const names = adapters.map((a) => a.name).sort();
     console.log("Registered adapters:", names);
-    expect(names.length).toBeGreaterThanOrEqual(19);
+    expect(names.length).toBeGreaterThanOrEqual(18);
 
     for (const expected of EXPECTED_ADAPTERS) {
       expect(names).toContain(expected);
@@ -75,13 +74,11 @@ describe("DexRegistry", () => {
       },
       "meteora-dlmm": {
         canBuy: true, canSell: true, canSnipe: true, canGetPrice: true,
+        canAddLiquidity: true, canRemoveLiquidity: true, canClaimFees: true,
+        canListPositions: true,
       },
       "meteora-dbc": {
         canBuy: true, canSell: true, canSnipe: true, canGetPrice: true, canFindPool: false,
-      },
-      "meteora-lp-dlmm": {
-        canBuy: false, canSell: false, canAddLiquidity: true, canRemoveLiquidity: true,
-        canClaimFees: true, canListPositions: true,
       },
       "byreal-clmm": {
         canBuy: true, canSell: true, canSnipe: true, canGetPrice: true, canFindPool: false,
