@@ -143,14 +143,32 @@ function validateDex(dexName: string): void {
   }
 }
 
+/** Well-known token symbols for display */
+const KNOWN_SYMBOLS: Record<string, string> = {
+  So11111111111111111111111111111111111111112: "SOL",
+  EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v: "USDC",
+  Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB: "USDT",
+  USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB: "USD1",
+  "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R": "RAY",
+  METvsvVRapdj9cFLzq4Tr43xK4tAjQfwX76z3n6mWQL: "MET",
+};
+
+/** Format a mint address for display — use symbol if known, otherwise abbreviate */
+function formatMint(mint: string): string {
+  if (KNOWN_SYMBOLS[mint]) return KNOWN_SYMBOLS[mint];
+  if (mint === "SOL") return "SOL"; // some adapters already return "SOL"
+  if (mint.length > 12) return mint.slice(0, 6) + "..." + mint.slice(-4);
+  return mint;
+}
+
 function printResult(result: SwapResult): void {
   console.log();
   console.log(`  dex:       ${result.dex}`);
   console.log(`  tx:        ${result.txSignature}`);
   console.log(`  confirmed: ${result.confirmed}`);
-  console.log(`  in:        ${result.amountIn} ${result.amountInToken}`);
+  console.log(`  in:        ${result.amountIn} ${formatMint(result.amountInToken)}`);
   if (result.amountOut != null) {
-    console.log(`  out:       ${result.amountOut} ${result.amountOutToken ?? ""}`);
+    console.log(`  out:       ${result.amountOut} ${formatMint(result.amountOutToken ?? "")}`);
   }
   if (result.poolAddress) {
     console.log(`  pool:      ${result.poolAddress}`);
@@ -235,6 +253,47 @@ async function getTokenBalance(mint: string): Promise<{ amount: number; raw: big
     };
   } catch {
     return { amount: 0, raw: 0n, decimals: 0 };
+  }
+}
+
+/**
+ * Get the native SOL balance for the wallet (in SOL, not lamports).
+ */
+async function getSolBalance(): Promise<number> {
+  const { getConnection, getWallet } = await import("./helpers/config");
+  const connection = getConnection();
+  const wallet = getWallet();
+  const lamports = await connection.getBalance(wallet.publicKey);
+  return lamports / 1e9;
+}
+
+/**
+ * Snapshot output balance, run a swap, then compute the delta to fill amountOut.
+ * Works for both buy (output = token) and sell (output = SOL or quote token).
+ */
+async function fillAmountOut(
+  result: SwapResult,
+  outputMint: string,
+  balanceBefore: number,
+): Promise<void> {
+  if (result.amountOut != null) return; // adapter already provided it
+  if (!result.confirmed) return; // TX didn't confirm, no point checking
+
+  // Small delay for balance settlement
+  await new Promise((r) => setTimeout(r, 1500));
+
+  let balanceAfter: number;
+  if (outputMint === WSOL_MINT || outputMint === "SOL") {
+    balanceAfter = await getSolBalance();
+  } else {
+    const bal = await getTokenBalance(outputMint);
+    balanceAfter = bal.amount;
+  }
+
+  const delta = balanceAfter - balanceBefore;
+  if (delta > 0) {
+    result.amountOut = parseFloat(delta.toFixed(9));
+    result.amountOutToken = result.amountOutToken ?? outputMint;
   }
 }
 
@@ -507,7 +566,19 @@ const buyCmd = new Command("buy")
     const isStablecoinQuote = quoteMint && STABLECOIN_MINTS.has(quoteMint);
     const stepLabel = isStablecoinQuote ? "step 2: " : "";
     console.log(`\n  ${stepLabel}buying on ${adapter.name}...`);
+
+    // Snapshot output token balance before swap to compute amountOut
+    const outputMint = tokenMint;
+    const balBefore = outputMint ? (await getTokenBalance(outputMint)).amount : 0;
+
     const result = await adapter.buy(params);
+
+    // Fill amountOut from balance delta if adapter didn't provide it
+    if (outputMint) {
+      await fillAmountOut(result, outputMint, balBefore);
+      result.amountOutToken = result.amountOutToken ?? outputMint;
+    }
+
     printResult(result);
   });
 
@@ -582,7 +653,19 @@ const sellCmd = new Command("sell")
 
     const stepLabel = isStablecoinQuote ? "step 1: " : "";
     console.log(`\n  ${stepLabel}selling ${params.percentage}% on ${adapter.name}...`);
+
+    // Snapshot output balance before swap to compute amountOut
+    const sellOutputMint = quoteMint ?? WSOL_MINT;
+    const sellBalBefore = (sellOutputMint === WSOL_MINT || sellOutputMint === "SOL")
+      ? await getSolBalance()
+      : (await getTokenBalance(sellOutputMint)).amount;
+
     const result = await adapter.sell(params);
+
+    // Fill amountOut from balance delta if adapter didn't provide it
+    await fillAmountOut(result, sellOutputMint, sellBalBefore);
+    result.amountOutToken = result.amountOutToken ?? sellOutputMint;
+
     printResult(result);
 
     // Auto-swap stablecoin proceeds → SOL
