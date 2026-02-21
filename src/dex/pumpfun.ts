@@ -698,12 +698,28 @@ export class PumpFunAdapter implements IDexAdapter {
       (Number(state.virtualSolReserves) / LAMPORTS_PER_SOL) /
       (Number(state.virtualTokenReserves) / Math.pow(10, PUMP_TOKEN_DECIMALS));
 
-    // Derive mint from bonding curve PDA (not directly available from state).
-    // The caller should know the mint — we return baseMint as empty here.
-    // In practice, getPrice is called with the pool address and the caller has the mint.
+    // Derive baseMint by scanning the bonding curve's token accounts.
+    // The bonding curve PDA holds the token in an ATA — find which mint it holds.
+    let baseMint = "";
+    try {
+      const tokenAccounts = await connection.getTokenAccountsByOwner(bondingCurvePk, {
+        programId: TOKEN_PROGRAM_ID,
+      });
+      for (const { account } of tokenAccounts.value) {
+        // SPL token account layout: mint is at offset 0, 32 bytes
+        const mint = new PublicKey(account.data.subarray(0, 32));
+        if (!mint.equals(new PublicKey(WSOL_MINT))) {
+          baseMint = mint.toBase58();
+          break;
+        }
+      }
+    } catch {
+      // If token account scan fails, leave baseMint empty — caller must provide --token
+    }
+
     return {
       price,
-      baseMint: "", // Caller should know the mint
+      baseMint,
       quoteMint: WSOL_MINT,
       source: "on-chain",
       poolAddress,

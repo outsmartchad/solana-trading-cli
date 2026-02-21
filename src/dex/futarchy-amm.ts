@@ -606,8 +606,7 @@ export class FutarchyAmmAdapter implements IDexAdapter {
     const decimalsMultiplier = Math.pow(10, decimalsDiff);
     const uiPrice = (price * decimalsMultiplier) / PRICE_SCALE;
 
-    // Normalize price (invert if > 1, matching source behavior)
-    const realPrice = uiPrice > 1 ? 1 / uiPrice : uiPrice;
+    const realPrice = uiPrice;
 
     return {
       price: realPrice,

@@ -371,8 +371,7 @@ export class MeteoraDammV1Adapter implements IDexAdapter {
       price = 0;
     } else {
       const rawPrice = tokenBAmount.div(tokenAAmount);
-      // Source normalizes: if price > 1, invert it (base token price in quote)
-      price = Number(rawPrice) > 1 ? 1 / Number(rawPrice) : Number(rawPrice);
+      price = Number(rawPrice);
     }
 
     return {

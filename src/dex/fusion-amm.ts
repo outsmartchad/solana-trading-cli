@@ -635,8 +635,7 @@ export class FusionAmmAdapter implements IDexAdapter {
 
     const decimalsA = tokenA.data.decimals;
     const decimalsB = tokenB.data.decimals;
-    let price = sqrtPriceToPrice(fusionPool.data.sqrtPrice, decimalsA, decimalsB);
-    if (price > 1) price = 1 / price;
+    const price = sqrtPriceToPrice(fusionPool.data.sqrtPrice, decimalsA, decimalsB);
 
     return {
       price,

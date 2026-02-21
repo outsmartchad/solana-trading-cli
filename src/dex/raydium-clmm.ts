@@ -897,9 +897,6 @@ class RaydiumClmmAdapter implements IDexAdapter {
       poolState.mintDecimals1,
     );
 
-    // Normalize: if price > 1, invert (for meme tokens priced in SOL/USDC)
-    if (price > 1) price = 1 / price;
-
     return {
       price,
       baseMint: poolState.tokenMint0.toBase58(),

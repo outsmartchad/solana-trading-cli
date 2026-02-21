@@ -422,6 +422,9 @@ const buyCmd = new Command("buy")
     let tokenMint: string = cmdOpts.token;
     let quoteMint: string | undefined = cmdOpts.quote;
     let amountToSpend = Number(cmdOpts.amount);
+    if (isNaN(amountToSpend) || amountToSpend <= 0) {
+      die(`Invalid --amount: ${cmdOpts.amount}. Must be a positive number.`);
+    }
 
     if (!tokenMint && cmdOpts.pool) {
       const resolved = await resolvePool(adapter, cmdOpts.pool);
@@ -493,6 +496,11 @@ const sellCmd = new Command("sell")
       }
     }
 
+    const pct = Number(cmdOpts.pct);
+    if (isNaN(pct) || pct <= 0 || pct > 100) {
+      die(`Invalid --pct: ${cmdOpts.pct}. Must be between 1 and 100.`);
+    }
+
     // Auto-resolve token + quote from pool state
     let tokenMint: string = cmdOpts.token;
     let quoteMint: string | undefined = cmdOpts.quote;
@@ -513,7 +521,7 @@ const sellCmd = new Command("sell")
 
     const params: SellParams = {
       tokenMint,
-      percentage: Number(cmdOpts.pct),
+      percentage: pct,
       poolAddress: cmdOpts.pool,
       quoteMint,
       opts: buildSwapOpts(cmdOpts),

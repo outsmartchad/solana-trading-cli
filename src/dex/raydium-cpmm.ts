@@ -840,8 +840,14 @@ class RaydiumCpmmAdapter implements IDexAdapter {
     }
 
     const reserves = await getPoolReserves(connection, poolId, actualBase, actualQuote);
-    const quoteDecimals = actualQuote.equals(WSOL_MINT_PK) ? 9 : 6;
-    const baseDecimals = 6; // conservative default
+
+    // Fetch actual decimals from mint accounts
+    const [baseMintInfo, quoteMintInfo] = await Promise.all([
+      connection.getAccountInfo(actualBase),
+      connection.getAccountInfo(actualQuote),
+    ]);
+    const baseDecimals = baseMintInfo ? baseMintInfo.data.readUInt8(44) : 9;
+    const quoteDecimals = quoteMintInfo ? quoteMintInfo.data.readUInt8(44) : 9;
     const baseReserveHuman = Number(reserves.base) / 10 ** baseDecimals;
     const quoteReserveHuman = Number(reserves.quote) / 10 ** quoteDecimals;
     const price = baseReserveHuman > 0 ? quoteReserveHuman / baseReserveHuman : 0;

@@ -72,30 +72,47 @@ export async function sendAndConfirmVtx(
     maxRetries: 3,
   };
 
-  const signature = await connection.sendRawTransaction(tx.serialize(), sendOpts);
+  let signature: string;
+  try {
+    signature = await connection.sendRawTransaction(tx.serialize(), sendOpts);
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    return { txSignature: "", confirmed: false, error: `Send failed: ${errMsg}` };
+  }
 
-  const commitment = opts?.commitment ?? "confirmed";
-  const confirmation = await connection.confirmTransaction(
-    {
-      signature,
-      blockhash: blockhash.blockhash,
-      lastValidBlockHeight: blockhash.lastValidBlockHeight,
-    },
-    commitment,
-  );
+  console.log(`  TX sent: ${signature} — confirming...`);
 
-  if (confirmation.value.err) {
+  try {
+    const commitment = opts?.commitment ?? "confirmed";
+    const confirmation = await connection.confirmTransaction(
+      {
+        signature,
+        blockhash: blockhash.blockhash,
+        lastValidBlockHeight: blockhash.lastValidBlockHeight,
+      },
+      commitment,
+    );
+
+    if (confirmation.value.err) {
+      return {
+        txSignature: signature,
+        confirmed: false,
+        error: JSON.stringify(confirmation.value.err),
+      };
+    }
+
+    return {
+      txSignature: signature,
+      confirmed: true,
+    };
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
     return {
       txSignature: signature,
       confirmed: false,
-      error: JSON.stringify(confirmation.value.err),
+      error: `Confirmation failed: ${errMsg}`,
     };
   }
-
-  return {
-    txSignature: signature,
-    confirmed: true,
-  };
 }
 
 // ---------------------------------------------------------------------------

@@ -585,9 +585,7 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
     } else {
       const sqrtPriceX64 = calculateInitSqrtPrice(tokenAAmount, tokenBAmount, sqrtMinPrice, sqrtMaxPrice);
       const priceDecimal = sqrtPriceX64ToPrice(sqrtPriceX64, decimalsA, decimalsB);
-      const rawPrice = Number(priceDecimal);
-      // Source normalizes: if price > 1, invert
-      price = rawPrice > 1 ? 1 / rawPrice : rawPrice;
+      price = Number(priceDecimal);
     }
 
     return {

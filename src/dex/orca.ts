@@ -767,8 +767,7 @@ export class OrcaAdapter implements IDexAdapter {
     const decimalsA = mintAInfo ? mintAInfo.data.readUInt8(44) : 9;
     const decimalsB = mintBInfo ? mintBInfo.data.readUInt8(44) : 9;
 
-    let price = sqrtPriceToPrice(sqrtPrice, decimalsA, decimalsB);
-    if (price > 1) price = 1 / price;
+    const price = sqrtPriceToPrice(sqrtPrice, decimalsA, decimalsB);
 
     return {
       price,

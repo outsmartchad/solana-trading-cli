@@ -455,8 +455,7 @@ export class MeteoraDlmmAdapter implements IDexAdapter {
     const priceFactor = Math.pow(10, tokenYDecimals - tokenXDecimals);
     const adjustedPrice = Number(rawPrice) / priceFactor;
 
-    // Source normalizes: if price > 1, invert
-    const price = adjustedPrice > 1 ? 1 / adjustedPrice : adjustedPrice;
+    const price = adjustedPrice;
 
     return {
       price,

@@ -341,7 +341,6 @@ function calculateLaunchpadPrice(
   const decimalAdjustment = 10 ** (decimalBase - decimalQuote);
   let price = (virtualQuoteNum / virtualBaseNum) * decimalAdjustment;
 
-  if (price > 1) price = 1 / price;
   return price;
 }
 
