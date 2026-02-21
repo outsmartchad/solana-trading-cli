@@ -56,7 +56,6 @@ import "./dex/futarchy-launchpad";
 import "./dex/pumpfun";
 import "./dex/pumpfun-amm";
 import "./dex/jupiter-ultra";
-import "./dex/jupiter-swap";
 import "./dex/dflow";
 
 // ---------------------------------------------------------------------------

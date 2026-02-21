@@ -14,7 +14,7 @@
  *
  * Capabilities: canBuy, canSell (no snipe — doesn't make sense for an aggregator,
  * no findPool/getPrice — no pool concept)
- * API key from JUPITER_API_KEY env var.
+ * API key from JUPITER_API_KEY env var (optional — works without key at lower rate limits).
  */
 
 import {
@@ -104,14 +104,26 @@ interface JupiterUltraExecuteResponse {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function getApiKey(): string {
-  const key = process.env.JUPITER_API_KEY;
-  if (!key) {
-    throw new Error(
-      "JUPITER_API_KEY not set. Set the JUPITER_API_KEY environment variable to use Jupiter Ultra.",
+let _apiKeyHintShown = false;
+
+function getApiKey(): string | undefined {
+  const key = process.env.JUPITER_API_KEY || undefined;
+  if (!key && !_apiKeyHintShown) {
+    _apiKeyHintShown = true;
+    console.log(
+      "Tip: Set JUPITER_API_KEY for higher rate limits. Get one at https://portal.jup.ag",
     );
   }
   return key;
+}
+
+function apiHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const key = getApiKey();
+  if (key) {
+    headers["x-api-key"] = key;
+  }
+  return headers;
 }
 
 /**
@@ -157,9 +169,7 @@ async function getUltraOrder(
   }
 
   const response = await fetch(url.toString(), {
-    headers: {
-      "x-api-key": getApiKey(),
-    },
+    headers: apiHeaders(),
   });
 
   if (!response.ok) {
@@ -260,7 +270,7 @@ async function executeUltraOrderWithRetry(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": getApiKey(),
+          ...apiHeaders(),
         },
         body: JSON.stringify({ requestId, signedTransaction }),
       });

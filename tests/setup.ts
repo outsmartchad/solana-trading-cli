@@ -32,5 +32,4 @@ import "../src/dex/futarchy-launchpad";
 import "../src/dex/pumpfun";
 import "../src/dex/pumpfun-amm";
 import "../src/dex/jupiter-ultra";
-import "../src/dex/jupiter-swap";
 import "../src/dex/dflow";
