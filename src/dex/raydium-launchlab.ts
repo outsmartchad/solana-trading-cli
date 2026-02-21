@@ -63,6 +63,8 @@ const USD1_MINT_PK = new PublicKey("USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"
 
 // BuyExactIn discriminator from Anchor
 const BUY_EXACT_IN_DISCRIMINATOR = Buffer.from([250, 234, 13, 123, 213, 156, 19, 236]);
+// SellExactIn discriminator from Anchor
+const SELL_EXACT_IN_DISCRIMINATOR = Buffer.from([149, 39, 222, 155, 211, 124, 152, 26]);
 
 // PDA seeds
 const AUTH_SEED = Buffer.from("vault_auth_seed", "utf8");
@@ -254,6 +256,57 @@ function createBuyExactInIx(
   });
 }
 
+/**
+ * Build a SellExactIn instruction — sell tokenA (base) for tokenB (quote).
+ * Same account layout as BuyExactIn, different discriminator.
+ * Args: [amountIn: u64 (tokenA), minimumAmountOut: u64 (tokenB), shareFeeRate: u64]
+ */
+function createSellExactInIx(
+  cfg: LaunchLabSdkConfig,
+  owner: PublicKey,
+  userTokenAccountA: PublicKey,
+  userTokenAccountB: PublicKey,
+  amountIn: bigint,
+  minOut: bigint,
+  shareFeeRate: bigint = 0n,
+): TransactionInstruction {
+  const auth = getLaunchpadAuth();
+  const cpiEvent = getLaunchpadCpiEventPda();
+
+  const keys = [
+    { pubkey: owner, isSigner: true, isWritable: true },
+    { pubkey: auth, isSigner: false, isWritable: false },
+    { pubkey: cfg.configId, isSigner: false, isWritable: false },
+    { pubkey: cfg.platformId, isSigner: false, isWritable: false },
+    { pubkey: cfg.poolId, isSigner: false, isWritable: true },
+    { pubkey: userTokenAccountA, isSigner: false, isWritable: true },
+    { pubkey: userTokenAccountB, isSigner: false, isWritable: true },
+    { pubkey: cfg.vaultA, isSigner: false, isWritable: true },
+    { pubkey: cfg.vaultB, isSigner: false, isWritable: true },
+    { pubkey: cfg.mintA, isSigner: false, isWritable: false },
+    { pubkey: cfg.mintB, isSigner: false, isWritable: false },
+    { pubkey: cfg.tokenProgramA, isSigner: false, isWritable: false },
+    { pubkey: cfg.tokenProgramB, isSigner: false, isWritable: false },
+    { pubkey: cpiEvent, isSigner: false, isWritable: false },
+    { pubkey: cfg.programId, isSigner: false, isWritable: false },
+    // No shareFeeReceiver for now
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    { pubkey: cfg.platformClaimFeeVault, isSigner: false, isWritable: true },
+    { pubkey: cfg.creatorClaimFeeVault, isSigner: false, isWritable: true },
+  ];
+
+  const argData = Buffer.alloc(24);
+  argData.writeBigUInt64LE(amountIn, 0);
+  argData.writeBigUInt64LE(minOut, 8);
+  argData.writeBigUInt64LE(shareFeeRate, 16);
+
+  return new TransactionInstruction({
+    keys,
+    programId: cfg.programId,
+    data: Buffer.concat([SELL_EXACT_IN_DISCRIMINATOR, argData]),
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Price calculation from bonding curve
 // ---------------------------------------------------------------------------
@@ -330,7 +383,7 @@ class RaydiumLaunchLabAdapter implements IDexAdapter {
   readonly protocol = "launchlab";
   readonly capabilities: DexCapabilities = defaultCapabilities({
     canBuy: true,
-    canSell: false, // Buy-only until pool migration
+    canSell: true,
     canSnipe: false, // No snipe — LaunchLab pools use different mechanics
     canFindPool: true,
     canGetPrice: true,
@@ -564,10 +617,111 @@ class RaydiumLaunchLabAdapter implements IDexAdapter {
     return { instructions: ixs, signers: [] };
   }
 
-  // ----- Core: sell (unsupported) -----
+  // ----- Core: sell -----
 
-  async sell(_params: SellParams): Promise<SwapResult> {
-    throw new UnsupportedOperationError(this.name, "sell");
+  async sell(params: SellParams): Promise<SwapResult> {
+    const tokenMint = requireTokenMint(params, this.name);
+    const connection = getConnection();
+    const wallet = getWallet();
+    const tokenMintPk = new PublicKey(tokenMint);
+    const quoteMintPk = params.quoteMint ? new PublicKey(params.quoteMint) : WSOL_MINT_PK;
+    const priorityFee = params.opts?.priorityFeeMicroLamports ?? 5_000_000;
+    const computeUnits = params.opts?.computeUnitLimit ?? 300_000;
+
+    // Resolve pool
+    let poolId: PublicKey;
+    if (params.poolAddress) {
+      poolId = new PublicKey(params.poolAddress);
+    } else {
+      const found = await discoverLaunchpadPool(connection, tokenMintPk, quoteMintPk);
+      if (!found) throw new PoolNotFoundError(this.name, tokenMint, params.quoteMint);
+      poolId = found;
+    }
+
+    const poolState = await fetchLaunchpadPoolState(connection, poolId);
+
+    const platformClaimFeeVault = getLaunchpadPlatformVaultPda(poolState.platformId, poolState.mintB);
+    const creatorClaimFeeVault = getLaunchpadCreatorVaultPda(poolState.creator, poolState.mintB);
+
+    const tokenProgramA = await getTokenProgramForMint(connection, poolState.mintA);
+    const tokenProgramB = await getTokenProgramForMint(connection, poolState.mintB);
+
+    const sdkCfg: LaunchLabSdkConfig = {
+      programId: RAYDIUM_LAUNCHPAD_PROGRAM_ID,
+      configId: poolState.configId,
+      platformId: poolState.platformId,
+      poolId,
+      vaultA: poolState.vaultA,
+      vaultB: poolState.vaultB,
+      mintA: poolState.mintA,
+      mintB: poolState.mintB,
+      tokenProgramA,
+      tokenProgramB,
+      platformClaimFeeVault,
+      creatorClaimFeeVault,
+    };
+
+    // Get token balance and compute sell amount
+    const userTokenAccountA = await getAssociatedTokenAddress(
+      poolState.mintA, wallet.publicKey,
+      tokenProgramA.equals(TOKEN_2022_PROGRAM_ID), tokenProgramA,
+    );
+    const userTokenAccountB = await getAssociatedTokenAddress(
+      poolState.mintB, wallet.publicKey,
+      tokenProgramB.equals(TOKEN_2022_PROGRAM_ID), tokenProgramB,
+    );
+
+    const balRes = await connection.getTokenAccountBalance(userTokenAccountA);
+    const totalAmount = BigInt(balRes.value.amount);
+    const sellAmount = (totalAmount * BigInt(Math.floor(params.percentage))) / 100n;
+
+    if (sellAmount === 0n) {
+      return {
+        txSignature: "",
+        confirmed: false,
+        amountIn: 0,
+        amountInToken: tokenMint,
+        dex: this.name,
+        poolAddress: poolId.toBase58(),
+      };
+    }
+
+    const sellIx = createSellExactInIx(
+      sdkCfg, wallet.publicKey,
+      userTokenAccountA, userTokenAccountB,
+      sellAmount, 0n, // minimumAmountOut = 0
+    );
+
+    const ixs: TransactionInstruction[] = [
+      ComputeBudgetProgram.setComputeUnitLimit({ units: computeUnits }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
+      // Ensure quote ATA exists (to receive USD1/USDC/SOL proceeds)
+      createAssociatedTokenAccountIdempotentInstruction(
+        wallet.publicKey, userTokenAccountB, wallet.publicKey,
+        poolState.mintB,
+        tokenProgramB.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID_PK,
+      ),
+    ];
+
+    // If quote is WSOL, we need to handle wrapping/unwrapping
+    ixs.push(sellIx);
+
+    if (poolState.mintB.equals(WSOL_MINT_PK)) {
+      ixs.push(createCloseAccountInstruction(userTokenAccountB, wallet.publicKey, wallet.publicKey));
+    }
+
+    const result = await sendAndConfirmVtx(connection, ixs, wallet);
+
+    const sellAmountUi = Number(sellAmount) / 10 ** poolState.mintDecimalsA;
+
+    return {
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
+      amountIn: sellAmountUi,
+      amountInToken: tokenMint,
+      dex: this.name,
+      poolAddress: poolId.toBase58(),
+    };
   }
 
   // ----- Pool discovery -----
