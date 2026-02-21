@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>outsmart - Solana Trading CLI</title>
+  <meta name="description" content="Trade across 18 Solana DEXes with one CLI. Buy, sell, LP, and create pools with 12 TX landing providers.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --bg-card: #111113;
+      --bg-code: #16161a;
+      --border: #222228;
+      --border-hover: #333340;
+      --text: #e4e4e7;
+      --text-muted: #8b8b98;
+      --text-dim: #5c5c6b;
+      --accent: #6d5dfc;
+      --accent-light: #9d8fff;
+      --accent-glow: rgba(109, 93, 252, 0.15);
+      --green: #34d399;
+      --green-dim: rgba(52, 211, 153, 0.12);
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --max-w: 960px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Nav */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(10, 10, 11, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .nav-inner {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    nav .logo {
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: -0.5px;
+    }
+    nav .logo span { color: var(--accent-light); }
+    nav .nav-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+    nav .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    nav .nav-links a:hover { color: var(--text); }
+
+    /* Hero */
+    .hero {
+      padding: 140px 24px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 400px;
+      background: radial-gradient(ellipse, var(--accent-glow), transparent 70%);
+      pointer-events: none;
+    }
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .hero h1 span { color: var(--accent-light); }
+    .hero .tagline {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 560px;
+      margin: 0 auto 32px;
+      line-height: 1.6;
+    }
+    .hero .stats {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+    .hero .stat-item {
+      text-align: center;
+    }
+    .hero .stat-num {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--accent-light);
+      font-family: var(--mono);
+    }
+    .hero .stat-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+    .hero-code {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 28px;
+      max-width: 540px;
+      margin: 0 auto;
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.8;
+      position: relative;
+    }
+    .hero-code .prompt { color: var(--green); }
+    .hero-code .cmd { color: var(--text); }
+    .hero-code .flag { color: var(--accent-light); }
+    .hero-code .comment { color: var(--text-dim); }
+
+    .hero-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 32px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #5c4ce6; }
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--border-hover); }
+
+    /* Sections */
+    .container {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    section {
+      padding: 80px 0;
+    }
+    section + section {
+      border-top: 1px solid var(--border);
+    }
+    h2 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+    }
+    h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 40px;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 28px;
+      margin-bottom: 8px;
+      font-family: var(--mono);
+      color: var(--accent-light);
+    }
+    .section-desc {
+      color: var(--text-muted);
+      margin-bottom: 32px;
+      max-width: 600px;
+    }
+    p { margin-bottom: 12px; }
+    p + pre { margin-top: 8px; }
+
+    /* Code blocks */
+    pre {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+    code {
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+    p code, li code, td code {
+      background: var(--bg-code);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      font-size: 12px;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    td.check { color: var(--green); text-align: center; }
+    td.dash { color: var(--text-dim); text-align: center; }
+    td.adapter-name {
+      font-family: var(--mono);
+      font-weight: 500;
+      font-size: 12px;
+      color: var(--accent-light);
+    }
+
+    /* Cards grid */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: var(--border-hover); }
+    .card-title {
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+    .card p {
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* Provider grid */
+    .provider-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .provider-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .provider-name { font-weight: 500; }
+    .provider-env {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    /* Flag table (for command options) */
+    .flag-table {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .flag-table table { margin-bottom: 0; }
+    .flag-table th {
+      background: var(--bg-code);
+    }
+    .flag-table td:first-child {
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: nowrap;
+      color: var(--accent-light);
+    }
+
+    /* Output block */
+    .output-block {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.7;
+      margin-bottom: 16px;
+      color: var(--text-muted);
+    }
+    .output-block .key { color: var(--text-dim); }
+    .output-block .val { color: var(--text); }
+    .output-block .ok { color: var(--green); }
+
+    /* Architecture tree */
+    .tree {
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--text-muted);
+    }
+    .tree .dir { color: var(--accent-light); font-weight: 500; }
+    .tree .desc { color: var(--text-dim); }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+    footer a { color: var(--text-muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 16px;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 32px; }
+      .hero .stats { gap: 24px; }
+      .hero .stat-num { font-size: 24px; }
+      nav .nav-links { gap: 16px; }
+      nav .nav-links a { font-size: 12px; }
+      .card-grid { grid-template-columns: 1fr; }
+      .provider-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="logo">outsmart<span>.</span></a>
+    <ul class="nav-links">
+      <li><a href="#quickstart">Quick Start</a></li>
+      <li><a href="#commands">Commands</a></li>
+      <li><a href="#adapters">DEX Adapters</a></li>
+      <li><a href="#providers">TX Landing</a></li>
+      <li><a href="#api">API</a></li>
+      <li><a href="https://github.com/outsmartchad/outsmart-cli">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <h1>Trade Solana<br>from your <span>terminal</span></h1>
+  <p class="tagline">One CLI for every major Solana DEX. Buy, sell, provide liquidity, and create pools across 18 protocols with 12 TX landing providers.</p>
+
+  <div class="stats">
+    <div class="stat-item">
+      <div class="stat-num">18</div>
+      <div class="stat-label">DEX Adapters</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">12</div>
+      <div class="stat-label">TX Providers</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">1</div>
+      <div class="stat-label">Unified CLI</div>
+    </div>
+  </div>
+
+  <div class="hero-code">
+    <span class="prompt">$</span> <span class="cmd">npm install -g outsmart@alpha</span><br>
+    <span class="prompt">$</span> <span class="cmd">outsmart init</span><br>
+    <span class="prompt">$</span> <span class="cmd">outsmart buy</span> <span class="flag">--dex</span> raydium-cpmm <span class="flag">--pool</span> &lt;POOL&gt; <span class="flag">--amount</span> 0.1<br>
+    <span class="prompt">$</span> <span class="cmd">outsmart sell</span> <span class="flag">--dex</span> jupiter-ultra <span class="flag">--token</span> &lt;MINT&gt; <span class="flag">--pct</span> 100
+  </div>
+
+  <div class="hero-buttons">
+    <a href="#quickstart" class="btn btn-primary">Get Started</a>
+    <a href="https://github.com/outsmartchad/outsmart-cli" class="btn btn-secondary">View on GitHub</a>
+    <a href="https://www.npmjs.com/package/outsmart" class="btn btn-secondary">npm</a>
+  </div>
+</section>
+
+<!-- Quick Start -->
+<section id="quickstart">
+  <div class="container">
+    <h2>Quick Start</h2>
+    <p class="section-desc">Get trading in under a minute. Install from npm, configure your wallet, and execute your first trade.</p>
+
+    <h3>1. Install</h3>
+    <pre><span style="color:var(--comment)"># From npm (recommended)</span>
+npm install -g outsmart@alpha
+
+<span style="color:var(--text-dim)"># Or from source</span>
+git clone https://github.com/outsmartchad/outsmart-cli.git
+cd outsmart-cli
+npm install --legacy-peer-deps
+npm run build</pre>
+
+    <h3>2. Configure</h3>
+    <pre>outsmart init</pre>
+    <p style="color:var(--text-muted)">Prompts for your wallet key and RPC endpoint. Config is saved to <code>~/.outsmart/config.env</code>. You only need to do this once.</p>
+
+    <h3>3. Trade</h3>
+    <pre><span style="color:var(--text-dim)"># Buy tokens (token auto-detected from pool)</span>
+outsmart buy --dex raydium-cpmm --pool &lt;POOL&gt; --amount 0.1
+
+<span style="color:var(--text-dim)"># Sell 100% of held balance</span>
+outsmart sell --dex raydium-cpmm --pool &lt;POOL&gt; --pct 100
+
+<span style="color:var(--text-dim)"># Swap aggregator (no pool needed)</span>
+outsmart buy --dex jupiter-ultra --token &lt;MINT&gt; --amount 0.1
+
+<span style="color:var(--text-dim)"># Preview without sending (dry-run)</span>
+outsmart buy --dex raydium-cpmm --pool &lt;POOL&gt; --amount 0.1 --dry-run
+
+<span style="color:var(--text-dim)"># Check balances</span>
+outsmart balance</pre>
+
+    <h3>Example Output</h3>
+    <div class="output-block">
+<span class="key">  dex:</span>       <span class="val">raydium-cpmm</span>
+<span class="key">  tx:</span>        <span class="val">5zwjtaMj8LCzf4cY7Kt2QU2CAcAn...</span>
+<span class="key">  confirmed:</span> <span class="ok">true</span>
+<span class="key">  in:</span>        <span class="val">0.1 SOL</span>
+<span class="key">  out:</span>       <span class="val">200.186 TOKEN</span>
+<span class="key">  pool:</span>      <span class="val">Q2sPHPdUWFMg7M7wwrQKLrn619cAucfR...</span>
+    </div>
+  </div>
+</section>
+
+<!-- Commands -->
+<section id="commands">
+  <div class="container">
+    <h2>Commands</h2>
+    <p class="section-desc">Full command reference for trading, wallet management, liquidity, and pool creation.</p>
+
+    <!-- Trading -->
+    <h3>Trading</h3>
+
+    <h4>outsmart buy</h4>
+    <p>Buy tokens with SOL (or a quote token). On-chain DEXes require <code>--pool</code>; aggregators require <code>--token</code>.</p>
+    <pre>outsmart buy --dex raydium-cpmm --pool &lt;POOL&gt; --amount 0.1
+outsmart buy --dex jupiter-ultra --token &lt;MINT&gt; --amount 0.5</pre>
+    <div class="flag-table">
+      <table>
+        <tr><th>Flag</th><th>Description</th></tr>
+        <tr><td>-d, --dex &lt;name&gt;</td><td>DEX adapter name (required)</td></tr>
+        <tr><td>-a, --amount &lt;sol&gt;</td><td>SOL amount to spend (required)</td></tr>
+        <tr><td>-p, --pool &lt;address&gt;</td><td>Pool address (required for on-chain DEXes)</td></tr>
+        <tr><td>-t, --token &lt;mint&gt;</td><td>Token mint (auto-detected from pool; required for aggregators)</td></tr>
+        <tr><td>--dry-run</td><td>Simulate only &mdash; preview CU usage without sending</td></tr>
+      </table>
+    </div>
+
+    <h4>outsmart sell</h4>
+    <p>Sell a percentage of your held token balance.</p>
+    <pre>outsmart sell --dex raydium-cpmm --pool &lt;POOL&gt; --pct 100
+outsmart sell --dex jupiter-ultra --token &lt;MINT&gt; --pct 50</pre>
+    <div class="flag-table">
+      <table>
+        <tr><th>Flag</th><th>Description</th></tr>
+        <tr><td>-d, --dex &lt;name&gt;</td><td>DEX adapter name (required)</td></tr>
+        <tr><td>--pct &lt;percentage&gt;</td><td>Percentage of balance to sell, 1-100 (required)</td></tr>
+        <tr><td>-p, --pool &lt;address&gt;</td><td>Pool address (required for on-chain DEXes)</td></tr>
+        <tr><td>-t, --token &lt;mint&gt;</td><td>Token mint (auto-detected from pool; required for aggregators)</td></tr>
+        <tr><td>--dry-run</td><td>Simulate only &mdash; preview CU usage without sending</td></tr>
+      </table>
+    </div>
+
+    <h4>outsmart quote</h4>
+    <p>Get the current on-chain price from a pool.</p>
+    <pre>outsmart quote --dex raydium-cpmm --pool &lt;POOL&gt;</pre>
+
+    <h4>outsmart find-pool</h4>
+    <p>Discover a pool for a token pair on a specific DEX.</p>
+    <pre>outsmart find-pool --dex raydium-cpmm --token &lt;MINT&gt;</pre>
+
+    <!-- Wallet -->
+    <h3>Wallet Management</h3>
+
+    <h4>outsmart wallet</h4>
+    <p>Show active wallet address and SOL balance.</p>
+    <pre>outsmart wallet</pre>
+    <div class="output-block">
+<span class="key">  label:</span>   <span class="val">default</span>
+<span class="key">  address:</span> <span class="val">tstXr3NbiMd6FFZF2qb...pZVvdjeXiPv1</span>
+<span class="key">  balance:</span> <span class="val">0.377743 SOL</span>
+    </div>
+
+    <h4>outsmart wallet list</h4>
+    <p>Show all saved wallets. Active wallet marked with <code>*</code>.</p>
+    <pre>outsmart wallet list</pre>
+
+    <h4>outsmart wallet add / switch / remove</h4>
+    <pre><span style="color:var(--text-dim)"># Add a new wallet (prompts for private key)</span>
+outsmart wallet add --label trading
+
+<span style="color:var(--text-dim)"># Switch active wallet</span>
+outsmart wallet switch trading
+
+<span style="color:var(--text-dim)"># Remove a wallet</span>
+outsmart wallet remove trading</pre>
+
+    <!-- Balance -->
+    <h3>Balances</h3>
+
+    <h4>outsmart balance</h4>
+    <p>Show SOL + stablecoin balances. Use <code>--token</code> for a specific mint.</p>
+    <pre>outsmart balance
+outsmart balance --token &lt;MINT&gt;</pre>
+
+    <!-- Liquidity -->
+    <h3>Liquidity</h3>
+
+    <h4>outsmart add-liq</h4>
+    <p>Add liquidity. Supports one-sided SOL, one-sided token, or balanced deposits.</p>
+    <pre>outsmart add-liq --dex meteora-dlmm --pool &lt;POOL&gt; --amount-sol 0.5 --strategy spot --bins 50
+outsmart add-liq --dex meteora-damm-v2 --pool &lt;POOL&gt; --amount-sol 1.0</pre>
+    <div class="flag-table">
+      <table>
+        <tr><th>Flag</th><th>Description</th></tr>
+        <tr><td>--amount-sol &lt;n&gt;</td><td>SOL to deposit</td></tr>
+        <tr><td>--amount-token &lt;n&gt;</td><td>Non-SOL token to deposit</td></tr>
+        <tr><td>--strategy &lt;type&gt;</td><td>spot | curve | bid-ask (DLMM only, default: spot)</td></tr>
+        <tr><td>--bins &lt;count&gt;</td><td>Number of bins (DLMM only, default: 50, max: 70)</td></tr>
+      </table>
+    </div>
+
+    <h4>outsmart remove-liq / claim-fees / positions</h4>
+    <pre>outsmart remove-liq --dex meteora-damm-v2 --pool &lt;POOL&gt; --pct 100
+outsmart claim-fees --dex meteora-dlmm --pool &lt;POOL&gt;
+outsmart positions --dex meteora-dlmm --pool &lt;POOL&gt;</pre>
+
+    <!-- Pool Creation -->
+    <h3>Pool Creation</h3>
+
+    <h4>outsmart create-pump-coin</h4>
+    <p>Create a new PumpFun token with a bonding curve.</p>
+    <pre>outsmart create-pump-coin --name "My Token" --symbol "MYTKN" --uri "https://ipfs.io/..."</pre>
+
+    <h4>outsmart create-pool</h4>
+    <p>Create a PumpSwap AMM pool with initial liquidity.</p>
+    <pre>outsmart create-pool --base &lt;MINT&gt; --quote So111...112 --base-amount 1000000 --quote-amount 1</pre>
+
+    <h4>outsmart create-damm-pool</h4>
+    <p>Create a Meteora DAMM v2 custom pool with full fee configuration.</p>
+    <pre>outsmart create-damm-pool --base &lt;MINT&gt; --base-amount 1000000 --quote-amount 0.5 \
+  --max-fee 5000 --min-fee 100 --fee-mode 1 --dynamic-fee</pre>
+
+    <!-- Shared Options -->
+    <h3>Shared Swap Options</h3>
+    <p>All swap commands (<code>buy</code>, <code>sell</code>) accept these options:</p>
+    <div class="flag-table">
+      <table>
+        <tr><th>Option</th><th>Description</th><th>Default</th></tr>
+        <tr><td>--slippage &lt;bps&gt;</td><td>Slippage tolerance in basis points</td><td>300 (3%)</td></tr>
+        <tr><td>--priority &lt;uL&gt;</td><td>Priority fee per compute unit</td><td>from env</td></tr>
+        <tr><td>--tip &lt;sol&gt;</td><td>MEV tip in SOL</td><td>0.001</td></tr>
+        <tr><td>--cu &lt;units&gt;</td><td>Compute unit limit</td><td>auto</td></tr>
+        <tr><td>--jito</td><td>Use Jito bundle submission</td><td>false</td></tr>
+        <tr><td>--dry-run</td><td>Simulate TX without sending</td><td>false</td></tr>
+        <tr><td>--quote &lt;mint&gt;</td><td>Quote token mint</td><td>WSOL</td></tr>
+      </table>
+    </div>
+
+    <!-- Utilities -->
+    <h3>Utilities</h3>
+    <pre><span style="color:var(--text-dim)"># Token market data from DexScreener</span>
+outsmart info --token &lt;MINT&gt;
+
+<span style="color:var(--text-dim)"># List all DEX adapters</span>
+outsmart list-dex
+outsmart list-dex --cap canSell
+
+<span style="color:var(--text-dim)"># View / generate config</span>
+outsmart config show
+outsmart config env
+
+<span style="color:var(--text-dim)"># Interactive setup</span>
+outsmart init</pre>
+  </div>
+</section>
+
+<!-- Stablecoin Auto-Swap -->
+<section id="autoswap">
+  <div class="container">
+    <h2>Stablecoin Auto-Swap</h2>
+    <p class="section-desc">Some pools use USDC, USDT, or USD1 as the quote token. The CLI handles the conversion automatically.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">On Buy</div>
+        <p>Detects stablecoin quote from pool state, swaps SOL to stablecoin, then buys the token. All in one command.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">On Sell</div>
+        <p>Sells token for stablecoin, then auto-converts proceeds back to SOL. No manual steps needed.</p>
+      </div>
+    </div>
+    <pre style="margin-top: 24px"><span style="color:var(--text-dim)"># LaunchLab pool quoted in USD1 &mdash; just specify SOL amount</span>
+outsmart buy --dex raydium-launchlab --pool &lt;POOL&gt; --amount 0.1
+<span style="color:var(--text-dim)"># &rarr; auto-swaps 0.1 SOL &rarr; USD1 &rarr; buys token</span></pre>
+    <p style="color: var(--text-muted); font-size: 13px;">Uses Jupiter Ultra if <code>JUPITER_API_KEY</code> is set, otherwise falls back to on-chain DEX pools.</p>
+  </div>
+</section>
+
+<!-- DEX Adapters -->
+<section id="adapters">
+  <div class="container">
+    <h2>DEX Adapters</h2>
+    <p class="section-desc">18 adapters covering every major Solana DEX protocol. All confirmed on mainnet with real transactions.</p>
+
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Adapter</th>
+            <th>Protocol</th>
+            <th style="text-align:center">Buy</th>
+            <th style="text-align:center">Sell</th>
+            <th style="text-align:center">Price</th>
+            <th style="text-align:center">LP</th>
+            <th>Extra</th>
+            <th style="text-align:center">Tested</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="adapter-name">raydium-amm-v4</td><td>AMM v4</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td>findpool</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">raydium-cpmm</td><td>CPMM</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td>findpool</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">raydium-clmm</td><td>CLMM</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td>findpool</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">raydium-launchlab</td><td>Launchlab</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td>findpool, auto-swap</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">meteora-damm-v1</td><td>Dynamic AMM</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td>findpool</td><td class="dash">&mdash;</td></tr>
+          <tr><td class="adapter-name">meteora-damm-v2</td><td>CpAmm</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">full</td><td>findpool, create pool</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">meteora-dlmm</td><td>DLMM</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">full</td><td>&mdash;</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">meteora-dbc</td><td>DBC</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td>&mdash;</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">pumpfun</td><td>Bonding Curve</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td>create coin</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">pumpfun-amm</td><td>PumpSwap AMM</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td>create pool</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">orca</td><td>Whirlpool</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td>&mdash;</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">byreal-clmm</td><td>CLMM</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td>auto-swap</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">pancakeswap-clmm</td><td>CLMM</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td>&mdash;</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">fusion-amm</td><td>Fusion</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td>&mdash;</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">futarchy-amm</td><td>Futarchy</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td>auto-swap</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">futarchy-launchpad</td><td>Launchpad</td><td class="dash">&mdash;</td><td class="dash">&mdash;</td><td class="dash">&mdash;</td><td class="dash">&mdash;</td><td>fund/claim</td><td class="dash">&mdash;</td></tr>
+          <tr><td class="adapter-name">jupiter-ultra</td><td>Ultra API</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td class="dash">&mdash;</td><td>aggregator</td><td class="check">&#10003;</td></tr>
+          <tr><td class="adapter-name">dflow</td><td>Intent API</td><td class="check">&#10003;</td><td class="check">&#10003;</td><td class="dash">&mdash;</td><td class="dash">&mdash;</td><td>aggregator</td><td class="check">&#10003;</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- TX Landing Providers -->
+<section id="providers">
+  <div class="container">
+    <h2>TX Landing Providers</h2>
+    <p class="section-desc">12 providers with concurrent, race, random, and sequential submission strategies. Set the API key and the provider is automatically enabled.</p>
+
+    <div class="provider-grid">
+      <div class="provider-item"><span class="provider-name">Jito</span><span class="provider-env">JITO_API_KEY</span></div>
+      <div class="provider-item"><span class="provider-name">bloXroute</span><span class="provider-env">BLOXROUTE_AUTH_HEADER</span></div>
+      <div class="provider-item"><span class="provider-name">Helius</span><span class="provider-env">HELIUS_API_KEY</span></div>
+      <div class="provider-item"><span class="provider-name">Nozomi</span><span class="provider-env">NOZOMI_API_KEY</span></div>
+      <div class="provider-item"><span class="provider-name">Blockrazor</span><span class="provider-env">BLOCKRAZOR_API_KEY</span></div>
+      <div class="provider-item"><span class="provider-name">NextBlock</span><span class="provider-env">NEXTBLOCK_API_KEY</span></div>
+      <div class="provider-item"><span class="provider-name">0slot</span><span class="provider-env">ZERO_SLOT_API_KEY</span></div>
+      <div class="provider-item"><span class="provider-name">Soyas</span><span class="provider-env">SOYAS_API_KEY</span></div>
+      <div class="provider-item"><span class="provider-name">Astralane</span><span class="provider-env">ASTRALANE_API_KEY</span></div>
+      <div class="provider-item"><span class="provider-name">Stellium</span><span class="provider-env">STELLIUM_API_KEY</span></div>
+      <div class="provider-item"><span class="provider-name">Flashblock</span><span class="provider-env">FLASHBLOCK_API_KEY</span></div>
+      <div class="provider-item"><span class="provider-name">Node1</span><span class="provider-env">NODE1_API_KEY</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- Programmatic API -->
+<section id="api">
+  <div class="container">
+    <h2>Programmatic API</h2>
+    <p class="section-desc">Use outsmart as a library in your own bots, scripts, or agents.</p>
+
+    <pre><span style="color:var(--text-dim)">import</span> { getDexAdapter, listDexAdapters } <span style="color:var(--text-dim)">from</span> <span style="color:var(--green)">"outsmart"</span>;
+
+<span style="color:var(--text-dim)">// Import adapters you need (self-registers on import)</span>
+<span style="color:var(--text-dim)">import</span> <span style="color:var(--green)">"outsmart/dist/dex/raydium-cpmm"</span>;
+<span style="color:var(--text-dim)">import</span> <span style="color:var(--green)">"outsmart/dist/dex/jupiter-ultra"</span>;
+
+<span style="color:var(--text-dim)">const</span> cpmm = getDexAdapter(<span style="color:var(--green)">"raydium-cpmm"</span>);
+
+<span style="color:var(--text-dim)">// Buy</span>
+<span style="color:var(--text-dim)">const</span> result = <span style="color:var(--text-dim)">await</span> cpmm.buy({
+  tokenMint: <span style="color:var(--green)">"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"</span>,
+  amountSol: <span style="color:var(--yellow)">0.1</span>,
+  opts: { slippageBps: <span style="color:var(--yellow)">300</span>, tipSol: <span style="color:var(--yellow)">0.001</span> },
+});
+
+<span style="color:var(--text-dim)">// Sell 100%</span>
+<span style="color:var(--text-dim)">const</span> sellResult = <span style="color:var(--text-dim)">await</span> cpmm.sell({
+  tokenMint: <span style="color:var(--green)">"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"</span>,
+  percentage: <span style="color:var(--yellow)">100</span>,
+});
+
+<span style="color:var(--text-dim)">// Get price</span>
+<span style="color:var(--text-dim)">const</span> price = <span style="color:var(--text-dim)">await</span> cpmm.getPrice!(<span style="color:var(--green)">"POOL_ADDRESS"</span>);
+
+<span style="color:var(--text-dim)">// List all adapters</span>
+<span style="color:var(--text-dim)">const</span> adapters = listDexAdapters();</pre>
+    <p style="color:var(--text-muted); font-size: 13px;">For AI agent integration (MCP server, OpenClaw workflows), see <a href="https://github.com/outsmartchad/outsmart-agent" style="color:var(--accent-light)">outsmart-agent</a>.</p>
+  </div>
+</section>
+
+<!-- Configuration -->
+<section id="config">
+  <div class="container">
+    <h2>Configuration</h2>
+    <p class="section-desc">Environment variables for wallet, RPC, and TX landing. Set via <code>outsmart init</code> or manually in <code>~/.outsmart/config.env</code>.</p>
+
+    <h3>Required</h3>
+    <div class="flag-table">
+      <table>
+        <tr><th>Variable</th><th>Description</th></tr>
+        <tr><td>PRIVATE_KEY</td><td>Base58-encoded wallet private key</td></tr>
+        <tr><td>MAINNET_ENDPOINT</td><td>Solana mainnet RPC endpoint</td></tr>
+      </table>
+    </div>
+
+    <h3>Optional</h3>
+    <div class="flag-table">
+      <table>
+        <tr><th>Variable</th><th>Description</th><th>Default</th></tr>
+        <tr><td>TX_LANDING_MODE</td><td>concurrent | race | random | sequential</td><td>concurrent</td></tr>
+        <tr><td>DEFAULT_TIP_SOL</td><td>MEV tip in SOL</td><td>0.001</td></tr>
+        <tr><td>DEFAULT_SLIPPAGE_BPS</td><td>Slippage in basis points</td><td>300</td></tr>
+        <tr><td>JUPITER_API_KEY</td><td>Jupiter Ultra API key</td><td>works without</td></tr>
+        <tr><td>DFLOW_API_KEY</td><td>DFlow intent API key</td><td>required for dflow</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- Architecture -->
+<section id="architecture">
+  <div class="container">
+    <h2>Architecture</h2>
+    <p class="section-desc">Clean adapter pattern with self-registration. Each DEX module implements <code>IDexAdapter</code> and registers itself on import.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">Adapter Pattern</div>
+        <p>Each DEX module implements IDexAdapter (buy, sell, getPrice, findPool, addLiquidity, etc.) and self-registers via <code>registerAdapter()</code>. The CLI and library access adapters through the DexRegistry.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">TX Simulation</div>
+        <p>Transactions are simulated before sending by default. Failed simulations return immediately without spending SOL. Use <code>--dry-run</code> to preview CU usage.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">RPC Resilience</div>
+        <p>Exponential backoff on transient RPC errors (429, 503, network). Blockhash expiry retry with fresh blockhash. Configurable retry limits.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Multi-Wallet</div>
+        <p>Wallets stored in <code>~/.outsmart/wallets.json</code> with owner-only permissions. Add, switch, and remove wallets without restarting.</p>
+      </div>
+    </div>
+
+    <h3>Project Structure</h3>
+    <pre class="tree"><span class="dir">src/</span>
+  <span class="dir">cli.ts</span>                 <span class="desc"># CLI entry point (Commander.js)</span>
+  <span class="dir">index.ts</span>               <span class="desc"># Library entry point</span>
+  <span class="dir">dex/</span>
+    types.ts           <span class="desc"># IDexAdapter interface, all shared types</span>
+    index.ts           <span class="desc"># DexRegistry singleton</span>
+    shared/clmm-base.ts
+    <span class="desc">... 18 adapter files</span>
+  <span class="dir">helpers/</span>
+    config.ts          <span class="desc"># Wallet, connection, env loading</span>
+    wallets.ts         <span class="desc"># Multi-wallet management</span>
+    logger.ts          <span class="desc"># Structured logger (pino)</span>
+  <span class="dir">transactions/</span>
+    send-rpc.ts        <span class="desc"># sendAndConfirmVtx (simulation, backoff, dry-run)</span>
+    <span class="dir">landing/</span>
+      orchestrator.ts  <span class="desc"># Multi-provider concurrent submission</span>
+      nonce-manager.ts <span class="desc"># Durable nonce for dedup</span>
+      tip-accounts.ts  <span class="desc"># Tip account registry</span>
+      <span class="dir">providers/</span>     <span class="desc"># 12 provider implementations</span></pre>
+  </div>
+</section>
+
+<!-- Testing -->
+<section id="testing">
+  <div class="container">
+    <h2>Testing</h2>
+    <p class="section-desc">CI-safe unit tests run without RPC. Mainnet integration tests use real transactions with tiny amounts.</p>
+
+    <pre><span style="color:var(--text-dim)"># CI-safe (no RPC or SOL needed)</span>
+npm run test:unit        <span style="color:var(--text-dim)"># 43 unit tests</span>
+npm run test:registry    <span style="color:var(--text-dim)"># 18 adapters registered</span>
+
+<span style="color:var(--text-dim)"># Mainnet integration (requires PRIVATE_KEY + MAINNET_ENDPOINT)</span>
+npm run test:raydium     <span style="color:var(--text-dim)"># Raydium AMM v4, CPMM, CLMM</span>
+npm run test:meteora     <span style="color:var(--text-dim)"># Meteora DAMM v2, DLMM, DBC</span>
+npm run test:pumpfun     <span style="color:var(--text-dim)"># PumpFun + PumpSwap</span>
+npm run test:orca        <span style="color:var(--text-dim)"># Orca Whirlpool</span>
+npm run test:clmm        <span style="color:var(--text-dim)"># Byreal + PancakeSwap CLMM</span>
+npm run test:fusion      <span style="color:var(--text-dim)"># Fusion + Futarchy AMM</span>
+npm run test:api         <span style="color:var(--text-dim)"># Jupiter Ultra + DFlow</span></pre>
+    <p style="color:var(--text-muted); font-size: 13px;">Mainnet tests use 0.02 SOL per buy. Run suites one at a time &mdash; tests share a wallet.</p>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-links">
+    <a href="https://github.com/outsmartchad/outsmart-cli">GitHub</a>
+    <a href="https://www.npmjs.com/package/outsmart">npm</a>
+    <a href="https://discord.gg/dc3Kh3Y3yJ">Discord</a>
+    <a href="https://github.com/outsmartchad/outsmart-agent">outsmart-agent</a>
+  </div>
+  <p>ISC License. Use at your own risk. Never share your private keys.</p>
+</footer>
+
+</body>
+</html>
