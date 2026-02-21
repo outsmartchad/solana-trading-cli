@@ -319,9 +319,12 @@ function createClmmSwapV2Ix(
   inputVaultMint: PublicKey,
   outputVaultMint: PublicKey,
   tickArrayBitmapExtension: PublicKey,
+  zeroForOne?: boolean,
 ): TransactionInstruction {
-  const inputVault = isBaseInput ? poolParams.tokenVault0 : poolParams.tokenVault1;
-  const outputVault = isBaseInput ? poolParams.tokenVault1 : poolParams.tokenVault0;
+  // Use zeroForOne for vault direction (falls back to isBaseInput for backward compat)
+  const directionZeroForOne = zeroForOne ?? isBaseInput;
+  const inputVault = directionZeroForOne ? poolParams.tokenVault0 : poolParams.tokenVault1;
+  const outputVault = directionZeroForOne ? poolParams.tokenVault1 : poolParams.tokenVault0;
 
   const accounts = [
     { pubkey: payer, isSigner: true, isWritable: true },
@@ -508,11 +511,12 @@ async function buildClmmSwapInstructions(
     amountIn,
     minOut,
     sqrtPriceLimitX64,
-    isBaseInput,
+    true, // isBaseInput — always exact input swap
     tickArrays,
     inputVaultMint,
     outputVaultMint,
     tickArrayBitmapExt,
+    zeroForOne, // direction for vault selection
   );
 
   // Build instruction list
@@ -569,12 +573,13 @@ async function buildClmmSellInstructions(
   const poolState = await fetchClmmPoolState(connection, poolId);
   const baseTokenProgram = await getTokenProgramForMint(connection, tokenMint);
 
-  // For sell: input is tokenMint (base), output is quoteMint
-  const isBaseInput = poolState.tokenMint0.equals(tokenMint);
-  const zeroForOne = isBaseInput;
+  // For sell: input is tokenMint, output is quoteMint.
+  // zeroForOne = true if tokenMint is token0 (selling token0 for token1).
+  // isBaseInput is ALWAYS true — we specify exact input amount, not exact output.
+  const zeroForOne = poolState.tokenMint0.equals(tokenMint);
 
   let sqrtPriceLimitX64: BN;
-  if (isBaseInput) {
+  if (zeroForOne) {
     sqrtPriceLimitX64 = MIN_SQRT_PRICE_X64.add(new BN(1));
   } else {
     sqrtPriceLimitX64 = MAX_SQRT_PRICE_X64.sub(new BN(1));
@@ -592,8 +597,8 @@ async function buildClmmSellInstructions(
 
   const tickArrayBitmapExt = deriveTickArrayBitmapExtension(poolId);
 
-  const inputVaultMint = isBaseInput ? poolState.tokenMint0 : poolState.tokenMint1;
-  const outputVaultMint = isBaseInput ? poolState.tokenMint1 : poolState.tokenMint0;
+  const inputVaultMint = zeroForOne ? poolState.tokenMint0 : poolState.tokenMint1;
+  const outputVaultMint = zeroForOne ? poolState.tokenMint1 : poolState.tokenMint0;
 
   const poolParams: ClmmSwapIxParams = {
     poolId,
@@ -605,6 +610,8 @@ async function buildClmmSellInstructions(
     tokenMint1: poolState.tokenMint1,
   };
 
+  // isBaseInput = true: we always specify exact input amount
+  // zeroForOne: direction flag for vault selection
   const swapIx = createClmmSwapV2Ix(
     poolParams,
     wallet.publicKey,
@@ -613,11 +620,12 @@ async function buildClmmSellInstructions(
     sellAmount,
     minOut,
     sqrtPriceLimitX64,
-    isBaseInput,
+    true, // isBaseInput — exact input swap
     tickArrays,
     inputVaultMint,
     outputVaultMint,
     tickArrayBitmapExt,
+    zeroForOne, // pass direction for vault selection
   );
 
   const ixs: TransactionInstruction[] = [];
@@ -626,10 +634,16 @@ async function buildClmmSellInstructions(
     ixs.push(ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }));
   }
 
+  // Create output ATA (WSOL) and ensure input ATA exists
   ixs.push(
     createAssociatedTokenAccountIdempotentInstruction(wallet.publicKey, outputAta, wallet.publicKey, quoteMintPk),
     swapIx,
   );
+
+  // Close WSOL ATA to unwrap SOL proceeds
+  if (quoteMintPk.equals(WSOL_MINT_PK)) {
+    ixs.push(createCloseAccountInstruction(outputAta, wallet.publicKey, wallet.publicKey, [], TOKEN_PROGRAM_ID_PK));
+  }
 
   return ixs;
 }
