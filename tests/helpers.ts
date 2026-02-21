@@ -91,6 +91,9 @@ export const FUTARCHY_AMM_TOKEN = "BANKJmvhT8tiJRsBSS1n2HryMBPvT5Ze4HU95DUAmeta"
 /** Byreal CLMM: token/USDC pool */
 export const BYREAL_CLMM_POOL = "FYuG64kU4fi6PVt7Sfc5ubwiiSjxg7ux5LFZDDHrp6pp";
 
+/** PancakeSwap CLMM: WSOL/token pool */
+export const PANCAKESWAP_CLMM_POOL = "DbRUHWgc6xmdzn619JWFjCMYJRNZmDsDYSdbsbiF7i6b";
+
 // ---------------------------------------------------------------------------
 // Test amounts
 //

@@ -1280,14 +1280,10 @@ export class ClmmBaseAdapter implements IDexAdapter {
       );
       const amountLamports = Math.floor(amountSol * LAMPORTS_PER_SOL);
 
-      preIxs.push(
-        SystemProgram.transfer({
-          fromPubkey: wallet.publicKey,
-          toPubkey: inputAta,
-          lamports: amountLamports,
-        }),
-        createSyncNativeInstruction(inputAta, TOKEN_PROGRAM_ID),
-      );
+      // swapIxs = [createInputATA, createOutputATA, swapIx]
+      // Insert ATA creates first, then transfer+sync, then swap
+      const createAtaIxs = swapIxs.slice(0, -1); // ATA creation instructions
+      const swapOnlyIx = swapIxs[swapIxs.length - 1]; // the actual swap
 
       const closeIx = createCloseAccountInstruction(
         inputAta,
@@ -1297,7 +1293,18 @@ export class ClmmBaseAdapter implements IDexAdapter {
         TOKEN_PROGRAM_ID,
       );
 
-      return [...preIxs, ...swapIxs, closeIx];
+      return [
+        ...preIxs,
+        ...createAtaIxs,
+        SystemProgram.transfer({
+          fromPubkey: wallet.publicKey,
+          toPubkey: inputAta,
+          lamports: amountLamports,
+        }),
+        createSyncNativeInstruction(inputAta, TOKEN_PROGRAM_ID),
+        swapOnlyIx,
+        closeIx,
+      ];
     }
 
     return [...preIxs, ...swapIxs];

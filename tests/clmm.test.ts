@@ -22,6 +22,7 @@ import {
   WSOL,
   USDC,
   BYREAL_CLMM_POOL,
+  PANCAKESWAP_CLMM_POOL,
 } from "./helpers";
 
 /** Raydium CLMM SOL/USDC pool for auto-swap */
@@ -153,6 +154,11 @@ describe("byreal-clmm", () => {
 // ============================================================
 describe("pancakeswap-clmm", () => {
   const adapter = getDexAdapter("pancakeswap-clmm");
+  const pool = PANCAKESWAP_CLMM_POOL;
+
+  // Auto-detected from pool state
+  let token: string;
+  let quoteMint: string;
 
   test("capabilities check", () => {
     expect(adapter.capabilities.canBuy).toBe(true);
@@ -162,7 +168,45 @@ describe("pancakeswap-clmm", () => {
     expect(adapter.capabilities.canFindPool).toBe(false);
   });
 
-  test.skip("buy: requires known PancakeSwap CLMM pool", async () => {
-    // Replace with a real pool address when available
+  test("getPrice: auto-detect token and quote from pool", async () => {
+    const price = await adapter.getPrice!(pool);
+    logResult("pancakeswap-clmm getPrice", price);
+    expect(price.price).toBeGreaterThan(0);
+
+    if (STABLES.has(price.baseMint)) {
+      token = price.quoteMint;
+      quoteMint = price.baseMint;
+    } else {
+      token = price.baseMint;
+      quoteMint = price.quoteMint;
+    }
+    console.log(`Detected token: ${token}, quote: ${quoteMint}`);
+  });
+
+  test("buy: swap SOL for token", async () => {
+    expect(token).toBeTruthy();
+    await delay();
+    const result = await adapter.buy({
+      tokenMint: token,
+      amountSol: BUY_AMOUNT_SOL,
+      quoteMint,
+      poolAddress: pool,
+    });
+    logResult("pancakeswap-clmm buy", result);
+    expect(result.txSignature).toBeTruthy();
+    expect(result.dex).toBe("pancakeswap-clmm");
+  });
+
+  test("sell: 100% of token just bought", async () => {
+    expect(token).toBeTruthy();
+    await delay(10000);
+    const result = await adapter.sell({
+      tokenMint: token,
+      percentage: SELL_PERCENTAGE,
+      quoteMint,
+      poolAddress: pool,
+    });
+    logResult("pancakeswap-clmm sell", result);
+    expect(result.txSignature).toBeTruthy();
   });
 });
