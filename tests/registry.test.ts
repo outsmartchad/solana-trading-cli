@@ -71,6 +71,7 @@ describe("DexRegistry", () => {
       "meteora-damm-v2": {
         canBuy: true, canSell: true, canSnipe: true, canFindPool: true, canGetPrice: true,
         canAddLiquidity: true, canRemoveLiquidity: true, canClaimFees: true,
+        canListPositions: true, canCreatePool: true,
       },
       "meteora-dlmm": {
         canBuy: true, canSell: true, canSnipe: true, canGetPrice: true,

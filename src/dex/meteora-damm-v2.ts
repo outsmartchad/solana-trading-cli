@@ -29,8 +29,19 @@ import {
   SwapParams,
   PoolState,
   PositionState,
+  PoolFeesParams,
+  BaseFee,
   LIQUIDITY_SCALE,
   getTokenProgram as sdkGetTokenProgram,
+  getSqrtPriceFromPrice,
+  getPriceFromSqrtPrice,
+  getBaseFeeParams,
+  getDynamicFeeParams,
+  calculateTransferFeeIncludedAmount,
+  ActivationType,
+  BaseFeeMode,
+  BIN_STEP_BPS_DEFAULT,
+  BIN_STEP_BPS_U128_DEFAULT,
   MIN_SQRT_PRICE,
   MAX_SQRT_PRICE,
 } from "@meteora-ag/cp-amm-sdk";
@@ -61,6 +72,9 @@ import {
   BuildSwapIxsResult,
   AddLiquidityParams,
   RemoveLiquidityParams,
+  CreateCustomPoolParams,
+  CreateConfigPoolParams,
+  LpPositionInfo,
   TxResult,
   UnsupportedOperationError,
   PoolNotFoundError,
@@ -170,6 +184,20 @@ function deriveCustomizablePoolAddress(tokenAMint: PublicKey, tokenBMint: Public
   )[0];
 }
 
+function derivePoolAddress(config: PublicKey, tokenAMint: PublicKey, tokenBMint: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("pool"), config.toBuffer(), getFirstKey(tokenAMint, tokenBMint), getSecondKey(tokenAMint, tokenBMint)],
+    DAMM_PROGRAM_ID,
+  )[0];
+}
+
+function derivePositionAddress(positionNft: PublicKey): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("position"), positionNft.toBuffer()],
+    DAMM_PROGRAM_ID,
+  )[0];
+}
+
 // ---------------------------------------------------------------------------
 // Adapter
 // ---------------------------------------------------------------------------
@@ -186,6 +214,8 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
     canAddLiquidity: true,
     canRemoveLiquidity: true,
     canClaimFees: true,
+    canListPositions: true,
+    canCreatePool: true,
   });
 
   // ----- Core: buy -----
@@ -950,6 +980,467 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
       txSignature: lastSignature,
       confirmed: anyConfirmed,
     };
+  }
+
+  // ----- Pool creation: createCustomPool -----
+
+  /**
+   * Create a DAMM v2 pool with full fee configuration (custom pool).
+   *
+   * Uses `cpAmm.createCustomPool()` — allows setting fee schedule, price range,
+   * activation params, dynamic fee, and collect-fee mode.
+   *
+   * This is the primary method for token launches. Creates a customizable pool
+   * with MIN_SQRT_PRICE → MAX_SQRT_PRICE full-range liquidity.
+   *
+   * Ported from: 100x-algo-bots/trading-modules/meteora-damm-v2/create.ts
+   *   createDammV2BalancedPool()
+   */
+  async createCustomPool(params: CreateCustomPoolParams): Promise<TxResult> {
+    const {
+      baseMint,
+      quoteMint: quoteMintParam,
+      baseAmount,
+      quoteAmount,
+      poolFees,
+      collectFeeMode = 1,
+      activationType = 1,
+      activationPoint = null,
+      hasAlphaVault = false,
+      opts,
+    } = params;
+    const connection = getConnection();
+    const wallet = getWallet();
+    const quoteMintStr = quoteMintParam ?? WSOL_MINT;
+
+    const baseMintPk = new PublicKey(baseMint);
+    const quoteMintPk = new PublicKey(quoteMintStr);
+
+    // Fetch mint info for both tokens
+    const [baseMintAccInfo, quoteMintAccInfo] = await Promise.all([
+      connection.getAccountInfo(baseMintPk),
+      connection.getAccountInfo(quoteMintPk),
+    ]);
+
+    if (!baseMintAccInfo) throw new Error(`Base mint not found: ${baseMint}`);
+    if (!quoteMintAccInfo) throw new Error(`Quote mint not found: ${quoteMintStr}`);
+
+    const baseMintData = unpackMint(baseMintPk, baseMintAccInfo, baseMintAccInfo.owner);
+    const quoteMintData = unpackMint(quoteMintPk, quoteMintAccInfo, quoteMintAccInfo.owner);
+    const baseDecimals = baseMintData.decimals;
+    const quoteDecimalCount = quoteDecimals(quoteMintStr);
+
+    const baseTokenProgram = baseMintAccInfo.owner.equals(TOKEN_2022_PROGRAM_ID)
+      ? TOKEN_2022_PROGRAM_ID
+      : TOKEN_PROGRAM_ID;
+    const quoteTokenProgram = quoteMintAccInfo.owner.equals(TOKEN_2022_PROGRAM_ID)
+      ? TOKEN_2022_PROGRAM_ID
+      : TOKEN_PROGRAM_ID;
+
+    // Detect Token-2022 transfer fees
+    let baseTokenInfo: { mint: typeof baseMintData; currentEpoch: number } | undefined;
+    let quoteTokenInfo: { mint: typeof quoteMintData; currentEpoch: number } | undefined;
+
+    if (baseMintAccInfo.owner.equals(TOKEN_2022_PROGRAM_ID)) {
+      const epochInfo = await connection.getEpochInfo();
+      baseTokenInfo = { mint: baseMintData, currentEpoch: epochInfo.epoch };
+    }
+    if (quoteMintAccInfo.owner.equals(TOKEN_2022_PROGRAM_ID)) {
+      const epochInfo = await connection.getEpochInfo();
+      quoteTokenInfo = { mint: quoteMintData, currentEpoch: epochInfo.epoch };
+    }
+
+    // Convert human amounts to lamports
+    let tokenAAmount = new BN(
+      new Decimal(baseAmount).mul(Decimal.pow(10, baseDecimals)).floor().toFixed(),
+    );
+    let tokenBAmount = new BN(
+      new Decimal(quoteAmount).mul(Decimal.pow(10, quoteDecimalCount)).floor().toFixed(),
+    );
+
+    // Subtract transfer fees for Token-2022 tokens
+    if (baseTokenInfo) {
+      tokenAAmount = tokenAAmount.sub(
+        calculateTransferFeeIncludedAmount(tokenAAmount, baseTokenInfo.mint, baseTokenInfo.currentEpoch).transferFee,
+      );
+    }
+    if (quoteTokenInfo) {
+      tokenBAmount = tokenBAmount.sub(
+        calculateTransferFeeIncludedAmount(tokenBAmount, quoteTokenInfo.mint, quoteTokenInfo.currentEpoch).transferFee,
+      );
+    }
+
+    const cpAmm = new CpAmm(connection);
+
+    // Calculate initial sqrt price
+    const initPrice = params.initPrice ?? quoteAmount / baseAmount;
+    const initSqrtPrice = getSqrtPriceFromPrice(initPrice.toString(), baseDecimals, quoteDecimalCount);
+
+    // Full-range liquidity
+    const minSqrtPrice = MIN_SQRT_PRICE;
+    const maxSqrtPrice = MAX_SQRT_PRICE;
+
+    const liquidityDelta = cpAmm.getLiquidityDelta({
+      maxAmountTokenA: tokenAAmount,
+      maxAmountTokenB: tokenBAmount,
+      sqrtPrice: initSqrtPrice,
+      sqrtMinPrice: minSqrtPrice,
+      sqrtMaxPrice: maxSqrtPrice,
+      tokenAInfo: baseTokenInfo,
+    });
+
+    // Build fee params
+    const {
+      maxBaseFeeBps,
+      minBaseFeeBps,
+      numberOfPeriod,
+      totalDuration,
+      feeSchedulerMode,
+      useDynamicFee,
+      dynamicFeeConfig,
+    } = poolFees;
+
+    let dynamicFee: any = null;
+    if (useDynamicFee) {
+      if (dynamicFeeConfig) {
+        dynamicFee = {
+          binStep: BIN_STEP_BPS_DEFAULT,
+          binStepU128: BIN_STEP_BPS_U128_DEFAULT,
+          filterPeriod: dynamicFeeConfig.filterPeriod,
+          decayPeriod: dynamicFeeConfig.decayPeriod,
+          reductionFactor: dynamicFeeConfig.reductionFactor,
+          variableFeeControl: dynamicFeeConfig.variableFeeControl,
+          maxVolatilityAccumulator: dynamicFeeConfig.maxVolatilityAccumulator,
+        };
+      } else {
+        dynamicFee = getDynamicFeeParams(minBaseFeeBps);
+      }
+    }
+
+    const baseFee: BaseFee = getBaseFeeParams(
+      {
+        baseFeeMode:
+          feeSchedulerMode === 0
+            ? BaseFeeMode.FeeTimeSchedulerLinear
+            : BaseFeeMode.FeeTimeSchedulerExponential,
+        feeTimeSchedulerParam: {
+          startingFeeBps: maxBaseFeeBps,
+          endingFeeBps: minBaseFeeBps,
+          numberOfPeriod,
+          totalDuration,
+        },
+      },
+      quoteDecimalCount,
+      ActivationType.Timestamp,
+    );
+
+    const poolFeesParams: PoolFeesParams = {
+      baseFee,
+      padding: [],
+      dynamicFee,
+    };
+
+    const positionNft = Keypair.generate();
+
+    const {
+      tx: initCustomPoolTx,
+      pool,
+      position,
+    } = await cpAmm.createCustomPool({
+      payer: wallet.publicKey,
+      creator: wallet.publicKey,
+      positionNft: positionNft.publicKey,
+      tokenAMint: baseMintPk,
+      tokenBMint: quoteMintPk,
+      tokenAAmount,
+      tokenBAmount,
+      sqrtMinPrice: minSqrtPrice,
+      sqrtMaxPrice: maxSqrtPrice,
+      liquidityDelta,
+      initSqrtPrice,
+      poolFees: poolFeesParams,
+      hasAlphaVault,
+      activationType,
+      collectFeeMode,
+      activationPoint: activationPoint != null ? new BN(activationPoint) : null,
+      tokenAProgram: baseTokenProgram,
+      tokenBProgram: quoteTokenProgram,
+    });
+
+    const computeLimit = opts?.computeUnitLimit ?? 400_000;
+    const priorityFee = opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
+
+    const ixs: TransactionInstruction[] = [
+      ComputeBudgetProgram.setComputeUnitLimit({ units: computeLimit }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
+      ...initCustomPoolTx.instructions,
+    ];
+
+    console.log(`  pool:      ${pool.toBase58()}`);
+    console.log(`  position:  ${position.toBase58()}`);
+    console.log(`  price:     ${getPriceFromSqrtPrice(initSqrtPrice, baseDecimals, quoteDecimalCount)}`);
+
+    const result = await sendAndConfirmVtx(connection, ixs, wallet, {
+      addressLookupTables: opts?.addressLookupTables,
+      extraSigners: [positionNft],
+    });
+
+    return {
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
+      poolAddress: pool.toBase58(),
+      positionAddress: position.toBase58(),
+      dex: this.name,
+    };
+  }
+
+  // ----- Pool creation: createConfigPool -----
+
+  /**
+   * Create a DAMM v2 pool using a pre-existing on-chain config.
+   *
+   * Uses `cpAmm.createPool()` — simpler, less customizable. The config
+   * determines the fee schedule and price range boundaries.
+   *
+   * Ported from: 100x-algo-bots/trading-modules/meteora-damm-v2/create.ts
+   *   createDammV2Pool()
+   */
+  async createConfigPool(params: CreateConfigPoolParams): Promise<TxResult> {
+    const {
+      baseMint,
+      quoteMint: quoteMintParam,
+      baseAmount,
+      quoteAmount,
+      configAddress,
+      activationPoint = null,
+      lockLiquidity = false,
+      opts,
+    } = params;
+    const connection = getConnection();
+    const wallet = getWallet();
+    const quoteMintStr = quoteMintParam ?? WSOL_MINT;
+
+    const baseMintPk = new PublicKey(baseMint);
+    const quoteMintPk = new PublicKey(quoteMintStr);
+    const configPk = new PublicKey(configAddress);
+
+    // Fetch mint info
+    const [baseMintAccInfo, quoteMintAccInfo] = await Promise.all([
+      connection.getAccountInfo(baseMintPk),
+      connection.getAccountInfo(quoteMintPk),
+    ]);
+
+    if (!baseMintAccInfo) throw new Error(`Base mint not found: ${baseMint}`);
+    if (!quoteMintAccInfo) throw new Error(`Quote mint not found: ${quoteMintStr}`);
+
+    const baseMintData = unpackMint(baseMintPk, baseMintAccInfo, baseMintAccInfo.owner);
+    const quoteMintData = unpackMint(quoteMintPk, quoteMintAccInfo, quoteMintAccInfo.owner);
+    const baseDecimals = baseMintData.decimals;
+    const quoteDecimalCount = quoteDecimals(quoteMintStr);
+
+    const baseTokenProgram = baseMintAccInfo.owner.equals(TOKEN_2022_PROGRAM_ID)
+      ? TOKEN_2022_PROGRAM_ID
+      : TOKEN_PROGRAM_ID;
+    const quoteTokenProgram = quoteMintAccInfo.owner.equals(TOKEN_2022_PROGRAM_ID)
+      ? TOKEN_2022_PROGRAM_ID
+      : TOKEN_PROGRAM_ID;
+
+    // Token-2022 transfer fee detection
+    let baseTokenInfo: { mint: typeof baseMintData; currentEpoch: number } | undefined;
+    let quoteTokenInfo: { mint: typeof quoteMintData; currentEpoch: number } | undefined;
+
+    if (baseMintAccInfo.owner.equals(TOKEN_2022_PROGRAM_ID)) {
+      const epochInfo = await connection.getEpochInfo();
+      baseTokenInfo = { mint: baseMintData, currentEpoch: epochInfo.epoch };
+    }
+    if (quoteMintAccInfo.owner.equals(TOKEN_2022_PROGRAM_ID)) {
+      const epochInfo = await connection.getEpochInfo();
+      quoteTokenInfo = { mint: quoteMintData, currentEpoch: epochInfo.epoch };
+    }
+
+    let tokenAAmount = new BN(
+      new Decimal(baseAmount).mul(Decimal.pow(10, baseDecimals)).floor().toFixed(),
+    );
+    let tokenBAmount = new BN(
+      new Decimal(quoteAmount).mul(Decimal.pow(10, quoteDecimalCount)).floor().toFixed(),
+    );
+
+    if (baseTokenInfo) {
+      tokenAAmount = tokenAAmount.sub(
+        calculateTransferFeeIncludedAmount(tokenAAmount, baseTokenInfo.mint, baseTokenInfo.currentEpoch).transferFee,
+      );
+    }
+    if (quoteTokenInfo) {
+      tokenBAmount = tokenBAmount.sub(
+        calculateTransferFeeIncludedAmount(tokenBAmount, quoteTokenInfo.mint, quoteTokenInfo.currentEpoch).transferFee,
+      );
+    }
+
+    const cpAmm = new CpAmm(connection);
+
+    // Fetch config state to get its price range
+    const configState = await cpAmm.fetchConfigState(configPk);
+
+    // Calculate initial sqrt price
+    const initPrice = params.initPrice ?? quoteAmount / baseAmount;
+    const initSqrtPrice = getSqrtPriceFromPrice(initPrice.toString(), baseDecimals, quoteDecimalCount);
+
+    // Use config's price range for liquidity delta
+    const liquidityDelta = cpAmm.getLiquidityDelta({
+      maxAmountTokenA: tokenAAmount,
+      maxAmountTokenB: tokenBAmount,
+      sqrtPrice: initSqrtPrice,
+      sqrtMinPrice: configState.sqrtMinPrice,
+      sqrtMaxPrice: configState.sqrtMaxPrice,
+      tokenAInfo: baseTokenInfo,
+    });
+
+    const positionNft = Keypair.generate();
+
+    const initPoolTx = await cpAmm.createPool({
+      payer: wallet.publicKey,
+      creator: wallet.publicKey,
+      config: configPk,
+      positionNft: positionNft.publicKey,
+      tokenAMint: baseMintPk,
+      tokenBMint: quoteMintPk,
+      tokenAAmount,
+      tokenBAmount,
+      liquidityDelta,
+      initSqrtPrice,
+      activationPoint: activationPoint != null ? new BN(activationPoint) : null,
+      tokenAProgram: baseTokenProgram,
+      tokenBProgram: quoteTokenProgram,
+      isLockLiquidity: lockLiquidity,
+    });
+
+    // Derive addresses for logging
+    const pool = derivePoolAddress(configPk, baseMintPk, quoteMintPk);
+    const position = derivePositionAddress(positionNft.publicKey);
+
+    const computeLimit = opts?.computeUnitLimit ?? 400_000;
+    const priorityFee = opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS;
+
+    const ixs: TransactionInstruction[] = [
+      ComputeBudgetProgram.setComputeUnitLimit({ units: computeLimit }),
+      ComputeBudgetProgram.setComputeUnitPrice({ microLamports: priorityFee }),
+      ...initPoolTx.instructions,
+    ];
+
+    console.log(`  pool:      ${pool.toBase58()}`);
+    console.log(`  position:  ${position.toBase58()}`);
+    console.log(`  config:    ${configAddress}`);
+    console.log(`  price:     ${getPriceFromSqrtPrice(initSqrtPrice, baseDecimals, quoteDecimalCount)}`);
+
+    const result = await sendAndConfirmVtx(connection, ixs, wallet, {
+      addressLookupTables: opts?.addressLookupTables,
+      extraSigners: [positionNft],
+    });
+
+    return {
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
+      poolAddress: pool.toBase58(),
+      positionAddress: position.toBase58(),
+      dex: this.name,
+    };
+  }
+
+  // ----- LP: listPositions -----
+
+  /**
+   * List all DAMM v2 positions owned by the user on a specific pool.
+   *
+   * Uses `getPositionsByUser()` to discover positions on-chain, then
+   * calculates unclaimed fees for each position.
+   *
+   * Ported from: 100x-algo-bots/trading-modules/meteora-damm-v2/pool.ts
+   *   fetchPositionsByUser()
+   */
+  async listPositions(poolAddress: string): Promise<LpPositionInfo[]> {
+    const connection = getConnection();
+    const wallet = getWallet();
+
+    const cpAmm = new CpAmm(connection);
+    const userPositions = await cpAmm.getPositionsByUser(wallet.publicKey);
+
+    // Filter to positions belonging to this pool
+    const poolPositions = userPositions.filter(
+      (p) => p.positionState.pool.toBase58() === poolAddress,
+    );
+
+    if (poolPositions.length === 0) {
+      return [];
+    }
+
+    const poolPk = new PublicKey(poolAddress);
+    const poolState = await cpAmm.fetchPoolState(poolPk);
+
+    // Fetch decimals for both tokens
+    const tokenAMint = poolState.tokenAMint;
+    const tokenBMint = poolState.tokenBMint;
+    const tokenAProgram = sdkGetTokenProgram(poolState.tokenAFlag);
+    const tokenBProgram = sdkGetTokenProgram(poolState.tokenBFlag);
+
+    const [tokenAMintInfo, tokenBMintInfo] = await Promise.all([
+      connection.getAccountInfo(tokenAMint),
+      connection.getAccountInfo(tokenBMint),
+    ]);
+
+    const mintA = unpackMint(tokenAMint, tokenAMintInfo!, tokenAMintInfo!.owner);
+    const mintB = unpackMint(tokenBMint, tokenBMintInfo!, tokenBMintInfo!.owner);
+    const decimalsA = mintA.decimals;
+    const decimalsB = mintB.decimals;
+
+    const results: LpPositionInfo[] = [];
+
+    for (const pos of poolPositions) {
+      const positionState = await cpAmm.fetchPositionState(pos.position);
+
+      // Calculate unclaimed fees (same math as claimFees)
+      const totalPositionLiquidity = positionState.unlockedLiquidity
+        .add(positionState.vestedLiquidity)
+        .add(positionState.permanentLockedLiquidity);
+
+      const feeAPerTokenStored = new BN(
+        Buffer.from(poolState.feeAPerLiquidity).reverse(),
+      ).sub(new BN(Buffer.from(positionState.feeAPerTokenCheckpoint).reverse()));
+
+      const feeBPerTokenStored = new BN(
+        Buffer.from(poolState.feeBPerLiquidity).reverse(),
+      ).sub(new BN(Buffer.from(positionState.feeBPerTokenCheckpoint).reverse()));
+
+      const feeA = positionState.feeAPending.add(
+        totalPositionLiquidity.mul(feeAPerTokenStored).shrn(LIQUIDITY_SCALE),
+      );
+      const feeB = positionState.feeBPending.add(
+        totalPositionLiquidity.mul(feeBPerTokenStored).shrn(LIQUIDITY_SCALE),
+      );
+
+      const feeAHuman = Number(feeA.toString()) / Math.pow(10, decimalsA);
+      const feeBHuman = Number(feeB.toString()) / Math.pow(10, decimalsB);
+
+      // DAMM v2 uses full-range positions — lowerBinId/upperBinId not applicable
+      // but we report liquidity amounts via the vault balances proportionally
+      const hasLiquidity = !totalPositionLiquidity.isZero();
+
+      results.push({
+        positionAddress: pos.position.toBase58(),
+        poolAddress,
+        dex: this.name,
+        lowerBinId: 0, // full-range — not applicable
+        upperBinId: 0, // full-range — not applicable
+        amountX: 0, // per-position token amounts not directly available from state
+        amountY: 0,
+        tokenXMint: tokenAMint.toBase58(),
+        tokenYMint: tokenBMint.toBase58(),
+        feeX: feeAHuman,
+        feeY: feeBHuman,
+        inRange: hasLiquidity,
+      });
+    }
+
+    return results;
   }
 
   // ----- Internal helpers -----

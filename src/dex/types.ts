@@ -260,6 +260,132 @@ export interface PriceInfo {
 }
 
 // ---------------------------------------------------------------------------
+// Pool creation parameters (DAMM v2 custom pool)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fee schedule configuration for DAMM v2 custom pools.
+ *
+ * Controls how fees decay over time after pool activation.
+ * Two modes:
+ *   - Linear (feeSchedulerMode=0): fees drop linearly from max to min
+ *   - Exponential (feeSchedulerMode=1): fees drop exponentially from max to min
+ */
+export interface PoolFeeConfig {
+  /** Maximum base fee in basis points (e.g. 9900 = 99%) — charged at pool activation */
+  maxBaseFeeBps: number;
+
+  /** Minimum base fee in basis points (e.g. 200 = 2%) — reached after totalDuration */
+  minBaseFeeBps: number;
+
+  /** Number of fee decay periods */
+  numberOfPeriod: number;
+
+  /** Total duration in seconds for fee schedule (activationType=1/timestamp) */
+  totalDuration: number;
+
+  /** 0 = Linear decay, 1 = Exponential decay */
+  feeSchedulerMode: number;
+
+  /** Whether to enable dynamic fee on top of base fee (adds ~20% of minBaseFeeBps) */
+  useDynamicFee: boolean;
+
+  /** Custom dynamic fee params (if null, auto-calculated from minBaseFeeBps) */
+  dynamicFeeConfig?: {
+    filterPeriod: number;
+    decayPeriod: number;
+    reductionFactor: number;
+    variableFeeControl: number;
+    maxVolatilityAccumulator: number;
+  } | null;
+}
+
+/**
+ * Parameters for creating a DAMM v2 custom pool (full fee config, custom price range).
+ *
+ * Uses `cpAmm.createCustomPool()` — the most flexible pool creation method.
+ * This is what production systems use for token launches.
+ */
+export interface CreateCustomPoolParams {
+  /** Base token mint address (base58) */
+  baseMint: string;
+
+  /** Quote token mint address (base58, default: WSOL) */
+  quoteMint?: string;
+
+  /** Amount of base token to seed (human-readable, e.g. 1000000) */
+  baseAmount: number;
+
+  /** Amount of quote token to seed (human-readable, e.g. 0.5 SOL) */
+  quoteAmount: number;
+
+  /**
+   * Initial price in quote/base units (e.g. 0.0000001 SOL per token).
+   * If omitted, calculated from quoteAmount / baseAmount.
+   */
+  initPrice?: number;
+
+  /** Fee schedule configuration */
+  poolFees: PoolFeeConfig;
+
+  /** 0 = collect fees in both tokens, 1 = collect fees in quote token only */
+  collectFeeMode?: number;
+
+  /** 0 = Slot-based activation, 1 = Timestamp-based activation (default: 1) */
+  activationType?: number;
+
+  /** Activation point (slot number or unix timestamp). null = activate immediately */
+  activationPoint?: number | null;
+
+  /** Whether to create an alpha vault after pool creation (default: false) */
+  hasAlphaVault?: boolean;
+
+  /** Swap options (priority fee, compute limit, etc.) */
+  opts?: SwapOpts;
+}
+
+/**
+ * Parameters for creating a DAMM v2 pool using a pre-existing config.
+ *
+ * Uses `cpAmm.createPool()` — simpler, less customizable.
+ * The config address determines the fee schedule and price range.
+ */
+export interface CreateConfigPoolParams {
+  /** Base token mint address (base58) */
+  baseMint: string;
+
+  /** Quote token mint address (base58, default: WSOL) */
+  quoteMint?: string;
+
+  /** Amount of base token to seed (human-readable) */
+  baseAmount: number;
+
+  /** Amount of quote token to seed (human-readable) */
+  quoteAmount: number;
+
+  /**
+   * Initial price in quote/base units.
+   * If omitted, calculated from quoteAmount / baseAmount.
+   */
+  initPrice?: number;
+
+  /** On-chain config address (base58). Known configs:
+   *  - 2yAJha5NVgq5mEitTUvdWSUKrcYvxAAc2H6rPDbEQqSu
+   *  - EcfqEkLSeGzDtZrTJWcbDxptfR2nWfX6cjJLFkgttwY6
+   */
+  configAddress: string;
+
+  /** Activation point (slot number or unix timestamp). null = activate immediately */
+  activationPoint?: number | null;
+
+  /** Whether to lock the initial liquidity permanently (default: false) */
+  lockLiquidity?: boolean;
+
+  /** Swap options (priority fee, compute limit, etc.) */
+  opts?: SwapOpts;
+}
+
+// ---------------------------------------------------------------------------
 // LP strategy (for DLMM-style concentrated liquidity)
 // ---------------------------------------------------------------------------
 
@@ -414,6 +540,9 @@ export interface DexCapabilities {
   /** Can list user's LP positions */
   canListPositions: boolean;
 
+  /** Can create new pools (e.g. DAMM v2 createCustomPool / createPool) */
+  canCreatePool: boolean;
+
   /**
    * Whether this adapter is a swap aggregator (e.g. Jupiter, DFlow).
    *
@@ -445,6 +574,7 @@ export function defaultCapabilities(
     canRemoveLiquidity: false,
     canClaimFees: false,
     canListPositions: false,
+    canCreatePool: false,
     isAggregator: false,
     ...overrides,
   };
@@ -616,6 +746,26 @@ export interface IDexAdapter {
    * @throws UnsupportedOperationError if capabilities.canListPositions is false
    */
   listPositions?(poolAddress: string): Promise<LpPositionInfo[]>;
+
+  /**
+   * Create a new pool with full fee configuration (custom pool).
+   *
+   * Only supported by DAMM v2 adapters. Uses the SDK's createCustomPool()
+   * method which allows setting fee schedule, price range, activation params.
+   *
+   * @throws UnsupportedOperationError if capabilities.canCreatePool is false
+   */
+  createCustomPool?(params: CreateCustomPoolParams): Promise<TxResult>;
+
+  /**
+   * Create a new pool using a pre-existing config address.
+   *
+   * Uses the SDK's createPool() method which inherits fee schedule and price
+   * range from the config. Simpler but less customizable.
+   *
+   * @throws UnsupportedOperationError if capabilities.canCreatePool is false
+   */
+  createConfigPool?(params: CreateConfigPoolParams): Promise<TxResult>;
 }
 
 // ---------------------------------------------------------------------------

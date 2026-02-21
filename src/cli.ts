@@ -610,6 +610,118 @@ program
   });
 
 // ---------------------------------------------------------------------------
+// outsmart create-damm-pool (DAMM v2 custom pool — full fee config)
+// ---------------------------------------------------------------------------
+
+program
+  .command("create-damm-pool")
+  .description("Create a Meteora DAMM v2 custom pool with full fee configuration")
+  .requiredOption("--base <mint>", "base token mint address")
+  .requiredOption("--base-amount <amount>", "initial base token deposit (human-readable)")
+  .requiredOption("--quote-amount <amount>", "initial quote token deposit (human-readable)")
+  .option("--quote <mint>", "quote token mint (default: WSOL)")
+  .option("--price <number>", "initial price in quote/base units (default: quoteAmount / baseAmount)")
+  .option("--max-fee <bps>", "max base fee in bps, charged at activation (default: 9900)", "9900")
+  .option("--min-fee <bps>", "min base fee in bps, reached after decay (default: 200)", "200")
+  .option("--periods <n>", "number of fee decay periods (default: 1440)", "1440")
+  .option("--duration <secs>", "total fee decay duration in seconds (default: 86400)", "86400")
+  .option("--fee-mode <0|1>", "fee scheduler: 0=linear, 1=exponential (default: 0)", "0")
+  .option("--dynamic-fee", "enable dynamic fee on top of base fee")
+  .option("--collect-mode <0|1>", "fee collection: 0=both tokens, 1=quote only (default: 1)", "1")
+  .option("--activation <timestamp>", "activation unix timestamp (default: immediate)")
+  .option("--alpha-vault", "create alpha vault after pool")
+  .option("--priority <microLamports>", "priority fee in microLamports per CU")
+  .option("--cu <units>", "compute unit limit")
+  .action(async (cmdOpts) => {
+    const adapter = getDexAdapter("meteora-damm-v2") as import("./dex/meteora-damm-v2").MeteoraDammV2Adapter;
+
+    const params: import("./dex/types").CreateCustomPoolParams = {
+      baseMint: cmdOpts.base,
+      quoteMint: cmdOpts.quote,
+      baseAmount: Number(cmdOpts.baseAmount),
+      quoteAmount: Number(cmdOpts.quoteAmount),
+      initPrice: cmdOpts.price ? Number(cmdOpts.price) : undefined,
+      poolFees: {
+        maxBaseFeeBps: Number(cmdOpts.maxFee),
+        minBaseFeeBps: Number(cmdOpts.minFee),
+        numberOfPeriod: Number(cmdOpts.periods),
+        totalDuration: Number(cmdOpts.duration),
+        feeSchedulerMode: Number(cmdOpts.feeMode),
+        useDynamicFee: !!cmdOpts.dynamicFee,
+        dynamicFeeConfig: null,
+      },
+      collectFeeMode: Number(cmdOpts.collectMode),
+      activationType: 1, // timestamp
+      activationPoint: cmdOpts.activation ? Number(cmdOpts.activation) : null,
+      hasAlphaVault: !!cmdOpts.alphaVault,
+      opts: buildSwapOpts(cmdOpts),
+    };
+
+    console.log(`\n  creating DAMM v2 custom pool...`);
+    console.log(`  base:      ${cmdOpts.base}`);
+    console.log(`  quote:     ${cmdOpts.quote ?? "WSOL"}`);
+    console.log(`  amounts:   ${cmdOpts.baseAmount} base + ${cmdOpts.quoteAmount} quote`);
+    console.log(`  fees:      ${cmdOpts.maxFee} → ${cmdOpts.minFee} bps (${cmdOpts.feeMode === "1" ? "exponential" : "linear"})`);
+
+    const result = await adapter.createCustomPool(params);
+    console.log();
+    console.log(`  tx:        ${result.txSignature}`);
+    console.log(`  confirmed: ${result.confirmed}`);
+    if (result.poolAddress) console.log(`  pool:      ${result.poolAddress}`);
+    if (result.positionAddress) console.log(`  position:  ${result.positionAddress}`);
+    if (result.error) console.log(`  error:     ${result.error}`);
+    console.log();
+  });
+
+// ---------------------------------------------------------------------------
+// outsmart create-damm-config-pool (DAMM v2 config-based pool)
+// ---------------------------------------------------------------------------
+
+program
+  .command("create-damm-config-pool")
+  .description("Create a Meteora DAMM v2 pool using an existing config")
+  .requiredOption("--base <mint>", "base token mint address")
+  .requiredOption("--base-amount <amount>", "initial base token deposit (human-readable)")
+  .requiredOption("--quote-amount <amount>", "initial quote token deposit (human-readable)")
+  .requiredOption("--config <address>", "on-chain config address")
+  .option("--quote <mint>", "quote token mint (default: WSOL)")
+  .option("--price <number>", "initial price in quote/base units (default: quoteAmount / baseAmount)")
+  .option("--activation <timestamp>", "activation unix timestamp (default: immediate)")
+  .option("--lock", "permanently lock the initial liquidity")
+  .option("--priority <microLamports>", "priority fee in microLamports per CU")
+  .option("--cu <units>", "compute unit limit")
+  .action(async (cmdOpts) => {
+    const adapter = getDexAdapter("meteora-damm-v2") as import("./dex/meteora-damm-v2").MeteoraDammV2Adapter;
+
+    const params: import("./dex/types").CreateConfigPoolParams = {
+      baseMint: cmdOpts.base,
+      quoteMint: cmdOpts.quote,
+      baseAmount: Number(cmdOpts.baseAmount),
+      quoteAmount: Number(cmdOpts.quoteAmount),
+      initPrice: cmdOpts.price ? Number(cmdOpts.price) : undefined,
+      configAddress: cmdOpts.config,
+      activationPoint: cmdOpts.activation ? Number(cmdOpts.activation) : null,
+      lockLiquidity: !!cmdOpts.lock,
+      opts: buildSwapOpts(cmdOpts),
+    };
+
+    console.log(`\n  creating DAMM v2 config-based pool...`);
+    console.log(`  base:      ${cmdOpts.base}`);
+    console.log(`  quote:     ${cmdOpts.quote ?? "WSOL"}`);
+    console.log(`  config:    ${cmdOpts.config}`);
+    console.log(`  amounts:   ${cmdOpts.baseAmount} base + ${cmdOpts.quoteAmount} quote`);
+
+    const result = await adapter.createConfigPool(params);
+    console.log();
+    console.log(`  tx:        ${result.txSignature}`);
+    console.log(`  confirmed: ${result.confirmed}`);
+    if (result.poolAddress) console.log(`  pool:      ${result.poolAddress}`);
+    if (result.positionAddress) console.log(`  position:  ${result.positionAddress}`);
+    if (result.error) console.log(`  error:     ${result.error}`);
+    console.log();
+  });
+
+// ---------------------------------------------------------------------------
 // outsmart list-dex
 // ---------------------------------------------------------------------------
 
