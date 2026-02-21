@@ -1,6 +1,6 @@
 # outsmart
 
-**Solana trading CLI — buy, sell, and LP across 17 DEXes with 12 TX landing providers.**
+**Solana trading CLI — buy, sell, and LP across 19 DEXes with 12 TX landing providers.**
 
 ```bash
 npm install -g outsmart
@@ -152,6 +152,38 @@ outsmart find-pool --dex raydium-cpmm --token <MINT>
 outsmart find-pool --dex raydium-amm-v4 --token <MINT> --quote <USDC_MINT>
 ```
 
+### create-pump-coin
+
+Create a new PumpFun token with a bonding curve. The token is instantly tradeable on pump.fun.
+
+```bash
+outsmart create-pump-coin --name "My Token" --symbol "MYTKN" --uri "https://ipfs.io/ipfs/Qm..."
+```
+
+| Flag | Description |
+|------|-------------|
+| `--name <name>` | Token name (required) |
+| `--symbol <symbol>` | Token symbol (required) |
+| `--uri <uri>` | Metadata URI — IPFS/Arweave link to JSON metadata (required) |
+
+Returns the new mint address and bonding curve address.
+
+### create-pool
+
+Create a new PumpSwap AMM pool with initial liquidity.
+
+```bash
+outsmart create-pool --base <MINT> --quote So111...112 --base-amount 1000000 --quote-amount 1
+```
+
+| Flag | Description |
+|------|-------------|
+| `--base <mint>` | Base token mint address (required) |
+| `--quote <mint>` | Quote token mint address, usually WSOL (required) |
+| `--base-amount <amount>` | Initial base token deposit, human-readable (required) |
+| `--quote-amount <amount>` | Initial quote token deposit, human-readable (required) |
+| `--index <number>` | Pool index (default: 1; 0 is reserved for canonical pump pools) |
+
 ### list-dex
 
 List all registered DEX adapters and their capabilities.
@@ -212,27 +244,29 @@ All swap commands (`buy`, `sell`) accept these options:
 
 ## DEX Adapters
 
-17 adapters covering every major Solana DEX protocol:
+19 adapters covering every major Solana DEX protocol:
 
-| Adapter | Protocol | Buy | Sell | Pool | Price | LP |
-|---------|----------|:---:|:----:|:----:|:-----:|:--:|
-| raydium-amm-v4 | AMM v4 | x | x | x | x | |
-| raydium-cpmm | CPMM | x | x | x | x | |
-| raydium-clmm | CLMM | x | x | x | x | |
-| raydium-launchlab | Launchlab | x | | x | x | |
-| meteora-damm-v1 | Dynamic AMM | x | x | x | x | |
-| meteora-damm-v2 | CpAmm | x | x | x | x | add/remove/claim |
-| meteora-dlmm | DLMM | x | x | | x | |
-| meteora-dbc | DBC | x | x | | x | |
-| meteora-lp-dlmm | DLMM LP | | | | | add/remove |
-| orca | Whirlpool | x | x | | x | |
-| byreal-clmm | CLMM | x | x | | x | |
-| pancakeswap-clmm | CLMM | x | x | | x | |
-| fusion-amm | Fusion | x | x | | x | |
-| futarchy-amm | Futarchy | x | x | | x | |
-| futarchy-launchpad | Launchpad | | | | | fund/claim |
-| jupiter-ultra | Ultra API | x | x | | | |
-| dflow | Intent | x | x | | | |
+| Adapter | Protocol | Buy | Sell | Pool | Price | LP | Extra |
+|---------|----------|:---:|:----:|:----:|:-----:|:--:|-------|
+| raydium-amm-v4 | AMM v4 | x | x | x | x | | |
+| raydium-cpmm | CPMM | x | x | x | x | | |
+| raydium-clmm | CLMM | x | x | x | x | | |
+| raydium-launchlab | Launchlab | x | | x | x | | |
+| meteora-damm-v1 | Dynamic AMM | x | x | x | x | | |
+| meteora-damm-v2 | CpAmm | x | x | x | x | add/remove/claim | |
+| meteora-dlmm | DLMM | x | x | | x | | |
+| meteora-dbc | DBC | x | x | | x | | |
+| meteora-lp-dlmm | DLMM LP | | | | | add/remove | |
+| **pumpfun** | Bonding Curve | x | x | | x | | create coin |
+| **pumpfun-amm** | PumpSwap AMM | x | x | | x | | create pool |
+| orca | Whirlpool | x | x | | x | | |
+| byreal-clmm | CLMM | x | x | | x | | |
+| pancakeswap-clmm | CLMM | x | x | | x | | |
+| fusion-amm | Fusion | x | x | | x | | |
+| futarchy-amm | Futarchy | x | x | | x | | |
+| futarchy-launchpad | Launchpad | | | | | fund/claim | |
+| jupiter-ultra | Ultra API | x | x | | | | |
+| dflow | Intent | x | x | | | | |
 
 ## TX Landing Providers
 
@@ -369,7 +403,7 @@ src/
 │   ├── types.ts           # IDexAdapter interface
 │   ├── index.ts           # DexRegistry singleton
 │   ├── shared/clmm-base.ts
-│   └── 17 adapter files
+│   └── 19 adapter files
 ├── dexscreener/           # Market data (DexScreener API)
 ├── helpers/               # Config, wallet, Token-2022 utils
 └── transactions/

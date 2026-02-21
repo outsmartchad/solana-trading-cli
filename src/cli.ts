@@ -540,11 +540,11 @@ program
   });
 
 // ---------------------------------------------------------------------------
-// outsmart create-token (PumpFun bonding curve)
+// outsmart create-pump-coin (PumpFun bonding curve)
 // ---------------------------------------------------------------------------
 
 program
-  .command("create-token")
+  .command("create-pump-coin")
   .description("Create a new PumpFun token with a bonding curve")
   .requiredOption("--name <name>", "token name")
   .requiredOption("--symbol <symbol>", "token symbol")
