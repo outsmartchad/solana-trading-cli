@@ -8,8 +8,6 @@ outsmart init
 outsmart buy --dex raydium-cpmm --pool <POOL> --amount 0.1
 ```
 
-> **This branch (`agent-trading-infra`) is under active development.** For the stable version, use [`typescript-main`](https://github.com/outsmartchad/outsmart-cli/tree/typescript-main).
-
 ---
 
 ## Quick Start
