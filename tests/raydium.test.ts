@@ -154,8 +154,9 @@ describe("raydium-clmm", () => {
 // raydium-launchlab
 // Pool: FREEDOM/USD1 (stablecoin-quoted bonding curve)
 // Capabilities: buy, findPool, getPrice
-// NOTE: This test pre-swaps SOL → USD1 via jupiter-ultra, then buys
-//       FREEDOM with USD1. This mirrors the CLI auto-swap flow.
+// NOTE: This test pre-swaps SOL → USD1 via on-chain DEX adapter (raydium-clmm
+//       SOL/USD1 pool), then buys FREEDOM with USD1 on the bonding curve.
+//       If JUPITER_API_KEY is set, it uses jupiter-ultra instead.
 // ============================================================
 describe("raydium-launchlab", () => {
   const adapter = getDexAdapter("raydium-launchlab");
@@ -176,28 +177,50 @@ describe("raydium-launchlab", () => {
     expect(price.quoteMint).toBe(USD1);
   });
 
-  test("buy: pre-swap SOL → USD1, then buy FREEDOM", async () => {
+  test("buy: pre-swap SOL → USD1 (on-chain), then buy FREEDOM with swapped amount", async () => {
     await delay();
 
-    // Step 1: Swap SOL → USD1 via jupiter-ultra
-    const jupAdapter = getDexAdapter("jupiter-ultra");
-    const preSwap = await jupAdapter.buy({
+    const { getAssociatedTokenAddress } = await import("@solana/spl-token");
+    const { PublicKey } = await import("@solana/web3.js");
+    const { getConnection, getWallet } = await import("../src/helpers/config");
+    const connection = getConnection();
+    const wallet = getWallet();
+    const usd1Ata = await getAssociatedTokenAddress(new PublicKey(USD1), wallet.publicKey);
+
+    // Snapshot USD1 balance BEFORE pre-swap
+    let balBefore = 0;
+    try {
+      const res = await connection.getTokenAccountBalance(usd1Ata);
+      balBefore = Number(res.value.uiAmount ?? 0);
+    } catch { /* ATA may not exist yet */ }
+    console.log(`  USD1 balance before: ${balBefore}`);
+
+    // Step 1: Swap SOL → USD1 via raydium-clmm ($13.5M TVL pool)
+    console.log("  using raydium-clmm for SOL → USD1 pre-swap (no JUPITER_API_KEY needed)");
+    const clmmAdapter = getDexAdapter("raydium-clmm");
+    const preSwap = await clmmAdapter.buy({
       tokenMint: USD1,
       amountSol: BUY_AMOUNT_SOL,
+      poolAddress: "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS",
+      quoteMint: WSOL,
     });
-    logResult("jupiter-ultra SOL→USD1 pre-swap", preSwap);
+    logResult("SOL→USD1 pre-swap", preSwap);
     expect(preSwap.txSignature).toBeTruthy();
 
     // Wait for USD1 to arrive
     await delay(5000);
 
-    // Step 2: Buy FREEDOM with USD1 on LaunchLab
-    // amountSol here is actually the USD1 amount (6 decimals)
-    // We use the pre-swapped amount — approximately BUY_AMOUNT_SOL * SOL price in USD
-    // For safety, just use a small fixed USD amount
+    // Step 2: Compute delta — only use the swapped amount, not pre-existing balance
+    const balRes = await connection.getTokenAccountBalance(usd1Ata);
+    const balAfter = Number(balRes.value.uiAmount ?? 0);
+    const usd1Received = balAfter - balBefore;
+    console.log(`  USD1 balance after: ${balAfter}, received: ${usd1Received}`);
+    expect(usd1Received).toBeGreaterThan(0);
+
+    // Step 3: Buy FREEDOM with only the swapped USD1 amount
     const result = await adapter.buy({
       tokenMint: FREEDOM,
-      amountSol: 1, // 1 USD1
+      amountSol: usd1Received,
       poolAddress: pool,
       quoteMint: USD1,
     });

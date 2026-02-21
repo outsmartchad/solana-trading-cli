@@ -75,6 +75,7 @@ import {
   USDC_MINT,
   USDT_MINT,
   USD1_MINT,
+  SOL_STABLECOIN_POOLS,
 } from "./dex/types";
 
 import type {
@@ -197,7 +198,15 @@ async function getTokenBalance(mint: string): Promise<{ amount: number; raw: big
 }
 
 /**
- * Auto-swap SOL → stablecoin via jupiter-ultra.
+ * Check if Jupiter Ultra API is available (JUPITER_API_KEY is set).
+ */
+function hasJupiterApiKey(): boolean {
+  return !!process.env.JUPITER_API_KEY;
+}
+
+/**
+ * Auto-swap SOL → stablecoin. Uses jupiter-ultra if JUPITER_API_KEY is set,
+ * otherwise falls back to on-chain DEX adapters from SOL_STABLECOIN_POOLS.
  * Returns the stablecoin amount received.
  */
 async function autoSwapSolToStablecoin(
@@ -205,56 +214,131 @@ async function autoSwapSolToStablecoin(
   amountSol: number,
 ): Promise<number> {
   const label = stablecoinLabel(stablecoinMint);
-  console.log(`\n  step 1: swapping ${amountSol} SOL → ${label} via jupiter-ultra...`);
 
-  const jupAdapter = getDexAdapter("jupiter-ultra");
-  const result = await jupAdapter.buy({
-    tokenMint: stablecoinMint,
-    amountSol,
-  });
+  // Snapshot balance BEFORE swap so we return only the delta
+  const balanceBefore = await getTokenBalance(stablecoinMint);
 
-  if (!result.txSignature) {
-    die(`Failed to swap SOL → ${label}: no transaction signature returned`);
+  if (hasJupiterApiKey()) {
+    // --- Jupiter Ultra path ---
+    console.log(`\n  step 1: swapping ${amountSol} SOL → ${label} via jupiter-ultra...`);
+    const jupAdapter = getDexAdapter("jupiter-ultra");
+    const result = await jupAdapter.buy({
+      tokenMint: stablecoinMint,
+      amountSol,
+    });
+
+    if (!result.txSignature) {
+      die(`Failed to swap SOL → ${label}: no transaction signature returned`);
+    }
+    console.log(`  ✓ tx: ${result.txSignature}`);
+    if (result.confirmed) console.log(`  ✓ confirmed`);
+  } else {
+    // --- On-chain fallback path ---
+    const pools = SOL_STABLECOIN_POOLS[stablecoinMint];
+    if (!pools || pools.length === 0) {
+      die(`No on-chain SOL/${label} pools configured and JUPITER_API_KEY is not set.`);
+    }
+
+    let swapped = false;
+    for (const entry of pools) {
+      try {
+        const adapter = getDexAdapter(entry.dex);
+        console.log(`\n  step 1: swapping ${amountSol} SOL → ${label} via ${entry.dex} (pool ${entry.pool.slice(0, 8)}...)...`);
+        const result = await adapter.buy({
+          tokenMint: stablecoinMint,
+          amountSol,
+          poolAddress: entry.pool,
+          quoteMint: WSOL_MINT,
+        });
+
+        if (!result.txSignature) {
+          console.log(`  ✗ no tx signature, trying next pool...`);
+          continue;
+        }
+        console.log(`  ✓ tx: ${result.txSignature}`);
+        if (result.confirmed) console.log(`  ✓ confirmed`);
+        swapped = true;
+        break;
+      } catch (err: any) {
+        console.log(`  ✗ ${entry.dex} failed: ${err.message ?? err}. Trying next pool...`);
+      }
+    }
+
+    if (!swapped) {
+      die(
+        `All on-chain SOL/${label} pools failed. Set JUPITER_API_KEY for jupiter-ultra fallback,\n`
+        + `  or check your SOL balance and RPC connection.`,
+      );
+    }
   }
 
-  console.log(`  ✓ tx: ${result.txSignature}`);
-  if (result.confirmed) {
-    console.log(`  ✓ confirmed`);
-  }
-
-  // Wait a moment for balance to settle, then read actual balance
+  // Wait for balance to settle, then compute delta (only the swapped amount)
   await new Promise((r) => setTimeout(r, 2000));
-  const balance = await getTokenBalance(stablecoinMint);
-  console.log(`  ✓ received: ${balance.amount} ${label}`);
+  const balanceAfter = await getTokenBalance(stablecoinMint);
+  const received = balanceAfter.amount - balanceBefore.amount;
+  console.log(`  ✓ received: ${received.toFixed(6)} ${label} (wallet total: ${balanceAfter.amount} ${label})`);
 
-  if (balance.amount === 0) {
-    die(`SOL → ${label} swap TX landed but wallet has 0 ${label}. TX may have failed on-chain.`);
+  if (received <= 0) {
+    die(`SOL → ${label} swap TX landed but received 0 ${label}. TX may have failed on-chain.`);
   }
 
-  return balance.amount;
+  return received;
 }
 
 /**
- * Auto-swap stablecoin → SOL via jupiter-ultra after a sell.
+ * Auto-swap stablecoin → SOL after a sell. Uses jupiter-ultra if JUPITER_API_KEY
+ * is set, otherwise falls back to on-chain DEX adapters.
  */
 async function autoSwapStablecoinToSol(stablecoinMint: string): Promise<void> {
   const balance = await getTokenBalance(stablecoinMint);
   if (balance.amount === 0) return;
 
   const label = stablecoinLabel(stablecoinMint);
-  console.log(`\n  step 2: swapping ${balance.amount} ${label} → SOL via jupiter-ultra...`);
 
-  const jupAdapter = getDexAdapter("jupiter-ultra");
-  const result = await jupAdapter.sell({
-    tokenMint: stablecoinMint,
-    percentage: 100,
-  });
+  if (hasJupiterApiKey()) {
+    // --- Jupiter Ultra path ---
+    console.log(`\n  step 2: swapping ${balance.amount} ${label} → SOL via jupiter-ultra...`);
+    const jupAdapter = getDexAdapter("jupiter-ultra");
+    const result = await jupAdapter.sell({
+      tokenMint: stablecoinMint,
+      percentage: 100,
+    });
 
-  if (result.txSignature) {
-    console.log(`  ✓ tx: ${result.txSignature}`);
-    if (result.confirmed) {
-      console.log(`  ✓ confirmed`);
+    if (result.txSignature) {
+      console.log(`  ✓ tx: ${result.txSignature}`);
+      if (result.confirmed) console.log(`  ✓ confirmed`);
     }
+  } else {
+    // --- On-chain fallback path ---
+    const pools = SOL_STABLECOIN_POOLS[stablecoinMint];
+    if (!pools || pools.length === 0) {
+      console.log(`\n  ⚠ No on-chain ${label}/SOL pools configured and JUPITER_API_KEY is not set. ${label} remains in wallet.`);
+      return;
+    }
+
+    for (const entry of pools) {
+      try {
+        const adapter = getDexAdapter(entry.dex);
+        console.log(`\n  step 2: swapping ${balance.amount} ${label} → SOL via ${entry.dex} (pool ${entry.pool.slice(0, 8)}...)...`);
+        const result = await adapter.sell({
+          tokenMint: stablecoinMint,
+          percentage: 100,
+          poolAddress: entry.pool,
+          quoteMint: WSOL_MINT,
+        });
+
+        if (result.txSignature) {
+          console.log(`  ✓ tx: ${result.txSignature}`);
+          if (result.confirmed) console.log(`  ✓ confirmed`);
+          return;
+        }
+        console.log(`  ✗ no tx signature, trying next pool...`);
+      } catch (err: any) {
+        console.log(`  ✗ ${entry.dex} failed: ${err.message ?? err}. Trying next pool...`);
+      }
+    }
+
+    console.log(`\n  ⚠ All on-chain ${label}/SOL pools failed. ${label} remains in wallet.`);
   }
 }
 
@@ -345,21 +429,20 @@ const buyCmd = new Command("buy")
       quoteMint = quoteMint ?? resolved.quoteMint;
       console.log(`  auto-detected token: ${tokenMint}`);
 
-      // If the quote is a stablecoin (not SOL), auto-swap SOL → stablecoin
+      // If the quote is a stablecoin (not SOL), auto-swap SOL → stablecoin first
       if (resolved.quoteMint !== WSOL_MINT && STABLECOIN_MINTS.has(resolved.quoteMint)) {
         const label = stablecoinLabel(resolved.quoteMint);
         console.log(`  pool quote: ${label} (not SOL)`);
+        quoteMint = resolved.quoteMint;
 
-        // Check if user already has enough stablecoin
+        // Check existing balance
         const existingBalance = await getTokenBalance(resolved.quoteMint);
         if (existingBalance.amount > 0) {
           console.log(`  wallet has ${existingBalance.amount} ${label}`);
         }
 
-        // Always swap SOL → stablecoin for the requested amount
-        // (user specified --amount in SOL terms)
+        // Swap SOL → stablecoin, then use full stablecoin balance for the buy
         amountToSpend = await autoSwapSolToStablecoin(resolved.quoteMint, amountToSpend);
-        quoteMint = resolved.quoteMint;
       }
     }
 

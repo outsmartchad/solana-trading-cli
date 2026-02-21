@@ -854,6 +854,46 @@ export const USD1_MINT = "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB";
 /** Set of known stablecoin mints — used by CLI for auto-swap detection */
 export const STABLECOIN_MINTS = new Set([USDC_MINT, USDT_MINT, USD1_MINT]);
 
+/**
+ * SOL/stablecoin pool registry — used by auto-swap fallback when JUPITER_API_KEY
+ * is not set. Each stablecoin maps to a prioritized list of on-chain pools across
+ * multiple DEXes, ordered by TVL (highest first). The auto-swap logic tries each
+ * pool in order until one succeeds.
+ *
+ * Pool addresses sourced from Raydium V3 API and Meteora DLMM API (2025-02-21).
+ */
+export interface StablecoinPoolEntry {
+  dex: string;
+  pool: string;
+}
+
+export const SOL_STABLECOIN_POOLS: Record<string, StablecoinPoolEntry[]> = {
+  [USDC_MINT]: [
+    // Meteora DLMM — $6.2M liq, $23.9M 24h vol
+    { dex: "meteora-dlmm", pool: "BGm1tav58oGcsQJehL9WXBFXF7D27vZsKefj4xJKD5Y" },
+    // Raydium CLMM — $4.9M TVL, $6.0M 24h vol
+    { dex: "raydium-clmm", pool: "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv" },
+    // Raydium CLMM — $1.3M TVL, $3.4M 24h vol
+    { dex: "raydium-clmm", pool: "CYbD9RaToYMtWKA7QZyoLahnHdWq553Vm62Lh6qWtuxq" },
+    // Raydium AMM v4 — $7.5M TVL, $1.2M 24h vol
+    { dex: "raydium-amm-v4", pool: "58oQChx4yWmvKdwLLZzBi4ChoCc2fqCUWBkwMihLYQo2" },
+    // Meteora DLMM — $1.3M liq, $10.8M 24h vol
+    { dex: "meteora-dlmm", pool: "5rCf1DM8LjKTw4YqhnoLcngyZYeNnQqztScTogYHAS6" },
+  ],
+  [USDT_MINT]: [
+    // Raydium CLMM — $2.2M TVL, $34.7M 24h vol
+    { dex: "raydium-clmm", pool: "3nMFwZXwY1s1M5s8vYAHqd4wGs4iSxXE4LRoUMMYqEgF" },
+    // Raydium AMM v4 — $975K TVL, $229K 24h vol
+    { dex: "raydium-amm-v4", pool: "7XawhbbxtsRcQA8KTkHT9f9nc6d69UwqCDh6U5EEbEmX" },
+  ],
+  [USD1_MINT]: [
+    // Raydium CLMM — $13.5M TVL, $7.5M 24h vol
+    { dex: "raydium-clmm", pool: "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS" },
+    // Raydium CLMM — $157K TVL, $409K 24h vol
+    { dex: "raydium-clmm", pool: "G8LqPHYAMcwP14CDgk9XsV9VdwpsW3aJ59VubwnyrJVr" },
+  ],
+};
+
 /** Default slippage in basis points (3%) */
 export const DEFAULT_SLIPPAGE_BPS = 300;
 

@@ -467,6 +467,103 @@ class RaydiumLaunchLabAdapter implements IDexAdapter {
     };
   }
 
+  // ----- buildSwapIxs -----
+
+  async buildSwapIxs(params: BuyParams | SellParams): Promise<BuildSwapIxsResult> {
+    if ("percentage" in params) {
+      throw new UnsupportedOperationError(this.name, "buildSwapIxs(sell)");
+    }
+    const p = params as BuyParams;
+    const tokenMint = requireTokenMint(p, this.name);
+    const connection = getConnection();
+    const wallet = getWallet();
+    const tokenMintPk = new PublicKey(tokenMint);
+    const quoteMintPk = p.quoteMint ? new PublicKey(p.quoteMint) : WSOL_MINT_PK;
+
+    let poolId: PublicKey;
+    if (p.poolAddress) {
+      poolId = new PublicKey(p.poolAddress);
+    } else {
+      const found = await discoverLaunchpadPool(connection, tokenMintPk, quoteMintPk);
+      if (!found) throw new PoolNotFoundError(this.name, tokenMint, p.quoteMint);
+      poolId = found;
+    }
+
+    const poolState = await fetchLaunchpadPoolState(connection, poolId);
+
+    const platformClaimFeeVault = getLaunchpadPlatformVaultPda(poolState.platformId, poolState.mintB);
+    const creatorClaimFeeVault = getLaunchpadCreatorVaultPda(poolState.creator, poolState.mintB);
+
+    const tokenProgramA = await getTokenProgramForMint(connection, poolState.mintA);
+    const tokenProgramB = await getTokenProgramForMint(connection, poolState.mintB);
+
+    const sdkCfg: LaunchLabSdkConfig = {
+      programId: RAYDIUM_LAUNCHPAD_PROGRAM_ID,
+      configId: poolState.configId,
+      platformId: poolState.platformId,
+      poolId,
+      vaultA: poolState.vaultA,
+      vaultB: poolState.vaultB,
+      mintA: poolState.mintA,
+      mintB: poolState.mintB,
+      tokenProgramA,
+      tokenProgramB,
+      platformClaimFeeVault,
+      creatorClaimFeeVault,
+    };
+
+    let amountInLamportsB: bigint;
+    if (quoteMintPk.equals(WSOL_MINT_PK)) {
+      amountInLamportsB = BigInt(Math.floor(p.amountSol * LAMPORTS_PER_SOL));
+    } else {
+      amountInLamportsB = BigInt(Math.floor(p.amountSol * 1e6));
+    }
+
+    const userTokenAccountA = await getAssociatedTokenAddress(
+      poolState.mintA, wallet.publicKey,
+      tokenProgramA.equals(TOKEN_2022_PROGRAM_ID), tokenProgramA,
+    );
+    const userTokenAccountB = await getAssociatedTokenAddress(
+      poolState.mintB, wallet.publicKey,
+      tokenProgramB.equals(TOKEN_2022_PROGRAM_ID), tokenProgramB,
+    );
+
+    const swapIx = createBuyExactInIx(
+      sdkCfg, wallet.publicKey,
+      userTokenAccountA, userTokenAccountB,
+      amountInLamportsB, 0n,
+    );
+
+    const ixs: TransactionInstruction[] = [
+      createAssociatedTokenAccountIdempotentInstruction(
+        wallet.publicKey, userTokenAccountA, wallet.publicKey,
+        poolState.mintA,
+        tokenProgramA.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID_PK,
+      ),
+      createAssociatedTokenAccountIdempotentInstruction(
+        wallet.publicKey, userTokenAccountB, wallet.publicKey,
+        poolState.mintB,
+        tokenProgramB.equals(TOKEN_2022_PROGRAM_ID) ? TOKEN_2022_PROGRAM_ID : TOKEN_PROGRAM_ID_PK,
+      ),
+    ];
+
+    if (poolState.mintB.equals(WSOL_MINT_PK)) {
+      const lamports = Number(amountInLamportsB);
+      ixs.push(
+        SystemProgram.transfer({ fromPubkey: wallet.publicKey, toPubkey: userTokenAccountB, lamports }),
+        createSyncNativeInstruction(userTokenAccountB),
+      );
+    }
+
+    ixs.push(swapIx);
+
+    if (poolState.mintB.equals(WSOL_MINT_PK)) {
+      ixs.push(createCloseAccountInstruction(userTokenAccountB, wallet.publicKey, wallet.publicKey));
+    }
+
+    return { instructions: ixs, signers: [] };
+  }
+
   // ----- Core: sell (unsupported) -----
 
   async sell(_params: SellParams): Promise<SwapResult> {
