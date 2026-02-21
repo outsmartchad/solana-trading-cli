@@ -7,7 +7,7 @@ Project rules for Claude Code sessions working on this repo.
 - **Repo:** `outsmartchad/outsmart-cli`
 - **Branch:** `agent-trading-infra` (default branch on GitHub)
 - **Package name:** `outsmart`
-- **Purpose:** CLI + library for Solana trading — 17 DEX adapters, 12 TX landing providers
+- **Purpose:** CLI + library for Solana trading — 18 DEX adapters, 12 TX landing providers
 
 ## Git Identity
 
