@@ -473,13 +473,17 @@ export class PumpFunAdapter implements IDexAdapter {
       TOKEN_PROGRAM_ID,
     );
 
+    // max_sol_cost needs headroom — the program's internal fee calculation
+    // may round differently from ours. Add 5% buffer to avoid 6002 TooMuchSolRequired.
+    const maxSolCost = solLamports + solLamports / 20n;
+
     const buyIx = buildBuyInstruction(
       wallet.publicKey,
       mintPk,
       bondingCurve,
       state.creator,
       new BN(tokenAmount.toString()),
-      new BN(solLamports.toString()), // max_sol_cost = full amount (no extra slippage)
+      new BN(maxSolCost.toString()),
     );
 
     const ixs: TransactionInstruction[] = [
@@ -573,6 +577,7 @@ export class PumpFunAdapter implements IDexAdapter {
 
     const solLamports = BigInt(Math.floor(amountSol * LAMPORTS_PER_SOL));
     const tokenAmount = calculateBuyTokens(state, solLamports);
+    const maxSolCost = solLamports + solLamports / 20n;
 
     const computeLimit = opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT;
     const priorityFee = opts?.priorityFeeMicroLamports ?? 40_000_000;
@@ -591,7 +596,7 @@ export class PumpFunAdapter implements IDexAdapter {
       bondingCurve,
       state.creator,
       new BN(tokenAmount.toString()),
-      new BN(solLamports.toString()),
+      new BN(maxSolCost.toString()),
     );
 
     const ixs: TransactionInstruction[] = [
@@ -659,6 +664,7 @@ export class PumpFunAdapter implements IDexAdapter {
 
     const solLamports = BigInt(Math.floor(p.amountSol * LAMPORTS_PER_SOL));
     const tokenAmount = calculateBuyTokens(state, solLamports);
+    const maxSolCost = solLamports + solLamports / 20n;
 
     const createAta = createAssociatedTokenAccountIdempotentInstruction(
       wallet.publicKey,
@@ -670,7 +676,7 @@ export class PumpFunAdapter implements IDexAdapter {
 
     const buyIx = buildBuyInstruction(
       wallet.publicKey, mintPk, bondingCurve, state.creator,
-      new BN(tokenAmount.toString()), new BN(solLamports.toString()),
+      new BN(tokenAmount.toString()), new BN(maxSolCost.toString()),
     );
 
     return { instructions: [createAta, buyIx], signers: [] };

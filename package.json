@@ -25,6 +25,7 @@
     "test:registry": "jest --testPathPattern=registry",
     "test:raydium": "jest --testPathPattern=raydium",
     "test:meteora": "jest --testPathPattern=meteora",
+    "test:pumpfun": "jest --testPathPattern=pumpfun",
     "test:orca": "jest --testPathPattern=orca",
     "test:clmm": "jest --testPathPattern=clmm",
     "test:fusion": "jest --testPathPattern=fusion-futarchy",

@@ -58,6 +58,16 @@ export const FREEDOM = "WAh2JyAzyCusXZC4kmLPpaHz1DoaJHyCwmEBkYpbonk";
 /** Raydium LaunchLab: FREEDOM/USD1 */
 export const RAYDIUM_LAUNCHLAB_FREEDOM_USD1 = "8AmiUTD86mV64nDbTyWBzVybHhRQJxfjTFhkFkubJhb9";
 
+/** PumpFun bonding curve: OSMTEST token (created for testing) */
+export const PUMPFUN_OSMTEST_MINT = "EZdWgakAjiBRyuGbGEe8Pf7tNFCEB4BBDUH8EVkfSNiu";
+export const PUMPFUN_OSMTEST_BONDING_CURVE = "7fY2uG79YWdKdqeF7HVn7NRxtgQSA6mt42zoFCw9oJoq";
+
+/** PumpSwap AMM pool */
+export const PUMPSWAP_AMM_POOL = "FDrY5i5kuadZ1ik8gPS26qjj9Rw9mpufXMegGC2HNSP7";
+
+/** PumpSwap AMM token mint (base token from pool above) */
+export const PUMPSWAP_TOKEN = "8J69rbLTzWWgUJziFY8jeu5tDwEPBwUz4pKBMr5rpump";
+
 /** Random Meteora DBC: 6mwEqau1eKHch1QYCTRv5sdnGtJzVouzaLbKY5LDdoge/SOL pool */
 export const METEORA_DBC_GRACE_SOL = "DgxYpXJB2adQ9wFdyoCdnh5fNGfcLxXZsdkdqoyZZmwX";
 

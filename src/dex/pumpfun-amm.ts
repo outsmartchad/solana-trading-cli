@@ -251,12 +251,11 @@ function buildBuyInstruction(
   const userVolumeAccumulator = getUserVolumeAccumulatorPda(user);
   const feeConfig = getFeeConfigPda();
 
-  // Encode args: base_amount_out (u64) + max_quote_amount_in (u64) + track_volume (OptionBool None [0])
-  const data = Buffer.alloc(8 + 8 + 8 + 1);
+  // Encode args: base_amount_out (u64) + max_quote_amount_in (u64)
+  const data = Buffer.alloc(8 + 8 + 8);
   BUY_DISCRIMINATOR.copy(data, 0);
   data.writeBigUInt64LE(BigInt(baseAmountOut.toString()), 8);
   data.writeBigUInt64LE(BigInt(maxQuoteAmountIn.toString()), 16);
-  data.writeUInt8(0, 24); // OptionBool None
 
   return new TransactionInstruction({
     programId: PUMP_AMM_PROGRAM_ID,
@@ -280,7 +279,7 @@ function buildBuyInstruction(
       { pubkey: PUMP_AMM_PROGRAM_ID, isSigner: false, isWritable: false },
       { pubkey: coinCreatorVaultAta, isSigner: false, isWritable: true },
       { pubkey: coinCreatorVaultAuthority, isSigner: false, isWritable: false },
-      { pubkey: globalVolumeAccumulator, isSigner: false, isWritable: false },
+      { pubkey: globalVolumeAccumulator, isSigner: false, isWritable: true },
       { pubkey: userVolumeAccumulator, isSigner: false, isWritable: true },
       { pubkey: feeConfig, isSigner: false, isWritable: false },
       { pubkey: PUMP_FEE_PROGRAM, isSigner: false, isWritable: false },
@@ -540,14 +539,17 @@ export class PumpFunAmmAdapter implements IDexAdapter {
       wallet.publicKey, userQuoteAta, wallet.publicKey, poolState.quoteMint, quoteTokenProgram,
     );
 
-    // For WSOL: need to wrap SOL into the WSOL ATA
+    // max_quote_amount_in with 30% slippage buffer (AMM fee rounding + price movement)
+    const maxQuoteAmountIn = quoteAmountIn + quoteAmountIn * 30n / 100n;
+
+    // For WSOL: need to wrap SOL into the WSOL ATA (wrap max to cover slippage buffer)
     const wrapIxs: TransactionInstruction[] = [];
     if (poolState.quoteMint.toBase58() === WSOL_MINT) {
       wrapIxs.push(
         SystemProgram.transfer({
           fromPubkey: wallet.publicKey,
           toPubkey: userQuoteAta,
-          lamports: quoteAmountIn,
+          lamports: maxQuoteAmountIn,
         }),
         // syncNative to update WSOL balance
         new TransactionInstruction({
@@ -561,7 +563,7 @@ export class PumpFunAmmAdapter implements IDexAdapter {
     const buyIx = buildBuyInstruction(
       poolPk, poolState, wallet.publicKey,
       new BN(baseAmountOut.toString()),
-      new BN(quoteAmountIn.toString()), // max_quote_amount_in
+      new BN(maxQuoteAmountIn.toString()),
       baseTokenProgram,
       quoteTokenProgram,
     );
@@ -744,6 +746,9 @@ export class PumpFunAmmAdapter implements IDexAdapter {
       wallet.publicKey, userQuoteAta, wallet.publicKey, poolState.quoteMint, quoteTokenProgram,
     );
 
+    // max_quote_amount_in with 30% slippage buffer
+    const maxQuoteAmountIn = quoteAmountIn + quoteAmountIn * 30n / 100n;
+
     // WSOL wrapping
     const wrapIxs: TransactionInstruction[] = [];
     if (poolState.quoteMint.toBase58() === WSOL_MINT) {
@@ -751,7 +756,7 @@ export class PumpFunAmmAdapter implements IDexAdapter {
         SystemProgram.transfer({
           fromPubkey: wallet.publicKey,
           toPubkey: userQuoteAta,
-          lamports: quoteAmountIn,
+          lamports: maxQuoteAmountIn,
         }),
         new TransactionInstruction({
           programId: TOKEN_PROGRAM_ID,
@@ -764,7 +769,7 @@ export class PumpFunAmmAdapter implements IDexAdapter {
     const buyIx = buildBuyInstruction(
       poolPk, poolState, wallet.publicKey,
       new BN(baseAmountOut.toString()),
-      new BN(quoteAmountIn.toString()),
+      new BN(maxQuoteAmountIn.toString()),
       baseTokenProgram,
       quoteTokenProgram,
     );
@@ -851,9 +856,11 @@ export class PumpFunAmmAdapter implements IDexAdapter {
       quoteAmountIn,
     );
 
+    // 30% slippage buffer on max_quote_amount_in
+    const maxQuoteIn = quoteAmountIn + quoteAmountIn * 30n / 100n;
     const buyIx = buildBuyInstruction(
       poolPk, poolState, wallet.publicKey,
-      new BN(baseAmountOut.toString()), new BN(quoteAmountIn.toString()),
+      new BN(baseAmountOut.toString()), new BN(maxQuoteIn.toString()),
       baseTokenProgram, quoteTokenProgram,
     );
     return { instructions: [buyIx], signers: [] };
