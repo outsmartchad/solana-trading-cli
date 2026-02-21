@@ -87,6 +87,8 @@ import type {
   SwapResult,
 } from "./dex/types";
 
+import { setDryRunMode } from "./transactions/send-rpc";
+
 // ---------------------------------------------------------------------------
 // Version from package.json
 // ---------------------------------------------------------------------------
@@ -164,7 +166,9 @@ function formatMint(mint: string): string {
 function printResult(result: SwapResult): void {
   console.log();
   console.log(`  dex:       ${result.dex}`);
-  console.log(`  tx:        ${result.txSignature}`);
+  if (result.txSignature) {
+    console.log(`  tx:        ${result.txSignature}`);
+  }
   console.log(`  confirmed: ${result.confirmed}`);
   console.log(`  in:        ${result.amountIn} ${formatMint(result.amountInToken)}`);
   if (result.amountOut != null) {
@@ -449,6 +453,7 @@ function buildSwapOpts(cmd: {
   cu?: string;
   jito?: boolean;
   strategy?: string;
+  dryRun?: boolean;
 }): SwapOpts {
   const opts: SwapOpts = {};
   if (cmd.slippage != null) opts.slippageBps = Number(cmd.slippage);
@@ -459,6 +464,7 @@ function buildSwapOpts(cmd: {
   if (cmd.strategy != null) {
     opts.landingStrategy = cmd.strategy as SwapOpts["landingStrategy"];
   }
+  if (cmd.dryRun) opts.dryRun = true;
   return opts;
 }
 
@@ -473,7 +479,8 @@ function addSwapOptions(cmd: Command, includeTip = true): Command {
     .option("--cu <units>", "compute unit limit")
     .option("--jito", "use Jito bundle submission")
     .option("--strategy <mode>", "TX landing strategy: concurrent|race|random|sequential")
-    .option("--quote <mint>", "quote token mint (default: WSOL)");
+    .option("--quote <mint>", "quote token mint (default: WSOL)")
+    .option("--dry-run", "simulate the transaction without sending (preview CU usage and errors)");
   if (includeTip) {
     cmd.option("--tip <sol>", "MEV tip in SOL");
   }
@@ -564,19 +571,31 @@ const buyCmd = new Command("buy")
     };
 
     const isStablecoinQuote = quoteMint && STABLECOIN_MINTS.has(quoteMint);
+    const isDryRun = !!cmdOpts.dryRun;
+
+    // Activate global dry-run mode so all send functions simulate without sending
+    if (isDryRun) {
+      setDryRunMode(true);
+      console.log(`\n  DRY RUN — simulating only, no transaction will be sent\n`);
+    }
+
     const stepLabel = isStablecoinQuote ? "step 2: " : "";
     console.log(`\n  ${stepLabel}buying on ${adapter.name}...`);
 
     // Snapshot output token balance before swap to compute amountOut
     const outputMint = tokenMint;
-    const balBefore = outputMint ? (await getTokenBalance(outputMint)).amount : 0;
+    const balBefore = outputMint && !isDryRun ? (await getTokenBalance(outputMint)).amount : 0;
 
     const result = await adapter.buy(params);
 
     // Fill amountOut from balance delta if adapter didn't provide it
-    if (outputMint) {
+    if (outputMint && !isDryRun) {
       await fillAmountOut(result, outputMint, balBefore);
       result.amountOutToken = result.amountOutToken ?? outputMint;
+    }
+
+    if (isDryRun) {
+      setDryRunMode(false);
     }
 
     printResult(result);
@@ -651,25 +670,41 @@ const sellCmd = new Command("sell")
       opts: buildSwapOpts(cmdOpts),
     };
 
+    const isDryRun = !!cmdOpts.dryRun;
+
+    // Activate global dry-run mode so all send functions simulate without sending
+    if (isDryRun) {
+      setDryRunMode(true);
+      console.log(`\n  DRY RUN — simulating only, no transaction will be sent\n`);
+    }
+
     const stepLabel = isStablecoinQuote ? "step 1: " : "";
     console.log(`\n  ${stepLabel}selling ${params.percentage}% on ${adapter.name}...`);
 
     // Snapshot output balance before swap to compute amountOut
     const sellOutputMint = quoteMint ?? WSOL_MINT;
-    const sellBalBefore = (sellOutputMint === WSOL_MINT || sellOutputMint === "SOL")
-      ? await getSolBalance()
-      : (await getTokenBalance(sellOutputMint)).amount;
+    const sellBalBefore = !isDryRun
+      ? ((sellOutputMint === WSOL_MINT || sellOutputMint === "SOL")
+        ? await getSolBalance()
+        : (await getTokenBalance(sellOutputMint)).amount)
+      : 0;
 
     const result = await adapter.sell(params);
 
     // Fill amountOut from balance delta if adapter didn't provide it
-    await fillAmountOut(result, sellOutputMint, sellBalBefore);
-    result.amountOutToken = result.amountOutToken ?? sellOutputMint;
+    if (!isDryRun) {
+      await fillAmountOut(result, sellOutputMint, sellBalBefore);
+      result.amountOutToken = result.amountOutToken ?? sellOutputMint;
+    }
+
+    if (isDryRun) {
+      setDryRunMode(false);
+    }
 
     printResult(result);
 
     // Auto-swap stablecoin proceeds → SOL
-    if (isStablecoinQuote && quoteMint && result.txSignature) {
+    if (isStablecoinQuote && quoteMint && result.txSignature && !isDryRun) {
       await autoSwapStablecoinToSol(quoteMint);
     }
   });

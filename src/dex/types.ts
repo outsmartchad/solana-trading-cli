@@ -55,6 +55,12 @@ export interface SwapOpts {
   landingStrategy?: SubmissionStrategy;
 
   /**
+   * Dry-run mode — simulate the TX and return results without sending.
+   * Useful for previewing CU usage and catching errors before spending SOL.
+   */
+  dryRun?: boolean;
+
+  /**
    * Address lookup table accounts for V0 message compilation.
    * Adapters may provide their own; this allows callers to add extras.
    */

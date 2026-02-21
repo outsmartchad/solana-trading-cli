@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [agent-trading-infra, main]
+  pull_request:
+    branches: [agent-trading-infra, main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests (CI-safe, no RPC)
+        run: npm run test:unit
+
+      - name: Registry tests (no RPC)
+        run: npm run test:registry
+
+      - name: CLI --help smoke test
+        run: node dist/cli.js --help
+
+      - name: CLI list-dex smoke test
+        run: node dist/cli.js list-dex
