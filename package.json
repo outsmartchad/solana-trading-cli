@@ -54,7 +54,7 @@
   },
   "dependencies": {
     "@bloxroute/solana-trader-client-ts": "^2.1.6",
-    "@coral-xyz/anchor": "^0.30.1",
+    "@coral-xyz/anchor": "^0.29.0",
     "@crypticdot/fusionamm-client": "^1.0.81",
     "@crypticdot/fusionamm-core": "^1.0.81",
     "@metaplex-foundation/js": "^0.20.1",

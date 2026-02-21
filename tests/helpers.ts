@@ -84,6 +84,10 @@ export const ORCA_SOL_USDC = "Czfq3xZZDmsdGdUyrNLtRhGc47cXcZtLG4crryfu44zE";
 export const ORCA_WHIRLPOOL_POOL = "GpuWWgWuiWkn9fL6EQK55rdwQExkwQJsjuDmhnT3otdK";
 export const ORCA_WHIRLPOOL_TOKEN = "8Jx8AAHj86wbQgUTjGuj6GTTL5Ps3cqxKRTvpaJApump";
 
+/** Futarchy AMM pool */
+export const FUTARCHY_AMM_POOL = "3D854kknnQhu9xVaRNV154oZ9oN2WF3tXsq3LDu7fFMn";
+export const FUTARCHY_AMM_TOKEN = "BANKJmvhT8tiJRsBSS1n2HryMBPvT5Ze4HU95DUAmeta";
+
 // ---------------------------------------------------------------------------
 // Test amounts
 //

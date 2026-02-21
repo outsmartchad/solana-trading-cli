@@ -15,9 +15,15 @@ import {
   delay,
   logResult,
   BUY_AMOUNT_SOL,
+  SELL_PERCENTAGE,
   WSOL,
   USDC,
+  FUTARCHY_AMM_POOL,
+  FUTARCHY_AMM_TOKEN,
 } from "./helpers";
+
+/** Raydium CLMM SOL/USDC pool for auto-swap */
+const RAYDIUM_SOL_USDC_CLMM = "3ucNos4NbumPLZNWztqGHNFFgkHeRMBQAVemeeomsUxv";
 
 beforeAll(async () => {
   await ensureMainnetReady();
@@ -65,6 +71,8 @@ describe("fusion-amm", () => {
 // ============================================================
 describe("futarchy-amm", () => {
   const adapter = getDexAdapter("futarchy-amm");
+  const pool = FUTARCHY_AMM_POOL;
+  const token = FUTARCHY_AMM_TOKEN;
 
   test("capabilities check", () => {
     expect(adapter.capabilities.canBuy).toBe(true);
@@ -74,22 +82,45 @@ describe("futarchy-amm", () => {
     expect(adapter.capabilities.canFindPool).toBe(false);
   });
 
-  // Futarchy AMM: DAO-based pools. Need a known DAO address.
-  test.skip("buy: requires known Futarchy DAO pool", async () => {
-    const FUTARCHY_DAO = "REPLACE_WITH_FUTARCHY_DAO_ADDRESS";
-    const FUTARCHY_TOKEN = "REPLACE_WITH_FUTARCHY_TOKEN_MINT";
-
-    const price = await adapter.getPrice!(FUTARCHY_DAO);
+  test("getPrice: Futarchy AMM pool", async () => {
+    const price = await adapter.getPrice!(pool);
     logResult("futarchy-amm getPrice", price);
     expect(price.price).toBeGreaterThan(0);
+  });
 
+  test("buy: swap SOL→USDC then buy token (auto-swap)", async () => {
+    // Step 1: Swap SOL→USDC via raydium-clmm (pool quote is USDC)
+    const raydiumClmm = getDexAdapter("raydium-clmm");
     await delay();
-    const result = await adapter.buy({
-      tokenMint: FUTARCHY_TOKEN,
+    const swapResult = await raydiumClmm.buy({
+      tokenMint: USDC,
       amountSol: BUY_AMOUNT_SOL,
-      poolAddress: FUTARCHY_DAO,
+      poolAddress: RAYDIUM_SOL_USDC_CLMM,
+    });
+    logResult("SOL→USDC swap", swapResult);
+    expect(swapResult.txSignature).toBeTruthy();
+
+    // Step 2: Buy BANK token with USDC via futarchy-amm
+    // amountSol is repurposed as USDC amount (adapter auto-detects USDC quote)
+    await delay(5000);
+    const result = await adapter.buy({
+      tokenMint: token,
+      amountSol: BUY_AMOUNT_SOL, // ~0.02 USDC worth
+      poolAddress: pool,
     });
     logResult("futarchy-amm buy", result);
+    expect(result.txSignature).toBeTruthy();
+    expect(result.dex).toBe("futarchy-amm");
+  });
+
+  test("sell: 100% of token just bought", async () => {
+    await delay(10000);
+    const result = await adapter.sell({
+      tokenMint: token,
+      percentage: SELL_PERCENTAGE,
+      poolAddress: pool,
+    });
+    logResult("futarchy-amm sell", result);
     expect(result.txSignature).toBeTruthy();
   });
 });

@@ -224,8 +224,10 @@ class LaunchpadSDK {
   constructor(provider: AnchorProvider) {
     this.provider = provider;
     this.connection = provider.connection;
+    // Anchor 0.29 constructor: (idl, programId, provider)
     this.program = new Program<Idl>(
       LAUNCHPAD_IDL as Idl,
+      LAUNCHPAD_PROGRAM_ID,
       provider,
     );
   }

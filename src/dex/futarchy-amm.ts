@@ -44,6 +44,7 @@ import { getWallet, getConnection } from "../helpers/config";
 import { getTokenProgram } from "../helpers/token-2022";
 import { landTransaction } from "../transactions/landing";
 import { sendAndConfirmVtx } from "../transactions/send-rpc";
+import { IDL as FUTARCHY_RAW_IDL } from "./futarchy-idl";
 
 import {
   IDexAdapter,
@@ -81,161 +82,8 @@ const USDC_MINT_PK = new PublicKey(USDC_MINT);
 /** PRICE_SCALE from Rust: 1_000_000_000_000 (1e12) */
 const PRICE_SCALE = 1_000_000_000_000;
 
-// ---------------------------------------------------------------------------
-// Minimal Futarchy IDL for spotSwap + DAO account decoding
-// ---------------------------------------------------------------------------
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const FUTARCHY_IDL: any = {
-  version: "0.6.1",
-  name: "futarchy",
-  address: FUTARCHY_PROGRAM_ID.toBase58(),
-  instructions: [
-    {
-      name: "spotSwap",
-      accounts: [
-        { name: "dao", isMut: true, isSigner: false },
-        { name: "userBaseAccount", isMut: true, isSigner: false },
-        { name: "userQuoteAccount", isMut: true, isSigner: false },
-        { name: "ammBaseVault", isMut: true, isSigner: false },
-        { name: "ammQuoteVault", isMut: true, isSigner: false },
-        { name: "user", isMut: false, isSigner: true },
-        { name: "tokenProgram", isMut: false, isSigner: false },
-        { name: "eventAuthority", isMut: false, isSigner: false },
-        { name: "program", isMut: false, isSigner: false },
-      ],
-      args: [
-        {
-          name: "params",
-          type: { defined: "SpotSwapParams" },
-        },
-      ],
-    },
-  ],
-  accounts: [
-    {
-      name: "dao",
-      type: {
-        kind: "struct",
-        fields: [
-          { name: "amm", type: { defined: "FutarchyAmm" } },
-          { name: "nonce", type: "u64" },
-          { name: "daoCreator", type: "publicKey" },
-          { name: "pdaBump", type: "u8" },
-          { name: "squadsMultisig", type: "publicKey" },
-          { name: "squadsMultisigVault", type: "publicKey" },
-          { name: "baseMint", type: "publicKey" },
-          { name: "quoteMint", type: "publicKey" },
-          { name: "proposalCount", type: "u32" },
-          { name: "passThresholdBps", type: "u16" },
-          { name: "secondsPerProposal", type: "u32" },
-          { name: "twapInitialObservation", type: "u128" },
-          { name: "twapMaxObservationChangePerUpdate", type: "u128" },
-          { name: "twapStartDelaySeconds", type: "u32" },
-          { name: "minQuoteFutarchicLiquidity", type: "u64" },
-          { name: "minBaseFutarchicLiquidity", type: "u64" },
-          { name: "baseToStake", type: "u64" },
-          { name: "seqNum", type: "u64" },
-          { name: "initialSpendingLimit", type: { option: { defined: "InitialSpendingLimit" } } },
-        ],
-      },
-    },
-  ],
-  types: [
-    {
-      name: "SpotSwapParams",
-      type: {
-        kind: "struct",
-        fields: [
-          { name: "inputAmount", type: "u64" },
-          { name: "swapType", type: { defined: "SwapType" } },
-          { name: "minOutputAmount", type: "u64" },
-        ],
-      },
-    },
-    {
-      name: "SwapType",
-      type: {
-        kind: "enum",
-        variants: [{ name: "Buy" }, { name: "Sell" }],
-      },
-    },
-    {
-      name: "FutarchyAmm",
-      type: {
-        kind: "struct",
-        fields: [
-          { name: "state", type: { defined: "PoolState" } },
-          { name: "totalLiquidity", type: "u128" },
-          { name: "baseMint", type: "publicKey" },
-          { name: "quoteMint", type: "publicKey" },
-          { name: "ammBaseVault", type: "publicKey" },
-          { name: "ammQuoteVault", type: "publicKey" },
-        ],
-      },
-    },
-    {
-      name: "PoolState",
-      type: {
-        kind: "enum",
-        variants: [
-          {
-            name: "Spot",
-            fields: [{ name: "spot", type: { defined: "Pool" } }],
-          },
-          {
-            name: "Futarchy",
-            fields: [
-              { name: "spot", type: { defined: "Pool" } },
-              { name: "pass", type: { defined: "Pool" } },
-              { name: "fail", type: { defined: "Pool" } },
-            ],
-          },
-        ],
-      },
-    },
-    {
-      name: "Pool",
-      type: {
-        kind: "struct",
-        fields: [
-          { name: "oracle", type: { defined: "TwapOracle" } },
-          { name: "quoteReserves", type: "u64" },
-          { name: "baseReserves", type: "u64" },
-          { name: "quoteProtocolFeeBalance", type: "u64" },
-          { name: "baseProtocolFeeBalance", type: "u64" },
-        ],
-      },
-    },
-    {
-      name: "TwapOracle",
-      type: {
-        kind: "struct",
-        fields: [
-          { name: "aggregator", type: "u128" },
-          { name: "lastUpdatedTimestamp", type: "i64" },
-          { name: "createdAtTimestamp", type: "i64" },
-          { name: "lastPrice", type: "u128" },
-          { name: "lastObservation", type: "u128" },
-          { name: "maxObservationChangePerUpdate", type: "u128" },
-          { name: "initialObservation", type: "u128" },
-          { name: "startDelaySeconds", type: "u32" },
-        ],
-      },
-    },
-    {
-      name: "InitialSpendingLimit",
-      type: {
-        kind: "struct",
-        fields: [
-          { name: "amountPerMonth", type: "u64" },
-          { name: "members", type: { vec: "publicKey" } },
-        ],
-      },
-    },
-  ],
-};
-/* eslint-enable @typescript-eslint/no-explicit-any */
+/** Full Futarchy IDL (v0.6.0) — cast for Anchor 0.29 compatibility */
+const FUTARCHY_IDL = FUTARCHY_RAW_IDL as unknown as Idl;
 
 // ---------------------------------------------------------------------------
 // Internal SDK (embedded — matches source FutarchyAmmSDK)
@@ -247,8 +95,10 @@ class FutarchyAmmSDK {
 
   constructor(provider: AnchorProvider) {
     this.connection = provider.connection;
+    // Anchor 0.29 constructor: (idl, programId, provider)
     this.program = new Program<Idl>(
-      FUTARCHY_IDL as Idl,
+      FUTARCHY_IDL,
+      FUTARCHY_PROGRAM_ID,
       provider,
     );
   }
@@ -339,6 +189,17 @@ function extractSpotPool(ammState: any): any {
   throw new Error(`Invalid pool state: ${JSON.stringify(ammState)}`);
 }
 
+/** Convert SOL-denominated amount to quote token lamports based on quote mint */
+function computeInputAmount(amountSol: number, quoteMint: PublicKey): bigint {
+  if (quoteMint.equals(WSOL_MINT_PK)) {
+    return BigInt(Math.floor(amountSol * LAMPORTS_PER_SOL));
+  }
+  if (quoteMint.equals(USDC_MINT_PK)) {
+    return BigInt(Math.floor(amountSol * 1_000_000)); // 6 decimals
+  }
+  return BigInt(Math.floor(amountSol * 1_000_000_000));
+}
+
 function createProvider(): AnchorProvider {
   const connection = getConnection();
   const wallet = getWallet();
@@ -378,27 +239,22 @@ export class FutarchyAmmAdapter implements IDexAdapter {
 
     const dao = new PublicKey(poolAddress);
     const baseMint = new PublicKey(tokenMint);
-    const quoteMintStr = quoteMintParam ?? WSOL_MINT;
-    const quoteMint = new PublicKey(quoteMintStr);
 
     const provider = createProvider();
     const sdk = new FutarchyAmmSDK(provider);
 
-    // Validate DAO
+    // Fetch DAO to auto-detect quote mint
     const daoAccount = await sdk.getDao(dao);
     if (!daoAccount) {
       throw new Error(`DAO not found: ${dao.toBase58()}`);
     }
 
-    // Calculate input amount
-    let inputAmount: bigint;
-    if (quoteMint.equals(WSOL_MINT_PK)) {
-      inputAmount = BigInt(Math.floor(amountSol * LAMPORTS_PER_SOL));
-    } else if (quoteMint.equals(USDC_MINT_PK)) {
-      inputAmount = BigInt(Math.floor(amountSol * 1_000_000)); // 6 decimals
-    } else {
-      inputAmount = BigInt(Math.floor(amountSol * 1_000_000_000));
-    }
+    // Auto-detect quote mint from DAO account (override user param if not set)
+    const quoteMintStr = quoteMintParam ?? daoAccount.quoteMint.toBase58();
+    const quoteMint = new PublicKey(quoteMintStr);
+
+    // Calculate input amount based on quote mint decimals
+    const inputAmount = computeInputAmount(amountSol, quoteMint);
 
     // Slippage — use minOutputAmount=0 for now (source does the same)
     const minOutputAmount = BigInt(0);
@@ -475,11 +331,17 @@ export class FutarchyAmmAdapter implements IDexAdapter {
 
     const dao = new PublicKey(poolAddress);
     const baseMint = new PublicKey(tokenMint);
-    const quoteMintStr = quoteMintParam ?? WSOL_MINT;
-    const quoteMint = new PublicKey(quoteMintStr);
 
     const provider = createProvider();
     const sdk = new FutarchyAmmSDK(provider);
+
+    // Auto-detect quote mint from DAO account
+    const daoAccount = await sdk.getDao(dao);
+    if (!daoAccount) {
+      throw new Error(`DAO not found: ${dao.toBase58()}`);
+    }
+    const quoteMintStr = quoteMintParam ?? daoAccount.quoteMint.toBase58();
+    const quoteMint = new PublicKey(quoteMintStr);
 
     // Get token balance (Futarchy uses standard SPL tokens)
     const ata = await getAssociatedTokenAddress(baseMint, wallet.publicKey, false, TOKEN_PROGRAM_ID);
@@ -560,21 +422,19 @@ export class FutarchyAmmAdapter implements IDexAdapter {
 
     const dao = new PublicKey(poolAddress);
     const baseMint = new PublicKey(tokenMint);
-    const quoteMintStr = quoteMintParam ?? WSOL_MINT;
-    const quoteMint = new PublicKey(quoteMintStr);
 
     const provider = createProvider();
     const sdk = new FutarchyAmmSDK(provider);
 
-    // Calculate input amount
-    let inputAmount: bigint;
-    if (quoteMint.equals(WSOL_MINT_PK)) {
-      inputAmount = BigInt(Math.floor(amountSol * LAMPORTS_PER_SOL));
-    } else if (quoteMint.equals(USDC_MINT_PK)) {
-      inputAmount = BigInt(Math.floor(amountSol * 1_000_000));
-    } else {
-      inputAmount = BigInt(Math.floor(amountSol * 1_000_000_000));
+    // Auto-detect quote mint from DAO account
+    const daoAccount = await sdk.getDao(dao);
+    if (!daoAccount) {
+      throw new Error(`DAO not found: ${dao.toBase58()}`);
     }
+    const quoteMintStr = quoteMintParam ?? daoAccount.quoteMint.toBase58();
+    const quoteMint = new PublicKey(quoteMintStr);
+
+    const inputAmount = computeInputAmount(amountSol, quoteMint);
 
     // Snipe: minOutput = 0 for maximum fill
     const swapIxs = await sdk.createSpotSwapInstructions(
@@ -651,20 +511,19 @@ export class FutarchyAmmAdapter implements IDexAdapter {
 
     const dao = new PublicKey(buyParams.poolAddress);
     const baseMint = new PublicKey(tokenMint);
-    const quoteMintStr = buyParams.quoteMint ?? WSOL_MINT;
-    const quoteMint = new PublicKey(quoteMintStr);
 
     const provider = createProvider();
     const sdk = new FutarchyAmmSDK(provider);
 
-    let inputAmount: bigint;
-    if (quoteMint.equals(WSOL_MINT_PK)) {
-      inputAmount = BigInt(Math.floor(buyParams.amountSol * LAMPORTS_PER_SOL));
-    } else if (quoteMint.equals(USDC_MINT_PK)) {
-      inputAmount = BigInt(Math.floor(buyParams.amountSol * 1_000_000));
-    } else {
-      inputAmount = BigInt(Math.floor(buyParams.amountSol * 1_000_000_000));
+    // Auto-detect quote mint from DAO account
+    const daoAccount = await sdk.getDao(dao);
+    if (!daoAccount) {
+      throw new Error(`DAO not found: ${dao.toBase58()}`);
     }
+    const quoteMintStr = buyParams.quoteMint ?? daoAccount.quoteMint.toBase58();
+    const quoteMint = new PublicKey(quoteMintStr);
+
+    const inputAmount = computeInputAmount(buyParams.amountSol, quoteMint);
 
     const swapIxs = await sdk.createSpotSwapInstructions(
       dao, baseMint, quoteMint, "buy",
