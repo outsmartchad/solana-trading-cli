@@ -27,11 +27,10 @@ import DLMM, { StrategyType } from "@meteora-ag/dlmm";
 import {
   PublicKey,
   Keypair,
-  ComputeBudgetProgram,
 } from "@solana/web3.js";
 
 import { getWallet, getConnection } from "../helpers/config";
-import { sendAndConfirmVtx } from "../transactions/send-rpc";
+import { sendAndConfirmLegacyTx } from "../transactions/send-rpc";
 
 import {
   IDexAdapter,
@@ -47,8 +46,6 @@ import {
   LpStrategy,
   UnsupportedOperationError,
   WSOL_MINT,
-  DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS,
-  DEFAULT_COMPUTE_UNIT_LIMIT,
 } from "./types";
 
 import { registerAdapter } from "./index";
@@ -212,19 +209,10 @@ export class MeteoraLpDlmmAdapter implements IDexAdapter {
       },
     });
 
-    // Extract instructions from the SDK transaction
-    const ixs = [
-      ComputeBudgetProgram.setComputeUnitLimit({
-        units: opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT,
-      }),
-      ComputeBudgetProgram.setComputeUnitPrice({
-        microLamports: opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS,
-      }),
-      ...createPositionTx.instructions,
-    ];
-
+    // Send the SDK's legacy Transaction directly with a fresh blockhash.
+    // The SDK call above can take 10-30s, so we must NOT use a stale blockhash.
     try {
-      const result = await sendAndConfirmVtx(connection, ixs, wallet, {
+      const result = await sendAndConfirmLegacyTx(connection, createPositionTx, wallet, {
         extraSigners: [newPosition],
       });
 
@@ -259,7 +247,7 @@ export class MeteoraLpDlmmAdapter implements IDexAdapter {
    * If percentage is 100, also claims fees and closes the position.
    */
   async removeLiquidity(params: RemoveLiquidityParams): Promise<TxResult> {
-    const { poolAddress, percentage, positionAddress, opts } = params;
+    const { poolAddress, percentage, positionAddress } = params;
     const connection = getConnection();
     const wallet = getWallet();
     const poolPk = new PublicKey(poolAddress);
@@ -315,17 +303,7 @@ export class MeteoraLpDlmmAdapter implements IDexAdapter {
     let lastSignature = "";
     try {
       for (const removeTx of txArray) {
-        // Each SDK TX has its own instructions — send via sendAndConfirmVtx
-        const ixs = [
-          ComputeBudgetProgram.setComputeUnitLimit({
-            units: opts?.computeUnitLimit ?? DEFAULT_COMPUTE_UNIT_LIMIT,
-          }),
-          ComputeBudgetProgram.setComputeUnitPrice({
-            microLamports: opts?.priorityFeeMicroLamports ?? DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS,
-          }),
-          ...removeTx.instructions,
-        ];
-        const result = await sendAndConfirmVtx(connection, ixs, wallet);
+        const result = await sendAndConfirmLegacyTx(connection, removeTx, wallet);
         lastSignature = result.txSignature;
 
         if (!result.confirmed) {
@@ -404,17 +382,31 @@ export class MeteoraLpDlmmAdapter implements IDexAdapter {
       position = userPositions[0];
     }
 
-    // claimSwapFee returns Transaction | null
-    const claimFeeTx = await dlmmPool.claimSwapFee({
-      owner: wallet.publicKey,
-      position,
-    });
+    // claimSwapFee may return null or throw "No fee to claim"
+    let claimFeeTx;
+    try {
+      claimFeeTx = await dlmmPool.claimSwapFee({
+        owner: wallet.publicKey,
+        position,
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      // "No fee to claim" is expected for fresh positions — not a real error
+      return {
+        txSignature: "",
+        confirmed: true,
+        error: msg,
+        positionAddress: position.publicKey.toBase58(),
+        poolAddress,
+        dex: this.name,
+      };
+    }
 
     if (!claimFeeTx) {
       return {
         txSignature: "",
-        confirmed: false,
-        error: "No fees to claim (claimSwapFee returned null)",
+        confirmed: true,
+        error: "No fees to claim",
         positionAddress: position.publicKey.toBase58(),
         poolAddress,
         dex: this.name,
@@ -422,16 +414,7 @@ export class MeteoraLpDlmmAdapter implements IDexAdapter {
     }
 
     try {
-      const ixs = [
-        ComputeBudgetProgram.setComputeUnitLimit({
-          units: DEFAULT_COMPUTE_UNIT_LIMIT,
-        }),
-        ComputeBudgetProgram.setComputeUnitPrice({
-          microLamports: DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS,
-        }),
-        ...claimFeeTx.instructions,
-      ];
-      const result = await sendAndConfirmVtx(connection, ixs, wallet);
+      const result = await sendAndConfirmLegacyTx(connection, claimFeeTx, wallet);
 
       return {
         txSignature: result.txSignature,

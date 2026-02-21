@@ -3,16 +3,24 @@
  *
  * Use this for normal swap operations (buy/sell/LP).
  * For competitive/low-latency submissions (sniping), use the landing orchestrator.
+ *
+ * Two helpers:
+ *   - sendAndConfirmVtx()   — builds a V0 transaction from instructions, signs, sends, confirms
+ *   - sendAndConfirmLegacyTx() — takes a pre-built legacy Transaction from an SDK, assigns fresh
+ *     blockhash, signs, sends, confirms. Use this when the SDK returns a complete Transaction
+ *     object (e.g. DLMM initializePositionAndAddLiquidityByStrategy).
  */
 
 import {
   Connection,
   Keypair,
+  Transaction,
   TransactionInstruction,
   TransactionMessage,
   VersionedTransaction,
   AddressLookupTableAccount,
   SendOptions,
+  sendAndConfirmTransaction,
 } from "@solana/web3.js";
 
 export interface SendRpcOptions {
@@ -88,4 +96,66 @@ export async function sendAndConfirmVtx(
     txSignature: signature,
     confirmed: true,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Legacy Transaction helper
+// ---------------------------------------------------------------------------
+
+export interface SendLegacyTxOptions {
+  /** Extra signers beyond the primary wallet (e.g. new position keypair) */
+  extraSigners?: Keypair[];
+  /** Commitment level for confirmation (default: "confirmed") */
+  commitment?: "processed" | "confirmed" | "finalized";
+}
+
+/**
+ * Send a pre-built legacy Transaction from an SDK.
+ *
+ * Assigns a fresh blockhash right before sending so the TX doesn't expire
+ * even if the SDK took a long time to build it (e.g. DLMM LP operations).
+ *
+ * Use this instead of sendAndConfirmVtx when the SDK returns a complete
+ * Transaction object rather than raw instructions.
+ */
+export async function sendAndConfirmLegacyTx(
+  connection: Connection,
+  tx: Transaction,
+  signer: Keypair,
+  opts?: SendLegacyTxOptions,
+): Promise<SendRpcResult> {
+  // Assign fresh blockhash right before sending
+  const blockhash = await connection.getLatestBlockhash("confirmed");
+  tx.recentBlockhash = blockhash.blockhash;
+  tx.feePayer = signer.publicKey;
+
+  const signers: Keypair[] = [signer, ...(opts?.extraSigners ?? [])];
+
+  try {
+    const signature = await sendAndConfirmTransaction(
+      connection,
+      tx,
+      signers,
+      {
+        commitment: opts?.commitment ?? "confirmed",
+        skipPreflight: true,
+        maxRetries: 3,
+      },
+    );
+
+    return {
+      txSignature: signature,
+      confirmed: true,
+    };
+  } catch (error) {
+    // sendAndConfirmTransaction throws on failure — extract signature if possible
+    const errMsg = error instanceof Error ? error.message : String(error);
+    // Try to extract signature from error message
+    const sigMatch = errMsg.match(/[1-9A-HJ-NP-Za-km-z]{87,88}/);
+    return {
+      txSignature: sigMatch ? sigMatch[0] : "",
+      confirmed: false,
+      error: errMsg,
+    };
+  }
 }
