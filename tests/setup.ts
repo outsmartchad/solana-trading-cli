@@ -29,5 +29,7 @@ import "../src/dex/pancakeswap-clmm";
 import "../src/dex/fusion-amm";
 import "../src/dex/futarchy-amm";
 import "../src/dex/futarchy-launchpad";
+import "../src/dex/pumpfun";
+import "../src/dex/pumpfun-amm";
 import "../src/dex/jupiter-ultra";
 import "../src/dex/dflow";

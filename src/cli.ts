@@ -50,6 +50,8 @@ import "./dex/pancakeswap-clmm";
 import "./dex/fusion-amm";
 import "./dex/futarchy-amm";
 import "./dex/futarchy-launchpad";
+import "./dex/pumpfun";
+import "./dex/pumpfun-amm";
 import "./dex/jupiter-ultra";
 import "./dex/dflow";
 
@@ -535,6 +537,76 @@ program
       console.log(`  feeY:      ${pos.feeY}`);
       console.log();
     }
+  });
+
+// ---------------------------------------------------------------------------
+// outsmart create-token (PumpFun bonding curve)
+// ---------------------------------------------------------------------------
+
+program
+  .command("create-token")
+  .description("Create a new PumpFun token with a bonding curve")
+  .requiredOption("--name <name>", "token name")
+  .requiredOption("--symbol <symbol>", "token symbol")
+  .requiredOption("--uri <uri>", "metadata URI (IPFS link to JSON metadata)")
+  .action(async (cmdOpts) => {
+    const adapter = getDexAdapter("pumpfun") as import("./dex/pumpfun").PumpFunAdapter;
+
+    console.log(`\n  creating token "${cmdOpts.name}" (${cmdOpts.symbol}) on pump.fun...`);
+    const result = await adapter.create(cmdOpts.name, cmdOpts.symbol, cmdOpts.uri);
+    console.log();
+    console.log(`  tx:        ${result.txSignature}`);
+    console.log(`  confirmed: ${result.confirmed}`);
+    if (result.positionAddress) {
+      console.log(`  mint:      ${result.positionAddress}`);
+    }
+    if (result.poolAddress) {
+      console.log(`  curve:     ${result.poolAddress}`);
+    }
+    if (result.error) {
+      console.log(`  error:     ${result.error}`);
+    }
+    console.log();
+  });
+
+// ---------------------------------------------------------------------------
+// outsmart create-pool (PumpSwap AMM)
+// ---------------------------------------------------------------------------
+
+program
+  .command("create-pool")
+  .description("Create a new PumpSwap AMM pool with initial liquidity")
+  .requiredOption("--base <mint>", "base token mint address")
+  .requiredOption("--quote <mint>", "quote token mint address (usually WSOL)")
+  .requiredOption("--base-amount <amount>", "initial base token deposit (human-readable)")
+  .requiredOption("--quote-amount <amount>", "initial quote token deposit (human-readable)")
+  .option("--index <number>", "pool index (default: 1; 0 is reserved for canonical pump pools)", "1")
+  .action(async (cmdOpts) => {
+    const adapter = getDexAdapter("pumpfun-amm") as import("./dex/pumpfun-amm").PumpFunAmmAdapter;
+
+    console.log(`\n  creating pool on PumpSwap AMM...`);
+    console.log(`  base:      ${cmdOpts.base}`);
+    console.log(`  quote:     ${cmdOpts.quote}`);
+    console.log(`  amounts:   ${cmdOpts.baseAmount} base + ${cmdOpts.quoteAmount} quote`);
+    console.log(`  index:     ${cmdOpts.index}`);
+
+    const result = await adapter.createPool(
+      cmdOpts.base,
+      cmdOpts.quote,
+      Number(cmdOpts.baseAmount),
+      Number(cmdOpts.quoteAmount),
+      Number(cmdOpts.index),
+    );
+    console.log();
+    console.log(`  tx:        ${result.txSignature}`);
+    console.log(`  confirmed: ${result.confirmed}`);
+    if (result.poolAddress) {
+      console.log(`  pool:      ${result.poolAddress}`);
+    }
+    if (result.error) {
+      console.log(`  error:     ${result.error}`);
+    }
+    console.log();
   });
 
 // ---------------------------------------------------------------------------

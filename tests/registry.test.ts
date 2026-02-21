@@ -1,5 +1,5 @@
 /**
- * Registry smoke tests — verify all 17 DEX adapters are loaded
+ * Registry smoke tests — verify all 19 DEX adapters are loaded
  * and their capabilities match expectations.
  *
  * These tests do NOT make RPC calls or spend SOL.
@@ -23,16 +23,18 @@ const EXPECTED_ADAPTERS = [
   "fusion-amm",
   "futarchy-amm",
   "futarchy-launchpad",
+  "pumpfun",
+  "pumpfun-amm",
   "jupiter-ultra",
   "dflow",
 ];
 
 describe("DexRegistry", () => {
-  test("all 17 adapters are registered", () => {
+  test("all 19 adapters are registered", () => {
     const adapters = listDexAdapters();
     const names = adapters.map((a) => a.name).sort();
     console.log("Registered adapters:", names);
-    expect(names.length).toBeGreaterThanOrEqual(17);
+    expect(names.length).toBeGreaterThanOrEqual(19);
 
     for (const expected of EXPECTED_ADAPTERS) {
       expect(names).toContain(expected);
@@ -102,6 +104,12 @@ describe("DexRegistry", () => {
       "jupiter-ultra": {
         canBuy: true, canSell: true, canSnipe: false, canFindPool: false, canGetPrice: false,
         isAggregator: true,
+      },
+      "pumpfun": {
+        canBuy: true, canSell: true, canSnipe: true, canGetPrice: true, canFindPool: false,
+      },
+      "pumpfun-amm": {
+        canBuy: true, canSell: true, canSnipe: true, canGetPrice: true, canFindPool: false,
       },
       "dflow": {
         canBuy: true, canSell: true, canSnipe: false, canFindPool: false, canGetPrice: false,
