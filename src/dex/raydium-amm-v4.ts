@@ -47,6 +47,7 @@ import {
 import { registerAdapter } from "./index";
 import { getWallet, getConnection } from "../helpers/config";
 import { landTransaction } from "../transactions/landing";
+import { sendAndConfirmVtx } from "../transactions/send-rpc";
 
 // ---------------------------------------------------------------------------
 // Program constants
@@ -449,18 +450,12 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
       ixs.push(createCloseAccountInstruction(inputAta, wallet.publicKey, wallet.publicKey, [], TOKEN_PROGRAM_ID_PK));
     }
 
-    // Submit
-    const { blockhash } = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "buy",
-      tipSol: params.opts?.tipSol,
-    });
+    // Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, ixs, wallet);
 
-    const firstAccepted = results.find((r) => r.accepted);
     return {
-      txSignature: firstAccepted?.signature ?? "",
-      confirmed: !!firstAccepted?.accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: params.amountSol,
       amountInToken: quoteMintPk.equals(WSOL_MINT_PK) ? "SOL" : quoteMintPk.toBase58(),
       dex: this.name,
@@ -574,15 +569,8 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
       ixs.push(createCloseAccountInstruction(userOutputAta, wallet.publicKey, wallet.publicKey, [], TOKEN_PROGRAM_ID_PK));
     }
 
-    // Submit
-    const { blockhash } = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "sell",
-      tipSol: params.opts?.tipSol,
-    });
-
-    const firstAccepted = results.find((r) => r.accepted);
+    // Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, ixs, wallet);
 
     // Human-readable sell amount
     let tokenDecimals = 9;
@@ -593,8 +581,8 @@ class RaydiumAmmV4Adapter implements IDexAdapter {
     const humanAmount = Number(sellAmount) / Math.pow(10, tokenDecimals);
 
     return {
-      txSignature: firstAccepted?.signature ?? "",
-      confirmed: !!firstAccepted?.accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: humanAmount,
       amountInToken: params.tokenMint,
       dex: this.name,

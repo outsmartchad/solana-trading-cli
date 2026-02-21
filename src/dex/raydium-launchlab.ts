@@ -47,6 +47,7 @@ import {
 import { registerAdapter } from "./index";
 import { getWallet, getConnection } from "../helpers/config";
 import { landTransaction } from "../transactions/landing";
+import { sendAndConfirmVtx } from "../transactions/send-rpc";
 
 // ---------------------------------------------------------------------------
 // Program constants
@@ -451,18 +452,12 @@ class RaydiumLaunchLabAdapter implements IDexAdapter {
       ixs.push(createCloseAccountInstruction(userTokenAccountB, wallet.publicKey, wallet.publicKey));
     }
 
-    // Submit
-    const { blockhash } = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "buy",
-      tipSol: params.opts?.tipSol,
-    });
+    // Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, ixs, wallet);
 
-    const firstAccepted = results.find((r) => r.accepted);
     return {
-      txSignature: firstAccepted?.signature ?? "",
-      confirmed: !!firstAccepted?.accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: params.amountSol,
       amountInToken: quoteMintPk.equals(WSOL_MINT_PK) ? "SOL" : quoteMintPk.toBase58(),
       dex: this.name,

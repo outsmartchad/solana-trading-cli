@@ -24,6 +24,7 @@ import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, getAccount, getAssociatedToken
 
 import { getWallet, getConnection } from "../helpers/config";
 import { landTransaction } from "../transactions/landing";
+import { sendAndConfirmVtx } from "../transactions/send-rpc";
 
 import {
   IDexAdapter,
@@ -133,19 +134,14 @@ export class MeteoraDammV1Adapter implements IDexAdapter {
       ...swapTx.instructions,
     ];
 
-    // Land transaction
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "buy",
-      tipSol: opts?.tipSol,
+    // Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, ixs, wallet, {
       addressLookupTables: opts?.addressLookupTables,
     });
 
-    const accepted = results.find((r) => r.accepted);
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted?.accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: amountSol,
       amountInToken: quoteMintStr,
       dex: this.name,
@@ -214,16 +210,10 @@ export class MeteoraDammV1Adapter implements IDexAdapter {
       ...swapTx.instructions,
     ];
 
-    // Land transaction
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "sell",
-      tipSol: opts?.tipSol,
+    // Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, ixs, wallet, {
       addressLookupTables: opts?.addressLookupTables,
     });
-
-    const accepted = results.find((r) => r.accepted);
 
     // Human-readable sell amount
     let tokenDecimals = 9;
@@ -234,8 +224,8 @@ export class MeteoraDammV1Adapter implements IDexAdapter {
     const humanAmount = Number(sellAmount.toString()) / Math.pow(10, tokenDecimals);
 
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted?.accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: humanAmount,
       amountInToken: tokenMint,
       dex: this.name,

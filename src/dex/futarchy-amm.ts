@@ -43,6 +43,7 @@ import {
 import { getWallet, getConnection } from "../helpers/config";
 import { getTokenProgram } from "../helpers/token-2022";
 import { landTransaction } from "../transactions/landing";
+import { sendAndConfirmVtx } from "../transactions/send-rpc";
 
 import {
   IDexAdapter,
@@ -440,18 +441,14 @@ export class FutarchyAmmAdapter implements IDexAdapter {
       ];
     }
 
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "buy",
-      tipSol: opts?.tipSol,
+    // Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, ixs, wallet, {
       addressLookupTables: opts?.addressLookupTables,
     });
 
-    const accepted = results.find((r) => r.accepted);
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted?.accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: amountSol,
       amountInToken: quoteMintStr,
       dex: this.name,
@@ -528,15 +525,10 @@ export class FutarchyAmmAdapter implements IDexAdapter {
       ];
     }
 
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "sell",
-      tipSol: opts?.tipSol,
+    // Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, ixs, wallet, {
       addressLookupTables: opts?.addressLookupTables,
     });
-
-    const accepted = results.find((r) => r.accepted);
 
     // Human-readable sell amount
     let tokenDecimals = 9;
@@ -547,8 +539,8 @@ export class FutarchyAmmAdapter implements IDexAdapter {
     const humanAmount = Number(sellAmount) / Math.pow(10, tokenDecimals);
 
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted?.accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: humanAmount,
       amountInToken: tokenMint,
       dex: this.name,

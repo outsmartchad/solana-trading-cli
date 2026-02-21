@@ -61,6 +61,7 @@ import { MEMO_PROGRAM_ADDRESS } from "@solana-program/memo";
 
 import { getWallet, getConnection, main_endpoint } from "../helpers/config";
 import { landTransaction } from "../transactions/landing";
+import { sendAndConfirmVtx } from "../transactions/send-rpc";
 import {
   IDexAdapter,
   DexCapabilities,
@@ -417,17 +418,12 @@ export class FusionAmmAdapter implements IDexAdapter {
       opts,
     );
 
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(allIxs, wallet, blockhash, {
-      dex: this.name,
-      operation: "buy",
-      tipSol: opts?.tipSol,
-    });
+    // Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, allIxs, wallet);
 
-    const accepted = results.find((r) => r.accepted);
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: amountSol,
       amountInToken: quoteMintStr,
       dex: this.name,
@@ -497,19 +493,13 @@ export class FusionAmmAdapter implements IDexAdapter {
       opts,
     );
 
-    // 5. Land transaction
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(allIxs, wallet, blockhash, {
-      dex: this.name,
-      operation: "sell",
-      tipSol: opts?.tipSol,
-    });
+    // 5. Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, allIxs, wallet);
 
-    const accepted = results.find((r) => r.accepted);
     const humanSellAmount = Number(sellAmount) / 10 ** balance.decimals;
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: humanSellAmount,
       amountInToken: tokenMint,
       dex: this.name,

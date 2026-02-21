@@ -44,6 +44,7 @@ import {
 import { getWallet, getConnection } from "../helpers/config";
 import { getTokenProgram } from "../helpers/token-2022";
 import { landTransaction } from "../transactions/landing";
+import { sendAndConfirmVtx } from "../transactions/send-rpc";
 
 import {
   IDexAdapter,
@@ -481,17 +482,12 @@ export class FutarchyLaunchpadAdapter implements IDexAdapter {
       ];
     }
 
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "fund",
-      tipSol,
-    });
+    // Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, ixs, wallet);
 
-    const accepted = results.find((r) => r.accepted);
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted?.accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
     };
   }
 
@@ -528,17 +524,12 @@ export class FutarchyLaunchpadAdapter implements IDexAdapter {
       claimInstruction,
     ];
 
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "claim",
-      tipSol,
-    });
+    // Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, ixs, wallet);
 
-    const accepted = results.find((r) => r.accepted);
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted?.accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
     };
   }
 }

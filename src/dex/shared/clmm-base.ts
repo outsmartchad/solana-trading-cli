@@ -39,6 +39,7 @@ import { MathUtil } from "@raydium-io/raydium-sdk-v2";
 
 import { getWallet, getConnection } from "../../helpers/config";
 import { landTransaction } from "../../transactions/landing";
+import { sendAndConfirmVtx } from "../../transactions/send-rpc";
 import {
   IDexAdapter,
   DexCapabilities,
@@ -713,17 +714,12 @@ export class ClmmBaseAdapter implements IDexAdapter {
       opts,
     );
 
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(allIxs, wallet, blockhash, {
-      dex: this.name,
-      operation: "buy",
-      tipSol: opts?.tipSol,
-    });
+    // Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, allIxs, wallet);
 
-    const accepted = results.find((r) => r.accepted);
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: amountSol,
       amountInToken: quoteMintStr,
       dex: this.name,
@@ -784,19 +780,13 @@ export class ClmmBaseAdapter implements IDexAdapter {
       opts,
     );
 
-    // 4. Land transaction
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(allIxs, wallet, blockhash, {
-      dex: this.name,
-      operation: "sell",
-      tipSol: opts?.tipSol,
-    });
+    // 4. Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, allIxs, wallet);
 
-    const accepted = results.find((r) => r.accepted);
     const humanSellAmount = Number(sellAmount) / 10 ** balance.decimals;
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
       amountIn: humanSellAmount,
       amountInToken: tokenMint,
       dex: this.name,

@@ -705,19 +705,15 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
       ...addLiqTx.instructions,
     ];
 
-    const blockhash = await connection.getLatestBlockhash();
-    const results = await landTransaction(ixs, wallet, blockhash, {
-      dex: this.name,
-      operation: "add-liquidity",
-      tipSol: opts?.tipSol,
+    // Submit via RPC send+confirm
+    const result = await sendAndConfirmVtx(connection, ixs, wallet, {
       addressLookupTables: opts?.addressLookupTables,
       extraSigners: [positionNft],
     });
 
-    const accepted = results.find((r) => r.accepted);
     return {
-      txSignature: accepted?.signature ?? "",
-      confirmed: !!accepted?.accepted,
+      txSignature: result.txSignature,
+      confirmed: result.confirmed,
     };
   }
 
@@ -805,17 +801,13 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
           ...closeTx.instructions,
         ];
 
-        const blockhash = await connection.getLatestBlockhash();
-        const results = await landTransaction(ixs, wallet, blockhash, {
-          dex: this.name,
-          operation: "remove-liquidity",
-          tipSol: opts?.tipSol,
+        // Submit via RPC send+confirm
+        const result = await sendAndConfirmVtx(connection, ixs, wallet, {
           addressLookupTables: opts?.addressLookupTables,
         });
 
-        const accepted = results.find((r) => r.accepted);
-        if (accepted?.signature) lastSignature = accepted.signature;
-        if (accepted?.accepted) anyConfirmed = true;
+        if (result.txSignature) lastSignature = result.txSignature;
+        if (result.confirmed) anyConfirmed = true;
       } else {
         // Partial removal — calculate proportional liquidityDelta
         const removableLiquidity = positionState.unlockedLiquidity.add(positionState.vestedLiquidity);
@@ -849,17 +841,13 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
           ...removeTx.instructions,
         ];
 
-        const blockhash = await connection.getLatestBlockhash();
-        const results = await landTransaction(ixs, wallet, blockhash, {
-          dex: this.name,
-          operation: "remove-liquidity",
-          tipSol: opts?.tipSol,
+        // Submit via RPC send+confirm
+        const result = await sendAndConfirmVtx(connection, ixs, wallet, {
           addressLookupTables: opts?.addressLookupTables,
         });
 
-        const accepted = results.find((r) => r.accepted);
-        if (accepted?.signature) lastSignature = accepted.signature;
-        if (accepted?.accepted) anyConfirmed = true;
+        if (result.txSignature) lastSignature = result.txSignature;
+        if (result.confirmed) anyConfirmed = true;
       }
     }
 
@@ -951,15 +939,11 @@ export class MeteoraDammV2Adapter implements IDexAdapter {
         ...claimTx.instructions,
       ];
 
-      const blockhash = await connection.getLatestBlockhash();
-      const results = await landTransaction(ixs, wallet, blockhash, {
-        dex: this.name,
-        operation: "claim-fees",
-      });
+      // Submit via RPC send+confirm
+      const result = await sendAndConfirmVtx(connection, ixs, wallet);
 
-      const accepted = results.find((r) => r.accepted);
-      if (accepted?.signature) lastSignature = accepted.signature;
-      if (accepted?.accepted) anyConfirmed = true;
+      if (result.txSignature) lastSignature = result.txSignature;
+      if (result.confirmed) anyConfirmed = true;
     }
 
     return {
