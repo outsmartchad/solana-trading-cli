@@ -62,7 +62,7 @@ describe("DexRegistry", () => {
         canBuy: true, canSell: true, canSnipe: true, canFindPool: true, canGetPrice: true,
       },
       "raydium-launchlab": {
-        canBuy: true, canSell: false, canSnipe: false, canFindPool: true, canGetPrice: true,
+        canBuy: true, canSell: true, canSnipe: false, canFindPool: true, canGetPrice: true,
       },
       "meteora-damm-v1": {
         canBuy: true, canSell: true, canSnipe: true, canFindPool: true, canGetPrice: true,

@@ -166,7 +166,7 @@ describe("raydium-launchlab", () => {
     expect(adapter.capabilities.canBuy).toBe(true);
     expect(adapter.capabilities.canFindPool).toBe(true);
     expect(adapter.capabilities.canGetPrice).toBe(true);
-    expect(adapter.capabilities.canSell).toBe(false);
+    expect(adapter.capabilities.canSell).toBe(true);
     expect(adapter.capabilities.canSnipe).toBe(false);
   });
 
