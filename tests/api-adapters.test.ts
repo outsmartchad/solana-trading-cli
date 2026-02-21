@@ -89,9 +89,9 @@ describe("dflow", () => {
 
   const hasDflowKey = !!process.env.DFLOW_API_KEY;
 
-  test("buy: 0.001 SOL worth of USDC via DFlow", async () => {
+  test("buy: 0.02 SOL worth of USDC via DFlow", async () => {
     if (!hasDflowKey) {
-      console.log("Skipping dflow buy — DFLOW_API_KEY not set");
+      console.log("Skipping dflow buy — DFLOW_API_KEY not set (get one at https://pond.dflow.net/build/api-key)");
       return;
     }
     try {

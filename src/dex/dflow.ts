@@ -70,8 +70,15 @@ interface DFlowSubmitResponse {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function getApiKey(): string | undefined {
-  return process.env.DFLOW_API_KEY;
+function getApiKey(): string {
+  const key = process.env.DFLOW_API_KEY;
+  if (!key) {
+    throw new Error(
+      "DFLOW_API_KEY not set. DFlow requires an API key. " +
+      "Get one at https://pond.dflow.net/build/api-key and set the DFLOW_API_KEY environment variable.",
+    );
+  }
+  return key;
 }
 
 function buildHeaders(includeContentType = false): Record<string, string> {
