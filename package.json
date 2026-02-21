@@ -1,7 +1,10 @@
 {
   "name": "outsmart",
   "version": "2.0.0-alpha.0",
-  "description": "The most powerful Solana trading CLI. 19 DEXes, 12 TX landing providers.",
+  "description": "Solana trading CLI — 18 DEX adapters, 12 TX landing providers.",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
