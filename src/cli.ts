@@ -18,8 +18,8 @@ const _origWarn = process.stderr.write.bind(process.stderr);
  *   outsmart buy  --dex meteora-dlmm --pool <POOL> --amount 0.1
  *   outsmart sell --dex meteora-dlmm --pool <POOL> --pct 100
  *
- *   # On-chain DEX — explicit token (for non-SOL quote pools)
- *   outsmart buy  --dex meteora-dlmm --pool <POOL> --token <MINT> --amount 0.1
+ *   # Stablecoin pool — auto-swaps SOL→USD1 then buys, no extra steps needed
+ *   outsmart buy  --dex raydium-launchlab --pool <POOL> --amount 0.1
  *
  *   # Swap aggregator — requires token mint only (finds best route automatically)
  *   outsmart buy  --dex jupiter-ultra --token <MINT> --amount 0.1
@@ -70,9 +70,18 @@ import {
   DEFAULT_SLIPPAGE_BPS,
 } from "./dex";
 
+import {
+  STABLECOIN_MINTS,
+  USDC_MINT,
+  USDT_MINT,
+  USD1_MINT,
+} from "./dex/types";
+
 import type {
+  IDexAdapter,
   BuyParams,
   SellParams,
+  PriceInfo,
   SwapOpts,
   SwapResult,
 } from "./dex/types";
@@ -110,17 +119,36 @@ function printResult(result: SwapResult): void {
   console.log();
 }
 
+/** Friendly label for a stablecoin mint */
+function stablecoinLabel(mint: string): string {
+  if (mint === USDC_MINT) return "USDC";
+  if (mint === USDT_MINT) return "USDT";
+  if (mint === USD1_MINT) return "USD1";
+  return mint.slice(0, 8) + "...";
+}
+
 /**
- * Resolve the token mint from pool state when --token is omitted.
+ * Pool resolution result — contains both the token to trade and the quote mint.
+ */
+interface PoolResolution {
+  tokenMint: string;
+  quoteMint: string;
+  price: PriceInfo;
+}
+
+/**
+ * Resolve the token mint and quote mint from pool state.
  *
  * Calls adapter.getPrice(pool) which decodes the pool account and returns
- * baseMint + quoteMint. We return whichever is NOT WSOL. If neither is WSOL
- * (e.g. USDC/TOKEN pool), we error and ask the user to specify --token.
+ * baseMint + quoteMint. We determine which is the "token" (what the user
+ * wants to buy/sell) and which is the "quote" (SOL or stablecoin).
+ *
+ * Priority: SOL > USDC/USDT/USD1 > error (ambiguous).
  */
-async function resolveTokenMint(
-  adapter: import("./dex/types").IDexAdapter,
+async function resolvePool(
+  adapter: IDexAdapter,
   poolAddress: string,
-): Promise<string> {
+): Promise<PoolResolution> {
   if (!adapter.capabilities.canGetPrice || !adapter.getPrice) {
     die(`${adapter.name} cannot auto-detect token from pool — please provide --token <mint>`);
   }
@@ -128,15 +156,106 @@ async function resolveTokenMint(
   const price = await adapter.getPrice(poolAddress);
   const { baseMint, quoteMint } = price;
 
-  // Pick the non-SOL side
-  if (quoteMint === WSOL_MINT) return baseMint;
-  if (baseMint === WSOL_MINT) return quoteMint;
+  // SOL as quote — most common
+  if (quoteMint === WSOL_MINT) return { tokenMint: baseMint, quoteMint, price };
+  if (baseMint === WSOL_MINT) return { tokenMint: quoteMint, quoteMint: baseMint, price };
 
-  // Neither side is SOL — ambiguous
+  // Stablecoin as quote
+  if (STABLECOIN_MINTS.has(quoteMint)) return { tokenMint: baseMint, quoteMint, price };
+  if (STABLECOIN_MINTS.has(baseMint)) return { tokenMint: quoteMint, quoteMint: baseMint, price };
+
+  // Neither side is SOL or stablecoin — ambiguous
   die(
-    `Pool ${poolAddress} has no SOL side (${baseMint} / ${quoteMint}).\n`
+    `Pool ${poolAddress} has no SOL or stablecoin side (${baseMint} / ${quoteMint}).\n`
     + `  Please specify --token <mint> to indicate which token to trade.`,
   );
+}
+
+/**
+ * Get the SPL token balance for a mint in the user's wallet.
+ */
+async function getTokenBalance(mint: string): Promise<{ amount: number; raw: bigint; decimals: number }> {
+  const { getConnection, getWallet } = await import("./helpers/config");
+  const { PublicKey } = await import("@solana/web3.js");
+  const { getAssociatedTokenAddress } = await import("@solana/spl-token");
+
+  const connection = getConnection();
+  const wallet = getWallet();
+  const mintPk = new PublicKey(mint);
+
+  try {
+    const ata = await getAssociatedTokenAddress(mintPk, wallet.publicKey);
+    const res = await connection.getTokenAccountBalance(ata);
+    return {
+      amount: Number(res.value.uiAmount ?? 0),
+      raw: BigInt(res.value.amount),
+      decimals: res.value.decimals,
+    };
+  } catch {
+    return { amount: 0, raw: 0n, decimals: 0 };
+  }
+}
+
+/**
+ * Auto-swap SOL → stablecoin via jupiter-ultra.
+ * Returns the stablecoin amount received.
+ */
+async function autoSwapSolToStablecoin(
+  stablecoinMint: string,
+  amountSol: number,
+): Promise<number> {
+  const label = stablecoinLabel(stablecoinMint);
+  console.log(`\n  step 1: swapping ${amountSol} SOL → ${label} via jupiter-ultra...`);
+
+  const jupAdapter = getDexAdapter("jupiter-ultra");
+  const result = await jupAdapter.buy({
+    tokenMint: stablecoinMint,
+    amountSol,
+  });
+
+  if (!result.txSignature) {
+    die(`Failed to swap SOL → ${label}: no transaction signature returned`);
+  }
+
+  console.log(`  ✓ tx: ${result.txSignature}`);
+  if (result.confirmed) {
+    console.log(`  ✓ confirmed`);
+  }
+
+  // Wait a moment for balance to settle, then read actual balance
+  await new Promise((r) => setTimeout(r, 2000));
+  const balance = await getTokenBalance(stablecoinMint);
+  console.log(`  ✓ received: ${balance.amount} ${label}`);
+
+  if (balance.amount === 0) {
+    die(`SOL → ${label} swap TX landed but wallet has 0 ${label}. TX may have failed on-chain.`);
+  }
+
+  return balance.amount;
+}
+
+/**
+ * Auto-swap stablecoin → SOL via jupiter-ultra after a sell.
+ */
+async function autoSwapStablecoinToSol(stablecoinMint: string): Promise<void> {
+  const balance = await getTokenBalance(stablecoinMint);
+  if (balance.amount === 0) return;
+
+  const label = stablecoinLabel(stablecoinMint);
+  console.log(`\n  step 2: swapping ${balance.amount} ${label} → SOL via jupiter-ultra...`);
+
+  const jupAdapter = getDexAdapter("jupiter-ultra");
+  const result = await jupAdapter.sell({
+    tokenMint: stablecoinMint,
+    percentage: 100,
+  });
+
+  if (result.txSignature) {
+    console.log(`  ✓ tx: ${result.txSignature}`);
+    if (result.confirmed) {
+      console.log(`  ✓ confirmed`);
+    }
+  }
 }
 
 function buildSwapOpts(cmd: {
@@ -215,22 +334,46 @@ const buyCmd = new Command("buy")
       }
     }
 
-    // Auto-resolve token mint from pool state if not provided
+    // Auto-resolve token + quote from pool state
     let tokenMint: string = cmdOpts.token;
+    let quoteMint: string | undefined = cmdOpts.quote;
+    let amountToSpend = Number(cmdOpts.amount);
+
     if (!tokenMint && cmdOpts.pool) {
-      tokenMint = await resolveTokenMint(adapter, cmdOpts.pool);
+      const resolved = await resolvePool(adapter, cmdOpts.pool);
+      tokenMint = resolved.tokenMint;
+      quoteMint = quoteMint ?? resolved.quoteMint;
       console.log(`  auto-detected token: ${tokenMint}`);
+
+      // If the quote is a stablecoin (not SOL), auto-swap SOL → stablecoin
+      if (resolved.quoteMint !== WSOL_MINT && STABLECOIN_MINTS.has(resolved.quoteMint)) {
+        const label = stablecoinLabel(resolved.quoteMint);
+        console.log(`  pool quote: ${label} (not SOL)`);
+
+        // Check if user already has enough stablecoin
+        const existingBalance = await getTokenBalance(resolved.quoteMint);
+        if (existingBalance.amount > 0) {
+          console.log(`  wallet has ${existingBalance.amount} ${label}`);
+        }
+
+        // Always swap SOL → stablecoin for the requested amount
+        // (user specified --amount in SOL terms)
+        amountToSpend = await autoSwapSolToStablecoin(resolved.quoteMint, amountToSpend);
+        quoteMint = resolved.quoteMint;
+      }
     }
 
     const params: BuyParams = {
       tokenMint,
-      amountSol: Number(cmdOpts.amount),
+      amountSol: amountToSpend,
       poolAddress: cmdOpts.pool,
-      quoteMint: cmdOpts.quote,
+      quoteMint,
       opts: buildSwapOpts(cmdOpts),
     };
 
-    console.log(`\n  buying on ${adapter.name}...`);
+    const isStablecoinQuote = quoteMint && STABLECOIN_MINTS.has(quoteMint);
+    const stepLabel = isStablecoinQuote ? "step 2: " : "";
+    console.log(`\n  ${stepLabel}buying on ${adapter.name}...`);
     const result = await adapter.buy(params);
     printResult(result);
   });
@@ -267,24 +410,41 @@ const sellCmd = new Command("sell")
       }
     }
 
-    // Auto-resolve token mint from pool state if not provided
+    // Auto-resolve token + quote from pool state
     let tokenMint: string = cmdOpts.token;
+    let quoteMint: string | undefined = cmdOpts.quote;
+    let isStablecoinQuote = false;
+
     if (!tokenMint && cmdOpts.pool) {
-      tokenMint = await resolveTokenMint(adapter, cmdOpts.pool);
+      const resolved = await resolvePool(adapter, cmdOpts.pool);
+      tokenMint = resolved.tokenMint;
+      quoteMint = quoteMint ?? resolved.quoteMint;
       console.log(`  auto-detected token: ${tokenMint}`);
+
+      if (resolved.quoteMint !== WSOL_MINT && STABLECOIN_MINTS.has(resolved.quoteMint)) {
+        isStablecoinQuote = true;
+        const label = stablecoinLabel(resolved.quoteMint);
+        console.log(`  pool quote: ${label} (will auto-convert to SOL after sell)`);
+      }
     }
 
     const params: SellParams = {
       tokenMint,
       percentage: Number(cmdOpts.pct),
       poolAddress: cmdOpts.pool,
-      quoteMint: cmdOpts.quote,
+      quoteMint,
       opts: buildSwapOpts(cmdOpts),
     };
 
-    console.log(`\n  selling ${params.percentage}% on ${adapter.name}...`);
+    const stepLabel = isStablecoinQuote ? "step 1: " : "";
+    console.log(`\n  ${stepLabel}selling ${params.percentage}% on ${adapter.name}...`);
     const result = await adapter.sell(params);
     printResult(result);
+
+    // Auto-swap stablecoin proceeds → SOL
+    if (isStablecoinQuote && quoteMint && result.txSignature) {
+      await autoSwapStablecoinToSol(quoteMint);
+    }
   });
 
 addSwapOptions(sellCmd);

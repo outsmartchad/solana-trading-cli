@@ -49,6 +49,15 @@ export const USELESS = "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk";
 /** RAY token mint */
 export const RAY = "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R";
 
+/** USD1 stablecoin mint */
+export const USD1 = "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB";
+
+/** FREEDOM token mint (LaunchLab test token) */
+export const FREEDOM = "WAh2JyAzyCusXZC4kmLPpaHz1DoaJHyCwmEBkYpbonk";
+
+/** Raydium LaunchLab: FREEDOM/USD1 */
+export const RAYDIUM_LAUNCHLAB_FREEDOM_USD1 = "8AmiUTD86mV64nDbTyWBzVybHhRQJxfjTFhkFkubJhb9";
+
 /** Random Meteora DBC: 6mwEqau1eKHch1QYCTRv5sdnGtJzVouzaLbKY5LDdoge/SOL pool */
 export const METEORA_DBC_GRACE_SOL = "DgxYpXJB2adQ9wFdyoCdnh5fNGfcLxXZsdkdqoyZZmwX";
 

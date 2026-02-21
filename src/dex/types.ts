@@ -848,6 +848,12 @@ export const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 /** USDT mint address */
 export const USDT_MINT = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB";
 
+/** USD1 stablecoin mint */
+export const USD1_MINT = "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB";
+
+/** Set of known stablecoin mints — used by CLI for auto-swap detection */
+export const STABLECOIN_MINTS = new Set([USDC_MINT, USDT_MINT, USD1_MINT]);
+
 /** Default slippage in basis points (3%) */
 export const DEFAULT_SLIPPAGE_BPS = 300;
 

@@ -18,9 +18,12 @@ import {
   FARTCOIN,
   USELESS,
   RAY,
+  USD1,
+  FREEDOM,
   RAYDIUM_V4_SOL_FARTCOIN,
   RAYDIUM_CPMM_SOL_USELESS,
   RAYDIUM_CLMM_SOL_RAY,
+  RAYDIUM_LAUNCHLAB_FREEDOM_USD1,
 } from "./helpers";
 
 beforeAll(async () => {
@@ -149,12 +152,14 @@ describe("raydium-clmm", () => {
 
 // ============================================================
 // raydium-launchlab
+// Pool: FREEDOM/USD1 (stablecoin-quoted bonding curve)
 // Capabilities: buy, findPool, getPrice
-// NOTE: LaunchLab pools are bonding curves that may graduate.
-//       If no active pool exists, these tests will be skipped.
+// NOTE: This test pre-swaps SOL → USD1 via jupiter-ultra, then buys
+//       FREEDOM with USD1. This mirrors the CLI auto-swap flow.
 // ============================================================
 describe("raydium-launchlab", () => {
   const adapter = getDexAdapter("raydium-launchlab");
+  const pool = RAYDIUM_LAUNCHLAB_FREEDOM_USD1;
 
   test("capabilities check", () => {
     expect(adapter.capabilities.canBuy).toBe(true);
@@ -164,20 +169,40 @@ describe("raydium-launchlab", () => {
     expect(adapter.capabilities.canSnipe).toBe(false);
   });
 
-  // LaunchLab pools are ephemeral — skip buy test if no pool is available.
-  // To test manually: find an active LaunchLab token and set its mint below.
-  test.skip("buy: requires active LaunchLab token", async () => {
-    const LAUNCHLAB_TOKEN = "REPLACE_WITH_ACTIVE_LAUNCHLAB_MINT";
-    const pool = await adapter.findPool!(LAUNCHLAB_TOKEN, WSOL);
-    expect(pool).not.toBeNull();
-    if (pool) {
-      const result = await adapter.buy({
-        tokenMint: LAUNCHLAB_TOKEN,
-        amountSol: BUY_AMOUNT_SOL,
-        poolAddress: pool.address,
-      });
-      logResult("raydium-launchlab buy", result);
-      expect(result.txSignature).toBeTruthy();
-    }
+  test("getPrice: FREEDOM/USD1 pool", async () => {
+    const price = await adapter.getPrice!(pool);
+    logResult("raydium-launchlab getPrice", price);
+    expect(price.price).toBeGreaterThan(0);
+    expect(price.quoteMint).toBe(USD1);
+  });
+
+  test("buy: pre-swap SOL → USD1, then buy FREEDOM", async () => {
+    await delay();
+
+    // Step 1: Swap SOL → USD1 via jupiter-ultra
+    const jupAdapter = getDexAdapter("jupiter-ultra");
+    const preSwap = await jupAdapter.buy({
+      tokenMint: USD1,
+      amountSol: BUY_AMOUNT_SOL,
+    });
+    logResult("jupiter-ultra SOL→USD1 pre-swap", preSwap);
+    expect(preSwap.txSignature).toBeTruthy();
+
+    // Wait for USD1 to arrive
+    await delay(5000);
+
+    // Step 2: Buy FREEDOM with USD1 on LaunchLab
+    // amountSol here is actually the USD1 amount (6 decimals)
+    // We use the pre-swapped amount — approximately BUY_AMOUNT_SOL * SOL price in USD
+    // For safety, just use a small fixed USD amount
+    const result = await adapter.buy({
+      tokenMint: FREEDOM,
+      amountSol: 1, // 1 USD1
+      poolAddress: pool,
+      quoteMint: USD1,
+    });
+    logResult("raydium-launchlab buy FREEDOM", result);
+    expect(result.txSignature).toBeTruthy();
+    expect(result.dex).toBe("raydium-launchlab");
   });
 });
