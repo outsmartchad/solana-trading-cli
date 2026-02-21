@@ -369,26 +369,28 @@ All swap commands (`buy`, `sell`) accept these options:
 
 18 adapters covering every major Solana DEX protocol:
 
-| Adapter | Protocol | Buy | Sell | Pool | Price | LP | Extra |
-|---------|----------|:---:|:----:|:----:|:-----:|:--:|-------|
-| raydium-amm-v4 | AMM v4 | x | x | x | x | | |
-| raydium-cpmm | CPMM | x | x | x | x | | |
-| raydium-clmm | CLMM | x | x | x | x | | |
-| raydium-launchlab | Launchlab | x | x | x | x | | |
-| meteora-damm-v1 | Dynamic AMM | x | x | x | x | | |
-| meteora-damm-v2 | CpAmm | x | x | x | x | add/remove/claim/positions | create pool |
-| meteora-dlmm | DLMM | x | x | | x | add/remove/claim/positions | |
-| meteora-dbc | DBC | x | x | | x | | |
-| **pumpfun** | Bonding Curve | x | x | | x | | create coin |
-| **pumpfun-amm** | PumpSwap AMM | x | x | | x | | create pool |
-| orca | Whirlpool | x | x | | x | | |
-| byreal-clmm | CLMM | x | x | | x | | |
-| pancakeswap-clmm | CLMM | x | x | | x | | |
-| fusion-amm | Fusion | x | x | | x | | |
-| futarchy-amm | Futarchy | x | x | | x | | |
-| futarchy-launchpad | Launchpad | | | | | fund/claim | |
-| jupiter-ultra | Ultra API | x | x | | | | |
-| dflow | Intent | x | x | | | | |
+| Adapter | Protocol | Buy | Sell | Pool | Price | LP | Extra | Tested |
+|---------|----------|:---:|:----:|:----:|:-----:|:--:|-------|:------:|
+| raydium-amm-v4 | AMM v4 | x | x | x | x | | | ✅ |
+| raydium-cpmm | CPMM | x | x | x | x | | | ✅ |
+| raydium-clmm | CLMM | x | x | x | x | | | ✅ |
+| raydium-launchlab | Launchlab | x | x | x | x | | auto-swap | ✅ |
+| meteora-damm-v1 | Dynamic AMM | x | x | x | x | | | — |
+| meteora-damm-v2 | CpAmm | x | x | x | x | add/remove/claim/positions | create pool | ✅ |
+| meteora-dlmm | DLMM | x | x | | x | add/remove/claim/positions | | ✅ |
+| meteora-dbc | DBC | x | x | | x | | | ✅ |
+| **pumpfun** | Bonding Curve | x | x | | x | | create coin | ✅ |
+| **pumpfun-amm** | PumpSwap AMM | x | x | | x | | create pool | ✅ |
+| orca | Whirlpool | x | x | | x | | | ✅ |
+| byreal-clmm | CLMM | x | x | | x | | | ✅ |
+| pancakeswap-clmm | CLMM | x | x | | x | | | ✅ |
+| fusion-amm | Fusion | x | x | | x | | | ✅ |
+| futarchy-amm | Futarchy | x | x | | x | | auto-swap | ✅ |
+| futarchy-launchpad | Launchpad | | | | | fund/claim | | — |
+| jupiter-ultra | Ultra API | x | x | | | | | ✅ |
+| dflow | Intent | x | x | | | | | ✅ |
+
+✅ = buy + sell confirmed on Solana mainnet. 15 of 18 adapters tested (meteora-damm-v1 excluded as legacy, futarchy-launchpad is fund/claim only).
 
 ## TX Landing Providers
 
@@ -509,11 +511,14 @@ npm test                 # All tests
 npm run test:registry    # Registry smoke test (no RPC needed)
 npm run test:raydium     # Raydium adapters (mainnet)
 npm run test:meteora     # Meteora adapters (mainnet)
+npm run test:pumpfun     # PumpFun + PumpSwap (mainnet)
 npm run test:orca        # Orca Whirlpool (mainnet)
+npm run test:clmm        # Byreal + PancakeSwap CLMM (mainnet)
+npm run test:futarchy    # Fusion + Futarchy AMM (mainnet)
 npm run test:api         # Jupiter Ultra + DFlow (mainnet)
 ```
 
-Mainnet tests require `WALLET_PRIVATE_KEY` and `SOLANA_RPC_URL` env vars. Tests use tiny amounts (0.001 SOL).
+Mainnet tests require `WALLET_PRIVATE_KEY` and `SOLANA_RPC_URL` env vars. Tests use tiny amounts (0.02 SOL per buy). Run suites one at a time — tests share a wallet and cannot run in parallel.
 
 ---
 
