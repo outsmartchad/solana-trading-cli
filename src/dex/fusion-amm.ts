@@ -658,6 +658,7 @@ export class FusionAmmAdapter implements IDexAdapter {
     slippageBps: number,
     rawInputAmount?: bigint,
   ): Promise<BuildSwapIxsResult> {
+    const connection = getConnection();
     const wallet = getWallet();
     const rpc = createSolanaRpc(main_endpoint);
     const poolAddr = address(poolAddress);
@@ -666,6 +667,33 @@ export class FusionAmmAdapter implements IDexAdapter {
     const signer = await createKeyPairSignerFromBytes(
       new Uint8Array(wallet.secretKey),
     );
+
+    // Fetch pool to get both token mints and their programs
+    const fusionPool = (await retryRpcCall(() =>
+      fetchFusionPool(rpc, poolAddr),
+    )) as Account<FusionPool>;
+
+    const [tokenA, tokenB] = await retryRpcCall(() =>
+      fetchAllMint(rpc, [fusionPool.data.tokenMintA, fusionPool.data.tokenMintB]),
+    );
+
+    // Build ATA creation instructions for both sides
+    const mintAPk = new PublicKey(String(fusionPool.data.tokenMintA));
+    const mintBPk = new PublicKey(String(fusionPool.data.tokenMintB));
+    const progAPk = new PublicKey(String(tokenA.programAddress));
+    const progBPk = new PublicKey(String(tokenB.programAddress));
+
+    const ataA = await getAssociatedTokenAddress(mintAPk, wallet.publicKey, false, progAPk);
+    const ataB = await getAssociatedTokenAddress(mintBPk, wallet.publicKey, false, progBPk);
+
+    const createAtaIxs: TransactionInstruction[] = [
+      createAssociatedTokenAccountIdempotentInstruction(
+        wallet.publicKey, ataA, wallet.publicKey, mintAPk, progAPk,
+      ),
+      createAssociatedTokenAccountIdempotentInstruction(
+        wallet.publicKey, ataB, wallet.publicKey, mintBPk, progBPk,
+      ),
+    ];
 
     const kitInstructions = await buildFusionSwapInstructions(
       rpc,
@@ -679,7 +707,7 @@ export class FusionAmmAdapter implements IDexAdapter {
     const web3Instructions = convertInstructions(kitInstructions);
 
     return {
-      instructions: web3Instructions,
+      instructions: [...createAtaIxs, ...web3Instructions],
       signers: [],
     };
   }
