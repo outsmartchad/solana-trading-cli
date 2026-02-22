@@ -40,6 +40,37 @@ export type {
 // Adapter classes — for consumers that need to cast (e.g. PumpFunAdapter.create())
 export { PumpFunAdapter } from "./dex/pumpfun";
 
+// Percolator perpetual futures adapter (standalone, not IDexAdapter)
+export { PercolatorAdapter } from "./dex/percolator/adapter";
+export type {
+  CreateMarketParams,
+  CreateMarketResult,
+  MarketState,
+  TradeParams,
+  MarketRiskParams,
+  VammParams,
+  SlabHeader as PercolatorSlabHeader,
+  MarketConfig as PercolatorMarketConfig,
+  EngineState as PercolatorEngineState,
+  RiskParams as PercolatorRiskParams,
+  Account as PercolatorAccount,
+  DiscoveredMarket as PercolatorDiscoveredMarket,
+} from "./dex/percolator/adapter";
+export {
+  AccountKind as PercolatorAccountKind,
+  SLAB_TIERS as PERCOLATOR_SLAB_TIERS,
+  computeMarkPnl,
+  computeLiqPrice,
+  computePreTradeLiqPrice,
+  computeTradingFee,
+  computePnlPercent,
+  computeEstimatedEntryPrice,
+  computeFundingRateAnnualized,
+  computeRequiredMargin,
+  computeMaxLeverage,
+  computeVammQuote,
+} from "./dex/percolator/adapter";
+
 export {
   UnsupportedOperationError,
   PoolNotFoundError,
