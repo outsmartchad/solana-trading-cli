@@ -81,6 +81,8 @@ import {
   encodeCreateInsuranceMint,
   encodeDepositInsuranceLP,
   encodeWithdrawInsuranceLP,
+  encodeCloseSlab,
+  encodeAdminForceClose,
   type InitMarketArgs,
   type InitVammArgs,
 } from "./core/abi/instructions";
@@ -101,6 +103,8 @@ import {
   ACCOUNTS_CREATE_INSURANCE_MINT,
   ACCOUNTS_DEPOSIT_INSURANCE_LP,
   ACCOUNTS_WITHDRAW_INSURANCE_LP,
+  ACCOUNTS_CLOSE_SLAB,
+  ACCOUNTS_ADMIN_FORCE_CLOSE,
   WELL_KNOWN,
 } from "./core/abi/accounts";
 import { buildIx } from "./core/runtime/tx";
@@ -229,11 +233,11 @@ const DEFAULT_RISK_PARAMS: MarketRiskParams = {
   warmupPeriodSlots: 0n,
   maintenanceMarginBps: 500n,       // 5%
   initialMarginBps: 1000n,          // 10% (10x max leverage)
-  tradingFeeBps: 10n,               // 0.1%
-  newAccountFee: 0n,
+  tradingFeeBps: 30n,               // 0.3% (matches reference e2e test)
+  newAccountFee: 0n,                // No fee for convenience (initUser sends feePayment: 0)
   riskReductionThreshold: 0n,
   maintenanceFeePerSlot: 0n,
-  maxCrankStalenessSlots: 1000n,
+  maxCrankStalenessSlots: 100n,     // matches reference e2e test
   liquidationFeeBps: 100n,          // 1%
   liquidationFeeCap: 0n,
   liquidationBufferBps: 50n,        // 0.5%
@@ -241,14 +245,14 @@ const DEFAULT_RISK_PARAMS: MarketRiskParams = {
 };
 
 const DEFAULT_VAMM_PARAMS: VammParams = {
-  mode: 1,                           // vAMM mode
-  tradingFeeBps: 5,                  // 0.05%
-  baseSpreadBps: 10,                 // 0.10%
-  maxTotalBps: 100,                  // 1% max
-  impactKBps: 50,
-  liquidityNotionalE6: 1_000_000_000_000n,  // $1M notional
-  maxFillAbs: 0n,                    // unlimited
-  maxInventoryAbs: 0n,               // unlimited
+  mode: 0,                              // passive (0) — simpler pricing, no impact curve
+  tradingFeeBps: 50,                    // 0.5% (matches production defaults)
+  baseSpreadBps: 50,                    // 0.5% (matches production defaults)
+  maxTotalBps: 200,                     // 2% max (matches production defaults)
+  impactKBps: 0,                        // no impact (passive mode)
+  liquidityNotionalE6: 10_000_000_000_000n, // $10M notional (matches production)
+  maxFillAbs: 100_000_000_000_000_000n, // effectively unlimited (10^17, matches production)
+  maxInventoryAbs: 0n,                  // 0 = unlimited inventory
 };
 
 // =============================================================================
@@ -397,6 +401,26 @@ export class PercolatorAdapter {
       programId: matcherProgramId,
     });
 
+    // Step 7b: Init matcher context (send initVamm data directly to matcher program)
+    const [lpPdaForInit] = deriveLpPda(programId, slabKeypair.publicKey, 0); // LP will be idx 0
+    const initMatcherCtxIx = new TransactionInstruction({
+      programId: matcherProgramId,
+      keys: [
+        { pubkey: lpPdaForInit, isSigner: false, isWritable: false },
+        { pubkey: matcherCtxKeypair.publicKey, isSigner: false, isWritable: true },
+      ],
+      data: Buffer.from(encodeInitVamm({
+        mode: vamm.mode,
+        tradingFeeBps: vamm.tradingFeeBps,
+        baseSpreadBps: vamm.baseSpreadBps,
+        maxTotalBps: vamm.maxTotalBps,
+        impactKBps: vamm.impactKBps,
+        liquidityNotionalE6: vamm.liquidityNotionalE6,
+        maxFillAbs: vamm.maxFillAbs,
+        maxInventoryAbs: vamm.maxInventoryAbs,
+      })),
+    });
+
     // Step 8: InitLP (register LP account in slab, linked to matcher)
     const userAta = getAssociatedTokenAddressSync(collateralMint, wallet.publicKey, false);
     const createUserAtaIx = createAssociatedTokenAccountIdempotentInstruction(
@@ -422,8 +446,8 @@ export class PercolatorAdapter {
       }),
     });
 
-    // TX 3: createMatcherCtx + createUserAta + initLP
-    const sig3 = await sendIxs(connection, [createMatcherCtxIx, createUserAtaIx, initLPIx], wallet, [matcherCtxKeypair]);
+    // TX 3: createMatcherCtx + initMatcherCtx + createUserAta + initLP
+    const sig3 = await sendIxs(connection, [createMatcherCtxIx, initMatcherCtxIx, createUserAtaIx, initLPIx], wallet, [matcherCtxKeypair]);
     signatures.push(sig3);
 
     // Read slab to find LP's assigned index
@@ -432,30 +456,7 @@ export class PercolatorAdapter {
     // The LP is the first account registered
     const lpIdx = usedIndices[0] ?? 0;
 
-    // Step 9: InitVamm (configure vAMM on matcher program)
-    const [lpPda] = deriveLpPda(programId, slabKeypair.publicKey, lpIdx);
-
-    const initVammIx = buildIx({
-      programId: matcherProgramId,
-      keys: buildAccountMetas(ACCOUNTS_INIT_VAMM, [
-        wallet.publicKey,           // lpOwner
-        matcherCtxKeypair.publicKey, // matcherCtx
-        slabKeypair.publicKey,      // slab
-        lpPda,                      // lpPda
-      ]),
-      data: encodeInitVamm({
-        mode: vamm.mode,
-        tradingFeeBps: vamm.tradingFeeBps,
-        baseSpreadBps: vamm.baseSpreadBps,
-        maxTotalBps: vamm.maxTotalBps,
-        impactKBps: vamm.impactKBps,
-        liquidityNotionalE6: vamm.liquidityNotionalE6,
-        maxFillAbs: vamm.maxFillAbs,
-        maxInventoryAbs: vamm.maxInventoryAbs,
-      }),
-    });
-
-    // Step 10: Deposit LP collateral
+    // Step 9: Deposit LP collateral
     const depositLPIx = buildIx({
       programId,
       keys: buildAccountMetas(ACCOUNTS_DEPOSIT_COLLATERAL, [
@@ -469,8 +470,8 @@ export class PercolatorAdapter {
       data: encodeDepositCollateral({ userIdx: lpIdx, amount: params.lpCollateral }),
     });
 
-    // TX 4: initVamm + depositLPCollateral
-    const sig4 = await sendIxs(connection, [initVammIx, depositLPIx], wallet);
+    // TX 4: depositLPCollateral
+    const sig4 = await sendIxs(connection, [depositLPIx], wallet);
     signatures.push(sig4);
 
     return {
@@ -605,7 +606,6 @@ export class PercolatorAdapter {
     const connection = getNetworkConnection(network);
     const slab = new PublicKey(params.slabAddress);
     const programId = getProgramId(network, "small"); // TODO: detect tier from slab
-    const matcherProgramId = getMatcherProgramId(network);
 
     // Read slab to get LP owner and matcher context
     const slabData = await fetchSlab(connection, slab);
@@ -613,17 +613,26 @@ export class PercolatorAdapter {
 
     const [lpPda] = deriveLpPda(programId, slab, params.lpIdx);
 
-    const ix = buildIx({
+    // Prepend permissionless crank (required before TradeCpi to update engine timestamps)
+    const crankIx = buildIx({
+      programId,
+      keys: buildAccountMetas(ACCOUNTS_KEEPER_CRANK, [
+        wallet.publicKey, slab, SYSVAR_CLOCK_PUBKEY, slab,
+      ]),
+      data: encodeKeeperCrank({ callerIdx: 65535, allowPanic: false }),
+    });
+
+    const tradeIx = buildIx({
       programId,
       keys: buildAccountMetas(ACCOUNTS_TRADE_CPI, [
-        wallet.publicKey,           // user
-        lpAccount.owner,            // lpOwner
-        slab,                       // slab
-        SYSVAR_CLOCK_PUBKEY,        // clock
-        slab,                       // oracle (=slab for admin-oracle)
-        matcherProgramId,           // matcherProg
-        lpAccount.matcherContext,   // matcherCtx
-        lpPda,                      // lpPda
+        wallet.publicKey,                // user
+        lpAccount.owner,                 // lpOwner
+        slab,                            // slab
+        SYSVAR_CLOCK_PUBKEY,             // clock
+        slab,                            // oracle (=slab for admin-oracle)
+        lpAccount.matcherProgram,        // matcherProg (from slab account data)
+        lpAccount.matcherContext,        // matcherCtx
+        lpPda,                           // lpPda
       ]),
       data: encodeTradeCpi({
         lpIdx: params.lpIdx,
@@ -632,7 +641,7 @@ export class PercolatorAdapter {
       }),
     });
 
-    return sendIxs(connection, [ix], wallet);
+    return sendIxs(connection, [crankIx, tradeIx], wallet);
   }
 
   // -------------------------------------------------------------------------
@@ -924,5 +933,140 @@ export class PercolatorAdapter {
     }
 
     return allMarkets;
+  }
+
+  // -------------------------------------------------------------------------
+  // adminForceClose — force-close any position at oracle price (admin only)
+  // -------------------------------------------------------------------------
+  async adminForceClose(
+    slabAddress: string,
+    targetIdx: number,
+    network?: Network,
+    tier?: SlabTier,
+  ): Promise<string> {
+    const wallet = getWallet();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
+    const slab = new PublicKey(slabAddress);
+    const programId = getProgramId(net, tier ?? "small");
+
+    const ix = buildIx({
+      programId,
+      keys: buildAccountMetas(ACCOUNTS_ADMIN_FORCE_CLOSE, [
+        wallet.publicKey, slab, SYSVAR_CLOCK_PUBKEY, slab,
+      ]),
+      data: encodeAdminForceClose({ targetIdx }),
+    });
+
+    return sendIxs(connection, [ix], wallet);
+  }
+
+  // -------------------------------------------------------------------------
+  // closeSlab — close slab account and recover all rent (admin only)
+  // Requires: vault=0, insurance=0, numUsedAccounts=0
+  // -------------------------------------------------------------------------
+  async closeSlab(
+    slabAddress: string,
+    network?: Network,
+    tier?: SlabTier,
+  ): Promise<string> {
+    const wallet = getWallet();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
+    const slab = new PublicKey(slabAddress);
+    const programId = getProgramId(net, tier ?? "small");
+
+    const ix = buildIx({
+      programId,
+      keys: buildAccountMetas(ACCOUNTS_CLOSE_SLAB, [
+        wallet.publicKey, slab,
+      ]),
+      data: encodeCloseSlab(),
+    });
+
+    return sendIxs(connection, [ix], wallet);
+  }
+
+  // -------------------------------------------------------------------------
+  // teardownMarket — full cleanup: force-close all accounts, withdraw, close slab
+  // Returns total lamports recovered from slab rent
+  // -------------------------------------------------------------------------
+  async teardownMarket(
+    slabAddress: string,
+    network?: Network,
+    tier?: SlabTier,
+  ): Promise<{ closedAccounts: number; slabClosed: boolean; signatures: string[] }> {
+    const wallet = getWallet();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
+    const slab = new PublicKey(slabAddress);
+    const programId = getProgramId(net, tier ?? "small");
+    const signatures: string[] = [];
+    let closedAccounts = 0;
+
+    // Read slab state
+    const slabData = await fetchSlab(connection, slab);
+    const header = parseHeader(slabData);
+    const config = parseConfig(slabData);
+    const engine = parseEngine(slabData);
+
+    // Verify we're the admin
+    if (!header.admin.equals(wallet.publicKey)) {
+      throw new Error(`Not admin. Admin: ${header.admin.toBase58()}, Wallet: ${wallet.publicKey.toBase58()}`);
+    }
+
+    const accounts = parseAllAccounts(slabData);
+    const [vaultAuthority] = deriveVaultAuthority(programId, slab);
+    const userAta = getAssociatedTokenAddressSync(config.collateralMint, wallet.publicKey, false);
+
+    // Step 1: Force-close all accounts with open positions
+    for (const { idx, account } of accounts) {
+      if (account.positionSize !== 0n) {
+        try {
+          const sig = await this.adminForceClose(slabAddress, idx, net, tier);
+          signatures.push(sig);
+        } catch (e: any) {
+          console.warn(`Failed to force-close idx ${idx}: ${e.message}`);
+        }
+      }
+    }
+
+    // Re-read slab after force-closes
+    const slabData2 = await fetchSlab(connection, slab);
+    const accounts2 = parseAllAccounts(slabData2);
+
+    // Step 2: Close all accounts (withdraws remaining collateral)
+    for (const { idx } of accounts2) {
+      try {
+        const sig = await this.closeAccount(slabAddress, idx, net, tier);
+        signatures.push(sig);
+        closedAccounts++;
+      } catch (e: any) {
+        // Try withdraw first, then close
+        try {
+          const acct = parseAccount(slabData2, idx);
+          if (acct.capital > 0n) {
+            await this.withdraw(slabAddress, idx, acct.capital, net, tier);
+          }
+          const sig = await this.closeAccount(slabAddress, idx, net, tier);
+          signatures.push(sig);
+          closedAccounts++;
+        } catch (e2: any) {
+          console.warn(`Failed to close idx ${idx}: ${e2.message}`);
+        }
+      }
+    }
+
+    // Step 3: Close slab (recover rent)
+    let slabClosed = false;
+    try {
+      const sig = await this.closeSlab(slabAddress, net, tier);
+      signatures.push(sig);
+      slabClosed = true;
+    } catch (e: any) {
+      console.warn(`Failed to close slab: ${e.message}`);
+    }
+
+    return { closedAccounts, slabClosed, signatures };
   }
 }

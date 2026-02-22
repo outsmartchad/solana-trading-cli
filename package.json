@@ -33,7 +33,8 @@
     "test:clmm": "jest --testPathPattern=clmm",
     "test:fusion": "jest --testPathPattern=fusion-futarchy",
     "test:api": "jest --testPathPattern=api-adapters",
-    "test:unit": "jest --testPathPattern=unit"
+    "test:unit": "jest --testPathPattern=unit",
+    "test:percolator": "jest --testPathPattern=percolator"
   },
   "keywords": [
     "solana",

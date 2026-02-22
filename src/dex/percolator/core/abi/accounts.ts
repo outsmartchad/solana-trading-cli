@@ -98,6 +98,14 @@ export const ACCOUNTS_CLOSE_ACCOUNT: readonly AccountSpec[] = [
   { name: "oracle", signer: false, writable: false },
 ] as const;
 
+export const ACCOUNTS_TOPUP_INSURANCE: readonly AccountSpec[] = [
+  { name: "user", signer: true, writable: true },
+  { name: "slab", signer: false, writable: true },
+  { name: "userAta", signer: false, writable: true },
+  { name: "vault", signer: false, writable: true },
+  { name: "tokenProgram", signer: false, writable: false },
+] as const;
+
 export const ACCOUNTS_TRADE_CPI: readonly AccountSpec[] = [
   { name: "user", signer: true, writable: true },
   { name: "lpOwner", signer: false, writable: false },
@@ -107,6 +115,31 @@ export const ACCOUNTS_TRADE_CPI: readonly AccountSpec[] = [
   { name: "matcherProg", signer: false, writable: false },
   { name: "matcherCtx", signer: false, writable: true },
   { name: "lpPda", signer: false, writable: false },
+] as const;
+
+export const ACCOUNTS_SET_RISK_THRESHOLD: readonly AccountSpec[] = [
+  { name: "admin", signer: true, writable: true },
+  { name: "slab", signer: false, writable: true },
+] as const;
+
+export const ACCOUNTS_UPDATE_ADMIN: readonly AccountSpec[] = [
+  { name: "admin", signer: true, writable: true },
+  { name: "slab", signer: false, writable: true },
+] as const;
+
+export const ACCOUNTS_CLOSE_SLAB: readonly AccountSpec[] = [
+  { name: "admin", signer: true, writable: true },
+  { name: "slab", signer: false, writable: true },
+] as const;
+
+export const ACCOUNTS_UPDATE_CONFIG: readonly AccountSpec[] = [
+  { name: "admin", signer: true, writable: true },
+  { name: "slab", signer: false, writable: true },
+] as const;
+
+export const ACCOUNTS_SET_MAINTENANCE_FEE: readonly AccountSpec[] = [
+  { name: "admin", signer: true, writable: true },
+  { name: "slab", signer: false, writable: true },
 ] as const;
 
 export const ACCOUNTS_SET_ORACLE_AUTHORITY: readonly AccountSpec[] = [
@@ -119,12 +152,52 @@ export const ACCOUNTS_PUSH_ORACLE_PRICE: readonly AccountSpec[] = [
   { name: "slab", signer: false, writable: true },
 ] as const;
 
+export const ACCOUNTS_RESOLVE_MARKET: readonly AccountSpec[] = [
+  { name: "admin", signer: true, writable: true },
+  { name: "slab", signer: false, writable: true },
+] as const;
+
+export const ACCOUNTS_WITHDRAW_INSURANCE: readonly AccountSpec[] = [
+  { name: "admin", signer: true, writable: true },
+  { name: "slab", signer: false, writable: true },
+  { name: "adminAta", signer: false, writable: true },
+  { name: "vault", signer: false, writable: true },
+  { name: "tokenProgram", signer: false, writable: false },
+  { name: "vaultPda", signer: false, writable: false },
+] as const;
+
 export const ACCOUNTS_INIT_VAMM: readonly AccountSpec[] = [
   { name: "lpOwner", signer: true, writable: true },
   { name: "matcherCtx", signer: false, writable: true },
   { name: "slab", signer: false, writable: false },
   { name: "lpPda", signer: false, writable: false },
 ] as const;
+
+export const ACCOUNTS_PAUSE_MARKET: readonly AccountSpec[] = [
+  { name: "admin", signer: true, writable: true },
+  { name: "slab", signer: false, writable: true },
+] as const;
+
+export const ACCOUNTS_UNPAUSE_MARKET: readonly AccountSpec[] = [
+  { name: "admin", signer: true, writable: true },
+  { name: "slab", signer: false, writable: true },
+] as const;
+
+export function buildAccountMetas(
+  spec: readonly AccountSpec[],
+  keys: PublicKey[]
+): AccountMeta[] {
+  if (keys.length !== spec.length) {
+    throw new Error(
+      `Account count mismatch: expected ${spec.length}, got ${keys.length}`
+    );
+  }
+  return spec.map((s, i) => ({
+    pubkey: keys[i],
+    isSigner: s.signer,
+    isWritable: s.writable,
+  }));
+}
 
 export const ACCOUNTS_CREATE_INSURANCE_MINT: readonly AccountSpec[] = [
   { name: "admin", signer: true, writable: false },
@@ -160,25 +233,21 @@ export const ACCOUNTS_WITHDRAW_INSURANCE_LP: readonly AccountSpec[] = [
   { name: "vaultAuthority", signer: false, writable: false },
 ] as const;
 
-export function buildAccountMetas(
-  spec: readonly AccountSpec[],
-  keys: PublicKey[]
-): AccountMeta[] {
-  if (keys.length !== spec.length) {
-    throw new Error(
-      `Account count mismatch: expected ${spec.length}, got ${keys.length}`
-    );
-  }
-  return spec.map((s, i) => ({
-    pubkey: keys[i],
-    isSigner: s.signer,
-    isWritable: s.writable,
-  }));
-}
-
 export const WELL_KNOWN = {
   tokenProgram: TOKEN_PROGRAM_ID,
   clock: SYSVAR_CLOCK_PUBKEY,
   rent: SYSVAR_RENT_PUBKEY,
   systemProgram: SystemProgram.programId,
 } as const;
+
+// Custom account specs added by outsmart-cli for admin operations
+export const ACCOUNTS_ADMIN_FORCE_CLOSE: readonly AccountSpec[] = [
+  { name: "admin", signer: true, writable: true },
+  { name: "slab", signer: false, writable: true },
+  { name: "vault", signer: false, writable: true },
+  { name: "userAta", signer: false, writable: true },
+  { name: "vaultPda", signer: false, writable: false },
+  { name: "tokenProgram", signer: false, writable: false },
+  { name: "clock", signer: false, writable: false },
+  { name: "oracle", signer: false, writable: false },
+] as const;

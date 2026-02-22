@@ -1,6 +1,6 @@
 # outsmart
 
-**Solana trading CLI — buy, sell, and LP across 18 DEXes with 12 TX landing providers.**
+**Solana trading CLI — buy, sell, LP, and operate perp exchanges across 18 DEXes with 12 TX landing providers.**
 
 **[Documentation](https://outsmartchad.github.io/outsmart-cli/)** | **[npm](https://www.npmjs.com/package/outsmart)** | **[Discord](https://discord.gg/dc3Kh3Y3yJ)**
 
@@ -387,6 +387,108 @@ All swap commands (`buy`, `sell`) accept these options:
 
 All ✅ adapters confirmed on Solana mainnet with real transactions.
 
+## Percolator — Permissionless Perpetual Futures
+
+Create and operate your own on-chain perpetual futures exchange on Solana. The `PercolatorAdapter` is a standalone class (not `IDexAdapter` — perps are fundamentally different from spot).
+
+### Why This Matters
+
+First mover creates the perp market for a trending token and captures ALL leveraged volume fees. Nobody else has done AI-operated perp exchanges yet. This is the Percolator alpha.
+
+### Quick Start (Programmatic API)
+
+```typescript
+import { PercolatorAdapter } from "outsmart";
+
+const percolator = new PercolatorAdapter();
+
+// 1. Create a perp market (devnet, BONK collateral, $1 initial price)
+const market = await percolator.createMarket({
+  collateralMint: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", // BONK
+  initialPriceE6: 1_000_000n, // $1.00
+  tier: "small",
+  network: "devnet",
+  lpCollateral: 1_000_000_000n, // 1B BONK for LP
+});
+console.log("Market:", market.slabAddress);
+
+// 2. Register a trader
+const { userIdx } = await percolator.initUser(market.slabAddress, "devnet");
+
+// 3. Deposit collateral
+await percolator.deposit(market.slabAddress, userIdx, 500_000_000n, "devnet");
+
+// 4. Open a long position (positive size = long, negative = short)
+await percolator.trade({
+  slabAddress: market.slabAddress,
+  userIdx,
+  lpIdx: market.lpIndex,
+  size: 100_000_000n, // long 100M units
+  network: "devnet",
+});
+
+// 5. Push oracle price (admin-oracle mode)
+await percolator.pushOraclePrice(market.slabAddress, 1_100_000n, "devnet"); // $1.10
+
+// 6. Read market state
+const state = await percolator.getMarketState(market.slabAddress, "devnet");
+console.log("Open interest:", state.engine.openInterestLong);
+
+// 7. Check your position
+const pos = await percolator.getMyPosition(market.slabAddress, "devnet");
+console.log("PnL:", pos?.account.unrealizedPnl);
+```
+
+### PercolatorAdapter Methods (15)
+
+| Method | Description |
+|--------|-------------|
+| `createMarket(params)` | Full 10-step market creation (slab → init → oracle → crank → vAMM → LP) |
+| `initUser(slab, network?, tier?)` | Register a trader account, returns assigned index |
+| `deposit(slab, idx, amount, network?, tier?)` | Deposit collateral |
+| `withdraw(slab, idx, amount, network?, tier?)` | Withdraw collateral |
+| `trade(params)` | Open/close/modify positions via TradeCpi |
+| `closeAccount(slab, idx, network?, tier?)` | Close account and recover rent |
+| `crank(slab, network?, tier?)` | Permissionless keeper crank |
+| `pushOraclePrice(slab, priceE6, network?, tier?)` | Update oracle price (admin only) |
+| `liquidate(slab, targetIdx, network?, tier?)` | Permissionless liquidation |
+| `createInsuranceMint(slab, network?, tier?)` | One-time insurance LP mint creation |
+| `depositInsuranceLP(slab, amount, network?, tier?)` | Deposit into insurance fund |
+| `withdrawInsuranceLP(slab, lpAmount, network?, tier?)` | Withdraw from insurance fund |
+| `getMarketState(slab, network?)` | Read full slab state (header, config, engine, params, accounts) |
+| `getMyPosition(slab, network?)` | Find user's account by owner pubkey |
+| `discoverMarkets(network?)` | Find all markets across all program tiers |
+
+### Math Utilities
+
+Exported for PnL calculation, risk analysis, and pre-trade simulation:
+
+```typescript
+import {
+  computeMarkPnl,
+  computeLiqPrice,
+  computePreTradeLiqPrice,
+  computeTradingFee,
+  computePnlPercent,
+  computeEstimatedEntryPrice,
+  computeFundingRateAnnualized,
+  computeRequiredMargin,
+  computeMaxLeverage,
+  computeVammQuote,
+} from "outsmart";
+```
+
+### Deployed Programs
+
+| Tier | Devnet | Mainnet |
+|------|--------|---------|
+| Small | `FxfD37s1AZTeWfFQps9Zpebi2dNQ9QSSDtfMKdbsfKrD` | `GM8zjJ8LTBMv9xEsverh6H6wLyevgMHEJXcEzyY3rY24` |
+| Medium | `FwfBKZXbYr4vTK23bMFkbgKq3npJ3MSDxEaKmq9Aj4Qn` | — |
+| Large | `g9msRSV3sJmmE3r5Twn9HuBsxzuuRGTjKCVTKudm9in` | — |
+| Matcher | `4HcGCsyjAqnFua5ccuXyt8KRRQzKFbGTJkVChpS7Yfzy` | `DHP6DtwXP1yJsz8YzfoeigRFPB979gzmumkmCxDLSkUX` |
+
+---
+
 ## TX Landing Providers
 
 12 providers with concurrent, race, random, and sequential submission strategies:
@@ -427,6 +529,7 @@ Set any provider's API key and it's automatically enabled. The orchestrator send
 | `DEFAULT_TIP_SOL` | MEV tip in SOL | `0.001` |
 | `DEFAULT_SLIPPAGE_BPS` | Slippage in basis points | `300` |
 | `DEFAULT_PRIORITY_FEE` | Priority fee in microLamports per CU | `4000` |
+| `DEVNET_ENDPOINT` | Solana devnet RPC endpoint (for Percolator) | not set |
 | `JUPITER_API_KEY` | Jupiter Ultra API key ([portal.jup.ag](https://portal.jup.ag)) | works without key |
 | `DFLOW_API_KEY` | DFlow intent API key ([pond.dflow.net](https://pond.dflow.net/build/api-key)) | required for dflow |
 
@@ -485,9 +588,10 @@ npm run test:orca        # Orca Whirlpool (mainnet)
 npm run test:clmm        # Byreal + PancakeSwap CLMM (mainnet)
 npm run test:fusion      # Fusion + Futarchy AMM (mainnet)
 npm run test:api         # Jupiter Ultra + DFlow (mainnet)
+npm run test:percolator  # Percolator perps (devnet)
 ```
 
-Mainnet tests require `PRIVATE_KEY` and `MAINNET_ENDPOINT` env vars. Tests use tiny amounts (0.02 SOL per buy). Run suites one at a time — tests share a wallet and cannot run in parallel.
+Mainnet tests require `PRIVATE_KEY` and `MAINNET_ENDPOINT` env vars. Percolator tests require `DEVNET_ENDPOINT`. Tests use tiny amounts (0.002 SOL per buy). Run suites one at a time — tests share a wallet and cannot run in parallel.
 
 ---
 
@@ -501,6 +605,9 @@ src/
 │   ├── types.ts           # IDexAdapter interface
 │   ├── index.ts           # DexRegistry singleton
 │   ├── shared/clmm-base.ts
+│   ├── percolator/
+│   │   ├── adapter.ts     # PercolatorAdapter (15 methods)
+│   │   └── core/          # Vendored @percolator/core SDK
 │   └── 18 adapter files
 ├── dexscreener/           # Market data (DexScreener API)
 ├── helpers/

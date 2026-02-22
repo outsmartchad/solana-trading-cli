@@ -362,6 +362,10 @@
     <a href="#pool-creation" data-section="pool-creation">Pool Creation</a>
   </div>
   <div class="sidebar-section">
+    <div class="sidebar-heading">Perps</div>
+    <a href="#percolator" data-section="percolator">Percolator</a>
+  </div>
+  <div class="sidebar-section">
     <div class="sidebar-heading">Reference</div>
     <a href="#adapters" data-section="adapters">DEX Adapters (18)</a>
     <a href="#providers" data-section="providers">TX Providers (12)</a>
@@ -377,7 +381,7 @@
 
   <!-- Hero -->
   <div id="home" class="hero-wrap">
-    <div class="hero-badge"><span class="dot"></span> v2.0.0-alpha &middot; 18 DEX adapters &middot; 12 TX providers</div>
+    <div class="hero-badge"><span class="dot"></span> v2.0.0-alpha &middot; 18 DEX adapters &middot; Percolator perps &middot; 12 TX providers</div>
     <h1>Trade every Solana DEX<br>from your <span class="grad">terminal</span></h1>
     <p class="desc">One CLI and TypeScript SDK to buy, sell, LP, and create pools across every major Solana protocol. Built for traders, bots, and AI agents.</p>
 
@@ -537,6 +541,65 @@ outsmart create-pool --base &lt;MINT&gt; --quote So111...112 --base-amount 10000
 outsmart create-damm-pool --base &lt;MINT&gt; --base-amount 1000000 --quote-amount 0.5 \
   --max-fee 5000 --min-fee 100 --dynamic-fee</pre>
 
+    <!-- Percolator -->
+    <h2 id="percolator"><span class="grad">Percolator Perps</span></h2>
+    <p>Create and operate permissionless perpetual futures exchanges on Solana. The <code>PercolatorAdapter</code> is a standalone class &mdash; perps are fundamentally different from spot DEX operations.</p>
+
+    <h3>Create a Market</h3>
+    <pre><span class="td">import</span> { PercolatorAdapter } <span class="td">from</span> <span class="tok">"outsmart"</span>;
+
+<span class="td">const</span> percolator = <span class="td">new</span> PercolatorAdapter();
+
+<span class="td">// Create perp market (10-step lifecycle)</span>
+<span class="td">const</span> market = <span class="td">await</span> percolator.createMarket({
+  collateralMint: <span class="tok">"DezXAZ...B263"</span>,
+  initialPriceE6: <span class="tv">1_000_000n</span>,
+  tier: <span class="tok">"small"</span>,
+  network: <span class="tok">"devnet"</span>,
+  lpCollateral: <span class="tv">1_000_000_000n</span>,
+});</pre>
+
+    <h3>Trade</h3>
+    <pre><span class="td">// Register trader + deposit + open long</span>
+<span class="td">const</span> { userIdx } = <span class="td">await</span> percolator.initUser(market.slabAddress, <span class="tok">"devnet"</span>);
+<span class="td">await</span> percolator.deposit(market.slabAddress, userIdx, <span class="tv">500_000_000n</span>, <span class="tok">"devnet"</span>);
+<span class="td">await</span> percolator.trade({
+  slabAddress: market.slabAddress,
+  userIdx,
+  lpIdx: market.lpIndex,
+  size: <span class="tv">100_000_000n</span>, <span class="td">// positive = long</span>
+  network: <span class="tok">"devnet"</span>,
+});</pre>
+
+    <h3>Methods (15)</h3>
+    <div class="tbl"><table>
+      <tr><th>Method</th><th>Description</th></tr>
+      <tr><td>createMarket</td><td>Full 10-step market creation (slab &rarr; vAMM &rarr; LP)</td></tr>
+      <tr><td>initUser</td><td>Register a trader account</td></tr>
+      <tr><td>deposit</td><td>Deposit collateral</td></tr>
+      <tr><td>withdraw</td><td>Withdraw collateral</td></tr>
+      <tr><td>trade</td><td>Open/close/modify positions</td></tr>
+      <tr><td>closeAccount</td><td>Close account, recover rent</td></tr>
+      <tr><td>crank</td><td>Permissionless keeper crank</td></tr>
+      <tr><td>pushOraclePrice</td><td>Update oracle price (admin)</td></tr>
+      <tr><td>liquidate</td><td>Permissionless liquidation</td></tr>
+      <tr><td>createInsuranceMint</td><td>Create insurance LP mint</td></tr>
+      <tr><td>depositInsuranceLP</td><td>Deposit into insurance fund</td></tr>
+      <tr><td>withdrawInsuranceLP</td><td>Withdraw from insurance fund</td></tr>
+      <tr><td>getMarketState</td><td>Read full slab state</td></tr>
+      <tr><td>getMyPosition</td><td>Find user&rsquo;s position</td></tr>
+      <tr><td>discoverMarkets</td><td>Find all markets on-chain</td></tr>
+    </table></div>
+
+    <h3>Deployed Programs</h3>
+    <div class="tbl"><table>
+      <tr><th>Tier</th><th>Devnet</th><th>Mainnet</th></tr>
+      <tr><td>Small</td><td><code style="font-size:10px">FxfD37s1...fKrD</code></td><td><code style="font-size:10px">GM8zjJ8L...rY24</code></td></tr>
+      <tr><td>Medium</td><td><code style="font-size:10px">FwfBKZXb...j4Qn</code></td><td>&mdash;</td></tr>
+      <tr><td>Large</td><td><code style="font-size:10px">g9msRSV3...9in</code></td><td>&mdash;</td></tr>
+      <tr><td>Matcher</td><td><code style="font-size:10px">4HcGCsyj...Yfzy</code></td><td><code style="font-size:10px">DHP6DtwX...kUX</code></td></tr>
+    </table></div>
+
     <!-- DEX Adapters -->
     <h2 id="adapters"><span class="grad">DEX Adapters</span></h2>
     <p>18 adapters covering every major Solana DEX. All confirmed on mainnet with real transactions.</p>
@@ -621,6 +684,7 @@ outsmart create-damm-pool --base &lt;MINT&gt; --base-amount 1000000 --quote-amou
       <tr><th>Variable</th><th>Description</th><th>Default</th></tr>
       <tr><td>PRIVATE_KEY</td><td>Base58 wallet private key</td><td><em>required</em></td></tr>
       <tr><td>MAINNET_ENDPOINT</td><td>Solana RPC endpoint</td><td><em>required</em></td></tr>
+      <tr><td>DEVNET_ENDPOINT</td><td>Solana devnet RPC (Percolator)</td><td>not set</td></tr>
       <tr><td>TX_LANDING_MODE</td><td>concurrent | race | random | sequential</td><td>concurrent</td></tr>
       <tr><td>DEFAULT_TIP_SOL</td><td>MEV tip in SOL</td><td>0.001</td></tr>
       <tr><td>DEFAULT_SLIPPAGE_BPS</td><td>Slippage in bps</td><td>300</td></tr>
@@ -655,6 +719,9 @@ outsmart create-damm-pool --base &lt;MINT&gt; --base-amount 1000000 --quote-amou
   <span class="tf">dex/</span>
     types.ts           <span class="td"># IDexAdapter interface</span>
     index.ts           <span class="td"># DexRegistry singleton</span>
+    <span class="tf">percolator/</span>
+      adapter.ts       <span class="td"># PercolatorAdapter (15 methods)</span>
+      <span class="tf">core/</span>            <span class="td"># Vendored @percolator/core SDK</span>
     <span class="td">... 18 adapter files</span>
   <span class="tf">helpers/</span>
     config.ts          <span class="td"># Wallet, connection, env</span>
@@ -677,7 +744,10 @@ npm run test:meteora     <span class="td"># Meteora DAMM v2, DLMM, DBC</span>
 npm run test:pumpfun     <span class="td"># PumpFun + PumpSwap</span>
 npm run test:orca        <span class="td"># Orca Whirlpool</span>
 npm run test:clmm        <span class="td"># Byreal + PancakeSwap</span>
-npm run test:api         <span class="td"># Jupiter Ultra + DFlow</span></pre>
+npm run test:api         <span class="td"># Jupiter Ultra + DFlow</span>
+
+<span class="td"># Devnet integration</span>
+npm run test:percolator  <span class="td"># Percolator perps (devnet)</span></pre>
 
     <footer>
       <span>ISC License. Use at your own risk. Never share your private keys.</span>

@@ -348,3 +348,26 @@ export function computeVammQuote(
     return (oraclePriceE6 * (BPS_DENOM - totalBps)) / BPS_DENOM;
   }
 }
+
+// =============================================================================
+// CloseSlab — transfer all slab lamports to admin (requires vault=0, no accounts)
+// =============================================================================
+
+export function encodeCloseSlab(): Uint8Array {
+  return encU8(IX_TAG.CloseSlab);
+}
+
+// =============================================================================
+// AdminForceClose — force-close any position at oracle price (admin only)
+// =============================================================================
+
+export interface AdminForceCloseArgs {
+  targetIdx: number;
+}
+
+export function encodeAdminForceClose(args: AdminForceCloseArgs): Uint8Array {
+  return concatBytes(
+    encU8(IX_TAG.AdminForceClose),
+    encU16(args.targetIdx),
+  );
+}
