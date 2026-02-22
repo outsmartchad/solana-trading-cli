@@ -79,3 +79,39 @@ export type { SendRpcOptions, SendRpcResult, SendLegacyTxOptions } from "./trans
 
 // DexScreener utility
 export { getInfoFromDexscreener } from "./dexscreener/info";
+
+// ---------------------------------------------------------------------------
+// Adapter registration — side-effect imports that trigger self-registration
+// ---------------------------------------------------------------------------
+
+/**
+ * Register all built-in DEX adapters with the global registry.
+ *
+ * Call this once before using getDexAdapter() or listDexAdapters().
+ * Each adapter module self-registers via registerAdapter() at import time.
+ *
+ * This is separated from the top-level exports so that library consumers
+ * can import types/helpers without triggering heavy SDK imports.
+ */
+export async function registerAllAdapters(): Promise<void> {
+  await Promise.all([
+    import("./dex/raydium-amm-v4"),
+    import("./dex/raydium-cpmm"),
+    import("./dex/raydium-clmm"),
+    import("./dex/raydium-launchlab"),
+    import("./dex/meteora-damm-v1"),
+    import("./dex/meteora-damm-v2"),
+    import("./dex/meteora-dlmm"),
+    import("./dex/meteora-dbc"),
+    import("./dex/orca"),
+    import("./dex/byreal-clmm"),
+    import("./dex/pancakeswap-clmm"),
+    import("./dex/fusion-amm"),
+    import("./dex/futarchy-amm"),
+    import("./dex/futarchy-launchpad"),
+    import("./dex/pumpfun"),
+    import("./dex/pumpfun-amm"),
+    import("./dex/jupiter-ultra"),
+    import("./dex/dflow"),
+  ]);
+}
