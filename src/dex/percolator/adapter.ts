@@ -34,7 +34,18 @@ import {
   getAssociatedTokenAddressSync,
   createAssociatedTokenAccountIdempotentInstruction,
 } from "@solana/spl-token";
-import { getWallet, getConnection } from "../../helpers/config";
+import { getWallet, getConnection, dev_connection } from "../../helpers/config";
+/** Pick the right RPC connection based on network */
+function getNetworkConnection(network?: "devnet" | "mainnet"): Connection {
+  const net = network ?? (process.env.NETWORK as string) ?? "devnet";
+  if (net === "devnet") {
+    if (!dev_connection) {
+      throw new Error("DEVNET_ENDPOINT not set. Add it to ~/.outsmart/config.env");
+    }
+    return dev_connection;
+  }
+  return getConnection(); // mainnet
+}
 import { sendAndConfirmVtx } from "../../transactions/send-rpc";
 import type { SendRpcOptions } from "../../transactions/send-rpc";
 
@@ -250,9 +261,9 @@ export class PercolatorAdapter {
   // -------------------------------------------------------------------------
   async createMarket(params: CreateMarketParams): Promise<CreateMarketResult> {
     const wallet = getWallet();
-    const connection = getConnection();
     const tier = params.tier ?? "small";
     const network = params.network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(network);
     const programId = getProgramId(network, tier);
     const matcherProgramId = getMatcherProgramId(network);
     const risk = { ...DEFAULT_RISK_PARAMS, ...params.riskParams };
@@ -480,9 +491,10 @@ export class PercolatorAdapter {
     tier?: SlabTier,
   ): Promise<{ userIdx: number; signature: string }> {
     const wallet = getWallet();
-    const connection = getConnection();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
     const slab = new PublicKey(slabAddress);
-    const programId = getProgramId(network ?? getCurrentNetwork(), tier ?? "small");
+    const programId = getProgramId(net, tier ?? "small");
 
     // Read slab to get collateral mint and pre-state
     const slabDataBefore = await fetchSlab(connection, slab);
@@ -530,9 +542,10 @@ export class PercolatorAdapter {
     tier?: SlabTier,
   ): Promise<string> {
     const wallet = getWallet();
-    const connection = getConnection();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
     const slab = new PublicKey(slabAddress);
-    const programId = getProgramId(network ?? getCurrentNetwork(), tier ?? "small");
+    const programId = getProgramId(net, tier ?? "small");
 
     const slabData = await fetchSlab(connection, slab);
     const config = parseConfig(slabData);
@@ -560,9 +573,10 @@ export class PercolatorAdapter {
     tier?: SlabTier,
   ): Promise<string> {
     const wallet = getWallet();
-    const connection = getConnection();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
     const slab = new PublicKey(slabAddress);
-    const programId = getProgramId(network ?? getCurrentNetwork(), tier ?? "small");
+    const programId = getProgramId(net, tier ?? "small");
 
     const slabData = await fetchSlab(connection, slab);
     const config = parseConfig(slabData);
@@ -587,9 +601,9 @@ export class PercolatorAdapter {
   // -------------------------------------------------------------------------
   async trade(params: TradeParams): Promise<string> {
     const wallet = getWallet();
-    const connection = getConnection();
-    const slab = new PublicKey(params.slabAddress);
     const network = params.network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(network);
+    const slab = new PublicKey(params.slabAddress);
     const programId = getProgramId(network, "small"); // TODO: detect tier from slab
     const matcherProgramId = getMatcherProgramId(network);
 
@@ -631,9 +645,10 @@ export class PercolatorAdapter {
     tier?: SlabTier,
   ): Promise<string> {
     const wallet = getWallet();
-    const connection = getConnection();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
     const slab = new PublicKey(slabAddress);
-    const programId = getProgramId(network ?? getCurrentNetwork(), tier ?? "small");
+    const programId = getProgramId(net, tier ?? "small");
 
     const slabData = await fetchSlab(connection, slab);
     const config = parseConfig(slabData);
@@ -662,9 +677,10 @@ export class PercolatorAdapter {
     tier?: SlabTier,
   ): Promise<string> {
     const wallet = getWallet();
-    const connection = getConnection();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
     const slab = new PublicKey(slabAddress);
-    const programId = getProgramId(network ?? getCurrentNetwork(), tier ?? "small");
+    const programId = getProgramId(net, tier ?? "small");
 
     const ix = buildIx({
       programId,
@@ -687,9 +703,10 @@ export class PercolatorAdapter {
     tier?: SlabTier,
   ): Promise<string> {
     const wallet = getWallet();
-    const connection = getConnection();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
     const slab = new PublicKey(slabAddress);
-    const programId = getProgramId(network ?? getCurrentNetwork(), tier ?? "small");
+    const programId = getProgramId(net, tier ?? "small");
 
     const ix = buildIx({
       programId,
@@ -715,9 +732,10 @@ export class PercolatorAdapter {
     tier?: SlabTier,
   ): Promise<string> {
     const wallet = getWallet();
-    const connection = getConnection();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
     const slab = new PublicKey(slabAddress);
-    const programId = getProgramId(network ?? getCurrentNetwork(), tier ?? "small");
+    const programId = getProgramId(net, tier ?? "small");
 
     const ix = buildIx({
       programId,
@@ -740,9 +758,10 @@ export class PercolatorAdapter {
     tier?: SlabTier,
   ): Promise<string> {
     const wallet = getWallet();
-    const connection = getConnection();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
     const slab = new PublicKey(slabAddress);
-    const programId = getProgramId(network ?? getCurrentNetwork(), tier ?? "small");
+    const programId = getProgramId(net, tier ?? "small");
 
     const slabData = await fetchSlab(connection, slab);
     const config = parseConfig(slabData);
@@ -778,9 +797,10 @@ export class PercolatorAdapter {
     tier?: SlabTier,
   ): Promise<string> {
     const wallet = getWallet();
-    const connection = getConnection();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
     const slab = new PublicKey(slabAddress);
-    const programId = getProgramId(network ?? getCurrentNetwork(), tier ?? "small");
+    const programId = getProgramId(net, tier ?? "small");
 
     const slabData = await fetchSlab(connection, slab);
     const config = parseConfig(slabData);
@@ -815,9 +835,10 @@ export class PercolatorAdapter {
     tier?: SlabTier,
   ): Promise<string> {
     const wallet = getWallet();
-    const connection = getConnection();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
     const slab = new PublicKey(slabAddress);
-    const programId = getProgramId(network ?? getCurrentNetwork(), tier ?? "small");
+    const programId = getProgramId(net, tier ?? "small");
 
     const slabData = await fetchSlab(connection, slab);
     const config = parseConfig(slabData);
@@ -841,8 +862,8 @@ export class PercolatorAdapter {
   // -------------------------------------------------------------------------
   // getMarketState — full slab readout
   // -------------------------------------------------------------------------
-  async getMarketState(slabAddress: string): Promise<MarketState> {
-    const connection = getConnection();
+  async getMarketState(slabAddress: string, network?: Network): Promise<MarketState> {
+    const connection = getNetworkConnection(network);
     const slab = new PublicKey(slabAddress);
     const data = await fetchSlab(connection, slab);
 
@@ -861,9 +882,10 @@ export class PercolatorAdapter {
   // -------------------------------------------------------------------------
   async getMyPosition(
     slabAddress: string,
+    network?: Network,
   ): Promise<{ idx: number; account: Account } | null> {
     const wallet = getWallet();
-    const connection = getConnection();
+    const connection = getNetworkConnection(network);
     const slab = new PublicKey(slabAddress);
     const data = await fetchSlab(connection, slab);
     const accounts = parseAllAccounts(data);
@@ -877,8 +899,8 @@ export class PercolatorAdapter {
   // discoverMarkets — find all markets across all program tiers
   // -------------------------------------------------------------------------
   async discoverMarkets(network?: Network): Promise<DiscoveredMarket[]> {
-    const connection = getConnection();
     const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
 
     // Query all tier programs in parallel
     const tierKeys: SlabTier[] = ["small", "medium", "large"];
