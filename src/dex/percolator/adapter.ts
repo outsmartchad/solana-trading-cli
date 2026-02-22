@@ -83,6 +83,8 @@ import {
   encodeWithdrawInsuranceLP,
   encodeCloseSlab,
   encodeAdminForceClose,
+  encodeResolveMarket,
+  encodeWithdrawInsurance,
   type InitMarketArgs,
   type InitVammArgs,
 } from "./core/abi/instructions";
@@ -105,6 +107,8 @@ import {
   ACCOUNTS_WITHDRAW_INSURANCE_LP,
   ACCOUNTS_CLOSE_SLAB,
   ACCOUNTS_ADMIN_FORCE_CLOSE,
+  ACCOUNTS_RESOLVE_MARKET,
+  ACCOUNTS_WITHDRAW_INSURANCE,
   WELL_KNOWN,
 } from "./core/abi/accounts";
 import { buildIx } from "./core/runtime/tx";
@@ -988,6 +992,62 @@ export class PercolatorAdapter {
   }
 
   // -------------------------------------------------------------------------
+  // resolveMarket — set RESOLVED flag (admin only, enables insurance withdrawal)
+  // -------------------------------------------------------------------------
+  async resolveMarket(
+    slabAddress: string,
+    network?: Network,
+    tier?: SlabTier,
+  ): Promise<string> {
+    const wallet = getWallet();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
+    const slab = new PublicKey(slabAddress);
+    const programId = getProgramId(net, tier ?? "small");
+
+    const ix = buildIx({
+      programId,
+      keys: buildAccountMetas(ACCOUNTS_RESOLVE_MARKET, [
+        wallet.publicKey, slab,
+      ]),
+      data: encodeResolveMarket(),
+    });
+
+    return sendIxs(connection, [ix], wallet);
+  }
+
+  // -------------------------------------------------------------------------
+  // withdrawInsurance — drain insurance fund to admin (requires RESOLVED)
+  // -------------------------------------------------------------------------
+  async withdrawInsurance(
+    slabAddress: string,
+    network?: Network,
+    tier?: SlabTier,
+  ): Promise<string> {
+    const wallet = getWallet();
+    const net = network ?? getCurrentNetwork();
+    const connection = getNetworkConnection(net);
+    const slab = new PublicKey(slabAddress);
+    const programId = getProgramId(net, tier ?? "small");
+
+    const slabData = await fetchSlab(connection, slab);
+    const config = parseConfig(slabData);
+    const [vaultAuthority] = deriveVaultAuthority(programId, slab);
+    const adminAta = getAssociatedTokenAddressSync(config.collateralMint, wallet.publicKey, false);
+
+    const ix = buildIx({
+      programId,
+      keys: buildAccountMetas(ACCOUNTS_WITHDRAW_INSURANCE, [
+        wallet.publicKey, slab, adminAta, config.vaultPubkey,
+        TOKEN_PROGRAM_ID, vaultAuthority,
+      ]),
+      data: encodeWithdrawInsurance(),
+    });
+
+    return sendIxs(connection, [ix], wallet);
+  }
+
+  // -------------------------------------------------------------------------
   // teardownMarket — full cleanup: force-close all accounts, withdraw, close slab
   // Returns total lamports recovered from slab rent
   // -------------------------------------------------------------------------
@@ -1057,14 +1117,36 @@ export class PercolatorAdapter {
       }
     }
 
-    // Step 3: Close slab (recover rent)
+    // Step 3: Resolve market (enables insurance fund withdrawal)
+    try {
+      const sig = await this.resolveMarket(slabAddress, net, tier);
+      signatures.push(sig);
+    } catch (e: any) {
+      // May already be resolved or may fail — non-fatal
+      console.warn(`Failed to resolve market: ${e.message}`);
+    }
+
+    // Step 4: Withdraw insurance fund (drains fee revenue)
+    try {
+      const sig = await this.withdrawInsurance(slabAddress, net, tier);
+      signatures.push(sig);
+    } catch (e: any) {
+      // Insurance may be zero — non-fatal
+      console.warn(`Failed to withdraw insurance: ${e.message}`);
+    }
+
+    // Step 5: Close slab (recover rent — requires engine.vault=0, insurance=0, no accounts)
+    // NOTE: Markets that had trades retain vault dust because WithdrawInsurance
+    // drains the insurance fund balance but doesn't decrement engine.vault.
+    // This makes closeSlab impossible for any market with fee revenue.
+    // Slab rent (~0.44 SOL) is irrecoverable for these markets.
     let slabClosed = false;
     try {
       const sig = await this.closeSlab(slabAddress, net, tier);
       signatures.push(sig);
       slabClosed = true;
-    } catch (e: any) {
-      console.warn(`Failed to close slab: ${e.message}`);
+    } catch {
+      // Expected for markets with trade history
     }
 
     return { closedAccounts, slabClosed, signatures };

@@ -371,3 +371,19 @@ export function encodeAdminForceClose(args: AdminForceCloseArgs): Uint8Array {
     encU16(args.targetIdx),
   );
 }
+
+// =============================================================================
+// ResolveMarket — set RESOLVED flag (admin only, requires oracle price set)
+// =============================================================================
+
+export function encodeResolveMarket(): Uint8Array {
+  return encU8(IX_TAG.ResolveMarket);
+}
+
+// =============================================================================
+// WithdrawInsurance — drain insurance fund to admin (requires RESOLVED, no positions)
+// =============================================================================
+
+export function encodeWithdrawInsurance(): Uint8Array {
+  return encU8(IX_TAG.WithdrawInsurance);
+}
