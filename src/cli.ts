@@ -104,6 +104,17 @@ function die(msg: string): never {
   process.exit(1);
 }
 
+/** Suppress console.log during an async operation (hides noisy TX logs) */
+async function quiet<T>(fn: () => Promise<T>): Promise<T> {
+  const orig = console.log;
+  console.log = () => {};
+  try {
+    return await fn();
+  } finally {
+    console.log = orig;
+  }
+}
+
 /** Base58 character set (no 0, O, I, l) */
 const BASE58_CHARS = /^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/;
 
@@ -1694,6 +1705,346 @@ program
     if (info.websiteURL) console.log(`  website:     ${info.websiteURL}`);
     console.log();
   });
+
+// ---------------------------------------------------------------------------
+// outsmart perp — Percolator perpetual futures
+// ---------------------------------------------------------------------------
+
+const perpCmd = new Command("perp")
+  .description("Percolator perpetual futures — create markets, trade, LP");
+
+/** Auto-crank a market (suppressed output). Swallows errors — stale crank is not fatal. */
+async function autoCrank(adapter: any, market: string, network: string): Promise<void> {
+  try { await quiet(() => adapter.crank(market, network, "small")); } catch { /* ok */ }
+}
+
+// --- perp long ---
+perpCmd
+  .command("long")
+  .description("Open a long position on a perp market")
+  .requiredOption("-m, --market <address>", "slab/market address")
+  .requiredOption("-s, --size <units>", "position size in native units")
+  .option("--lp <idx>", "LP index (default: 0)", "0")
+  .option("--user <idx>", "user index (auto-detected if omitted)")
+  .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .action(async (opts) => {
+    validateBase58(opts.market, "--market");
+    const { PercolatorAdapter } = await import("./dex/percolator/adapter");
+    const adapter = new PercolatorAdapter();
+    const size = BigInt(opts.size);
+    if (size <= 0n) die("--size must be positive");
+
+    let userIdx = opts.user != null ? Number(opts.user) : undefined;
+    if (userIdx === undefined) {
+      const pos = await adapter.getMyPosition(opts.market, opts.network);
+      if (!pos) die("No user account found. Run: outsmart perp init-user -m <address>");
+      userIdx = pos.idx;
+    }
+
+    console.log(`\n  longing ${size} on ${opts.market.slice(0, 8)}...`);
+    await autoCrank(adapter, opts.market, opts.network);
+    const sig = await quiet(() => adapter.trade({
+      slabAddress: opts.market, lpIdx: Number(opts.lp), userIdx, size, network: opts.network,
+    }));
+    console.log(`  done  tx: ${sig}\n`);
+  });
+
+// --- perp short ---
+perpCmd
+  .command("short")
+  .description("Open a short position on a perp market")
+  .requiredOption("-m, --market <address>", "slab/market address")
+  .requiredOption("-s, --size <units>", "position size in native units (positive number)")
+  .option("--lp <idx>", "LP index (default: 0)", "0")
+  .option("--user <idx>", "user index (auto-detected if omitted)")
+  .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .action(async (opts) => {
+    validateBase58(opts.market, "--market");
+    const { PercolatorAdapter } = await import("./dex/percolator/adapter");
+    const adapter = new PercolatorAdapter();
+    const size = BigInt(opts.size);
+    if (size <= 0n) die("--size must be positive");
+
+    let userIdx = opts.user != null ? Number(opts.user) : undefined;
+    if (userIdx === undefined) {
+      const pos = await adapter.getMyPosition(opts.market, opts.network);
+      if (!pos) die("No user account found. Run: outsmart perp init-user -m <address>");
+      userIdx = pos.idx;
+    }
+
+    console.log(`\n  shorting ${size} on ${opts.market.slice(0, 8)}...`);
+    await autoCrank(adapter, opts.market, opts.network);
+    const sig = await quiet(() => adapter.trade({
+      slabAddress: opts.market, lpIdx: Number(opts.lp), userIdx, size: -size, network: opts.network,
+    }));
+    console.log(`  done  tx: ${sig}\n`);
+  });
+
+// --- perp close ---
+perpCmd
+  .command("close")
+  .description("Close an open position (trade back to flat)")
+  .requiredOption("-m, --market <address>", "slab/market address")
+  .option("--lp <idx>", "LP index (default: 0)", "0")
+  .option("--user <idx>", "user index (auto-detected if omitted)")
+  .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .action(async (opts) => {
+    validateBase58(opts.market, "--market");
+    const { PercolatorAdapter } = await import("./dex/percolator/adapter");
+    const adapter = new PercolatorAdapter();
+
+    const pos = await adapter.getMyPosition(opts.market, opts.network);
+    if (!pos) die("No position found");
+
+    const currentSize = BigInt(pos.account.positionSize);
+    if (currentSize === 0n) {
+      console.log("\n  already flat\n");
+      return;
+    }
+
+    const side = currentSize > 0n ? "long" : "short";
+    const userIdx = opts.user != null ? Number(opts.user) : pos.idx;
+
+    console.log(`\n  closing ${side} ${currentSize > 0n ? currentSize : -currentSize}...`);
+    await autoCrank(adapter, opts.market, opts.network);
+    const sig = await quiet(() => adapter.trade({
+      slabAddress: opts.market, lpIdx: Number(opts.lp), userIdx, size: -currentSize, network: opts.network,
+    }));
+    console.log(`  done  tx: ${sig}\n`);
+  });
+
+// --- perp status ---
+perpCmd
+  .command("status")
+  .description("Show market state and your position")
+  .requiredOption("-m, --market <address>", "slab/market address")
+  .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .action(async (opts) => {
+    validateBase58(opts.market, "--market");
+    const { PercolatorAdapter } = await import("./dex/percolator/adapter");
+    const adapter = new PercolatorAdapter();
+
+    const state = await adapter.getMarketState(opts.market, opts.network);
+    const pos = await adapter.getMyPosition(opts.market, opts.network);
+
+    console.log();
+    console.log(`  market:     ${opts.market}`);
+    console.log(`  accounts:   ${state.accounts.length}`);
+    console.log(`  vault:      ${state.engine.vault}`);
+    console.log(`  oracle:     ${state.config.lastEffectivePriceE6} (e6)`);
+
+    if (pos) {
+      const size = BigInt(pos.account.positionSize);
+      const capital = BigInt(pos.account.capital);
+      const side = size > 0n ? "LONG" : size < 0n ? "SHORT" : "FLAT";
+      console.log();
+      console.log(`  your position:`);
+      console.log(`    index:    ${pos.idx}`);
+      console.log(`    side:     ${side}`);
+      console.log(`    size:     ${size}`);
+      console.log(`    capital:  ${capital}`);
+      console.log(`    entry:    ${pos.account.entryPrice} (e6)`);
+    } else {
+      console.log(`\n  no position (run: outsmart perp init-user -m ${opts.market})`);
+    }
+    console.log();
+  });
+
+// --- perp deposit ---
+perpCmd
+  .command("deposit")
+  .description("Deposit collateral to your account")
+  .requiredOption("-m, --market <address>", "slab/market address")
+  .requiredOption("-a, --amount <sol>", "amount in SOL (e.g. 0.5)")
+  .option("--user <idx>", "user index (auto-detected if omitted)")
+  .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .action(async (opts) => {
+    validateBase58(opts.market, "--market");
+    const { PercolatorAdapter } = await import("./dex/percolator/adapter");
+    const adapter = new PercolatorAdapter();
+    const solAmount = Number(opts.amount);
+    if (isNaN(solAmount) || solAmount <= 0) die("--amount must be a positive number");
+    const lamports = BigInt(Math.round(solAmount * 1e9));
+
+    let userIdx = opts.user != null ? Number(opts.user) : undefined;
+    if (userIdx === undefined) {
+      const pos = await adapter.getMyPosition(opts.market, opts.network);
+      if (!pos) die("No user account. Run: outsmart perp init-user -m <address>");
+      userIdx = pos.idx;
+    }
+
+    console.log(`\n  depositing ${solAmount} SOL...`);
+    const sig = await quiet(() => adapter.deposit(opts.market, userIdx!, lamports, opts.network, "small"));
+    console.log(`  done  tx: ${sig}\n`);
+  });
+
+// --- perp withdraw ---
+perpCmd
+  .command("withdraw")
+  .description("Withdraw collateral from your account")
+  .requiredOption("-m, --market <address>", "slab/market address")
+  .requiredOption("-a, --amount <sol>", "amount in SOL (e.g. 0.5), or 'all'")
+  .option("--user <idx>", "user index (auto-detected if omitted)")
+  .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .action(async (opts) => {
+    validateBase58(opts.market, "--market");
+    const { PercolatorAdapter } = await import("./dex/percolator/adapter");
+    const adapter = new PercolatorAdapter();
+
+    let userIdx = opts.user != null ? Number(opts.user) : undefined;
+    if (userIdx === undefined) {
+      const pos = await adapter.getMyPosition(opts.market, opts.network);
+      if (!pos) die("No user account. Run: outsmart perp init-user -m <address>");
+      userIdx = pos.idx;
+    }
+
+    let lamports: bigint;
+    if (opts.amount === "all") {
+      const pos = await adapter.getMyPosition(opts.market, opts.network);
+      if (!pos) die("No position found");
+      lamports = BigInt(pos.account.capital);
+      if (lamports <= 0n) die("No collateral to withdraw");
+    } else {
+      const solAmount = Number(opts.amount);
+      if (isNaN(solAmount) || solAmount <= 0) die("--amount must be a positive number or 'all'");
+      lamports = BigInt(Math.round(solAmount * 1e9));
+    }
+
+    console.log(`\n  withdrawing ${Number(lamports) / 1e9} SOL...`);
+    const sig = await quiet(() => adapter.withdraw(opts.market, userIdx!, lamports, opts.network, "small"));
+    console.log(`  done  tx: ${sig}\n`);
+  });
+
+// --- perp init-user ---
+perpCmd
+  .command("init-user")
+  .description("Register a trader account on a market")
+  .requiredOption("-m, --market <address>", "slab/market address")
+  .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .action(async (opts) => {
+    validateBase58(opts.market, "--market");
+    const { PercolatorAdapter } = await import("./dex/percolator/adapter");
+    const adapter = new PercolatorAdapter();
+
+    console.log(`\n  registering trader...`);
+    const { userIdx, signature } = await quiet(() => adapter.initUser(opts.market, opts.network, "small"));
+    console.log(`  done  index: ${userIdx}  tx: ${signature}\n`);
+  });
+
+// --- perp create-market ---
+perpCmd
+  .command("create-market")
+  .description("Create a new perp market (you become admin + LP)")
+  .option("--mint <address>", "collateral token mint (default: WSOL)", "So11111111111111111111111111111111111111112")
+  .option("--price <usd>", "initial oracle price in USD (e.g. 150)", "1")
+  .option("--lp <sol>", "LP collateral in SOL", "1")
+  .option("--tier <size>", "slab tier: small, medium, large", "small")
+  .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .action(async (opts) => {
+    validateBase58(opts.mint, "--mint");
+    const { PercolatorAdapter } = await import("./dex/percolator/adapter");
+    const { NATIVE_MINT } = await import("@solana/spl-token");
+    const { getWallet } = await import("./helpers/config");
+    const { Connection, SystemProgram, Transaction } = await import("@solana/web3.js");
+    const { getAssociatedTokenAddressSync, createAssociatedTokenAccountIdempotentInstruction, createSyncNativeInstruction } = await import("@solana/spl-token");
+
+    const adapter = new PercolatorAdapter();
+    const usdPrice = Number(opts.price);
+    const lpSol = Number(opts.lp);
+    if (isNaN(usdPrice) || usdPrice <= 0) die("--price must be a positive number");
+    if (isNaN(lpSol) || lpSol <= 0) die("--lp must be a positive number");
+    const priceE6 = BigInt(Math.round(usdPrice * 1e6));
+    const lpAmount = BigInt(Math.round(lpSol * 1e9));
+    const isWSol = opts.mint === NATIVE_MINT.toBase58();
+
+    console.log(`\n  creating perp market (price=$${usdPrice}, LP=${lpSol} SOL, ${opts.tier} tier)...`);
+
+    // Auto-wrap SOL if collateral is WSOL
+    if (isWSol) {
+      const wallet = getWallet();
+      const devRpc = process.env.DEVNET_ENDPOINT || "https://api.devnet.solana.com";
+      const conn = new Connection(opts.network === "mainnet" ? process.env.MAINNET_ENDPOINT! : devRpc, "confirmed");
+      const wrapAmount = lpAmount + 100_000_000n;
+      const ata = getAssociatedTokenAddressSync(NATIVE_MINT, wallet.publicKey, false);
+      const tx = new Transaction();
+      tx.add(createAssociatedTokenAccountIdempotentInstruction(wallet.publicKey, ata, wallet.publicKey, NATIVE_MINT));
+      tx.add(SystemProgram.transfer({ fromPubkey: wallet.publicKey, toPubkey: ata, lamports: wrapAmount }));
+      tx.add(createSyncNativeInstruction(ata));
+      const { blockhash } = await conn.getLatestBlockhash();
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = wallet.publicKey;
+      tx.sign(wallet);
+      const sig = await conn.sendRawTransaction(tx.serialize());
+      await conn.confirmTransaction(sig, "confirmed");
+    }
+
+    const result = await quiet(() => adapter.createMarket({
+      collateralMint: opts.mint,
+      initialPriceE6: priceE6,
+      tier: opts.tier,
+      network: opts.network,
+      lpCollateral: lpAmount,
+    }));
+
+    console.log(`  done\n`);
+    console.log(`  market:  ${result.slabAddress}`);
+    console.log(`  browse:  https://percolatorlaunch.com/trade/${result.slabAddress}\n`);
+  });
+
+// --- perp crank ---
+perpCmd
+  .command("crank")
+  .description("Run keeper crank (permissionless)")
+  .requiredOption("-m, --market <address>", "slab/market address")
+  .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .action(async (opts) => {
+    validateBase58(opts.market, "--market");
+    const { PercolatorAdapter } = await import("./dex/percolator/adapter");
+    const adapter = new PercolatorAdapter();
+    console.log(`\n  cranking...`);
+    const sig = await quiet(() => adapter.crank(opts.market, opts.network, "small"));
+    console.log(`  done  tx: ${sig}\n`);
+  });
+
+// --- perp set-price ---
+perpCmd
+  .command("set-price")
+  .description("Push oracle price (admin only)")
+  .requiredOption("-m, --market <address>", "slab/market address")
+  .requiredOption("--price <usd>", "price in USD (e.g. 150.50)")
+  .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .action(async (opts) => {
+    validateBase58(opts.market, "--market");
+    const { PercolatorAdapter } = await import("./dex/percolator/adapter");
+    const adapter = new PercolatorAdapter();
+    const usd = Number(opts.price);
+    if (isNaN(usd) || usd <= 0) die("--price must be a positive number");
+    const priceE6 = BigInt(Math.round(usd * 1e6));
+    console.log(`\n  setting price to $${usd}...`);
+    const sig = await quiet(() => adapter.pushOraclePrice(opts.market, priceE6, opts.network, "small"));
+    console.log(`  done  tx: ${sig}\n`);
+  });
+
+// --- perp markets ---
+perpCmd
+  .command("markets")
+  .description("Discover all markets on a network")
+  .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .action(async (opts) => {
+    const { PercolatorAdapter } = await import("./dex/percolator/adapter");
+    const adapter = new PercolatorAdapter();
+    const markets = await adapter.discoverMarkets(opts.network);
+    console.log(`\n  ${markets.length} markets on ${opts.network}\n`);
+    for (const m of markets.slice(0, 20)) {
+      console.log(`  ${m.slabAddress.toBase58()}`);
+    }
+    if (markets.length > 20) {
+      console.log(`  ... and ${markets.length - 20} more`);
+    }
+    console.log();
+  });
+
+program.addCommand(perpCmd);
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown — prevents hanging on Ctrl+C during long RPC calls
