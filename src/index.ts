@@ -56,5 +56,26 @@ export type {
   TipAccount,
 } from "./transactions/landing/types";
 
+// Helpers — wallet, connection, balance
+export {
+  getWallet,
+  getConnection,
+  resetWalletCache,
+} from "./helpers/config";
+
+export {
+  checkBalanceByAddress,
+  getSPLTokenBalance,
+} from "./helpers/check_balance";
+
+// TX send helpers
+export {
+  sendAndConfirmVtx,
+  sendAndConfirmLegacyTx,
+  setDryRunMode,
+  isDryRunMode,
+} from "./transactions/send-rpc";
+export type { SendRpcOptions, SendRpcResult, SendLegacyTxOptions } from "./transactions/send-rpc";
+
 // DexScreener utility
 export { getInfoFromDexscreener } from "./dexscreener/info";
