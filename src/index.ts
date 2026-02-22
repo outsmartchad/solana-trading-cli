@@ -31,8 +31,14 @@ export type {
   BuildSwapIxsResult,
   AddLiquidityParams,
   RemoveLiquidityParams,
+  CreateCustomPoolParams,
+  CreateConfigPoolParams,
+  PoolFeeConfig,
   SwapSide,
 } from "./dex/types";
+
+// Adapter classes — for consumers that need to cast (e.g. PumpFunAdapter.create())
+export { PumpFunAdapter } from "./dex/pumpfun";
 
 export {
   UnsupportedOperationError,
