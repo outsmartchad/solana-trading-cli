@@ -1,10 +1,9 @@
 /**
  * bloXroute TX Landing Provider
  *
- * Submits transactions via the bloXroute Solana Trader SDK (HttpProvider).
- * Uses legacy Transaction (not VersionedTransaction) because the SDK's
- * postSubmit expects a legacy-serialized base64 payload.
- * Gets its OWN blockhash from the provider for consistency with SDK expectations.
+ * Submits transactions via the bloXroute Solana Trader API using direct HTTP
+ * calls (no SDK dependency). Uses legacy Transaction because the API expects
+ * a legacy-serialized base64 payload.
  */
 
 import {
@@ -15,9 +14,6 @@ import {
   Transaction,
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
-import {
-  HttpProvider,
-} from "@bloxroute/solana-trader-client-ts";
 import {
   ILandingProvider,
   LandingResult,
@@ -39,21 +35,59 @@ const TIP_ACCOUNTS = [
 const DEFAULT_TIP_SOL = 0.001;
 const ENDPOINT = "http://amsterdam.solana.dex.blxrbdn.com";
 
+// Memo program ID (MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr)
+const MEMO_PROGRAM_ID = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+
 // ---------------------------------------------------------------------------
-// Lazy provider singleton
+// Direct API helpers (replacing @bloxroute/solana-trader-client-ts)
 // ---------------------------------------------------------------------------
 
-let _provider: HttpProvider | null = null;
-
-function getProvider(): HttpProvider | null {
-  if (_provider) return _provider;
-
-  const authKey = process.env.BLOXROUTE_AUTH_KEY || "";
+function getHeaders(): Record<string, string> {
   const apiKey = process.env.BLOXROUTE_API_KEY || "";
-  if (!authKey || !apiKey) return null;
+  return {
+    "Content-Type": "application/json",
+    "Authorization": apiKey,
+  };
+}
 
-  _provider = new HttpProvider(apiKey, authKey, ENDPOINT);
-  return _provider;
+async function apiGetRecentBlockHash(): Promise<string> {
+  const authKey = process.env.BLOXROUTE_AUTH_KEY || "";
+  const resp = await fetch(`${ENDPOINT}/api/v2/system/blockhash`, {
+    method: "GET",
+    headers: { ...getHeaders(), "X-Auth-Header": authKey },
+  });
+  if (!resp.ok) throw new Error(`bloXroute blockhash failed: ${resp.status}`);
+  const data = await resp.json() as { blockHash?: string };
+  if (!data.blockHash) throw new Error("No blockHash in bloXroute response");
+  return data.blockHash;
+}
+
+async function apiPostSubmit(b64Tx: string, opts: {
+  skipPreFlight?: boolean;
+  frontRunningProtection?: boolean;
+  useStakedRPCs?: boolean;
+}): Promise<{ signature?: string }> {
+  const authKey = process.env.BLOXROUTE_AUTH_KEY || "";
+  const resp = await fetch(`${ENDPOINT}/api/v2/submit`, {
+    method: "POST",
+    headers: { ...getHeaders(), "X-Auth-Header": authKey },
+    body: JSON.stringify({
+      transaction: { content: b64Tx, isCleanup: false },
+      skipPreFlight: opts.skipPreFlight ?? false,
+      frontRunningProtection: opts.frontRunningProtection ?? false,
+      useStakedRPCs: opts.useStakedRPCs ?? true,
+    }),
+  });
+  if (!resp.ok) throw new Error(`bloXroute submit failed: ${resp.status}`);
+  return resp.json() as Promise<{ signature?: string }>;
+}
+
+function createMemoInstruction(msg: string): TransactionInstruction {
+  return new TransactionInstruction({
+    keys: [],
+    programId: MEMO_PROGRAM_ID,
+    data: Buffer.from(msg, "utf-8"),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -76,8 +110,7 @@ function createProvider(): ILandingProvider {
     ): Promise<LandingResult> {
       const providerName = this.name;
       try {
-        const sdkProvider = getProvider();
-        if (!sdkProvider) {
+        if (!this.isEnabled()) {
           return { provider: providerName, accepted: false, error: "BLOXROUTE_API_KEY or BLOXROUTE_AUTH_KEY not set" };
         }
 
@@ -91,12 +124,14 @@ function createProvider(): ILandingProvider {
           lamports: Math.round(tipSol * LAMPORTS_PER_SOL),
         });
 
-        // bloXroute SDK expects legacy Transaction — get its OWN blockhash
-        const recentBlockhashResp = await sdkProvider.getRecentBlockHash({});
-        const bh = recentBlockhashResp.blockHash;
+        // Memo for bloXroute attribution
+        const memoIx = createMemoInstruction("Powered by bloXroute Trader Api");
 
-        // Build legacy transaction — never mutate input ixs
-        const allIxs = [...ixs, tipIx];
+        // bloXroute expects legacy Transaction — get its OWN blockhash
+        const bh = await apiGetRecentBlockHash();
+
+        // Build legacy transaction
+        const allIxs = [...ixs, tipIx, memoIx];
         const tx = new Transaction({
           recentBlockhash: bh,
           feePayer: signer.publicKey,
@@ -110,8 +145,7 @@ function createProvider(): ILandingProvider {
         const b64 = Buffer.from(tx.serialize()).toString("base64");
 
         const t0 = Date.now();
-        const response = await sdkProvider.postSubmit({
-          transaction: { content: b64, isCleanup: false },
+        const response = await apiPostSubmit(b64, {
           frontRunningProtection: false,
           useStakedRPCs: true,
           skipPreFlight: false,

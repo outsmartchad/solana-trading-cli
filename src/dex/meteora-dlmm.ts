@@ -773,7 +773,19 @@ export class MeteoraDlmmAdapter implements IDexAdapter {
     }
 
     try {
-      const result = await sendAndConfirmLegacyTx(connection, claimFeeTx, wallet);
+      // SDK may return a single Transaction or Transaction[] depending on version
+      const txToSend = Array.isArray(claimFeeTx) ? claimFeeTx[0] : claimFeeTx;
+      if (!txToSend) {
+        return {
+          txSignature: "",
+          confirmed: true,
+          error: "No fees to claim (empty tx array)",
+          positionAddress: position.publicKey.toBase58(),
+          poolAddress,
+          dex: this.name,
+        };
+      }
+      const result = await sendAndConfirmLegacyTx(connection, txToSend, wallet);
 
       return {
         txSignature: result.txSignature,

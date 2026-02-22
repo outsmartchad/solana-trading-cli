@@ -11,7 +11,7 @@ import {
   makeTxVersion,
   DEFAULT_SLIPPAGE_BPS,
 } from "./config";
-import { Metaplex } from "@metaplex-foundation/js";
+
 import fs from "fs";
 import {
   Connection,
@@ -19,27 +19,6 @@ import {
   ComputeBudgetProgram,
 } from "@solana/web3.js";
 
-/**
- * Retrieves the metadata of a token based on its address.
- */
-export async function getTokenMetadata(address: string) {
-  const connection = getConnection();
-  const metaplex = Metaplex.make(connection);
-  const mintAddress = new PublicKey(address);
-
-  let tokenName: string | undefined;
-  let tokenSymbol: string | undefined;
-
-  const metadataAccount = metaplex.nfts().pdas().metadata({ mint: mintAddress });
-  const metadataAccountInfo = await connection.getAccountInfo(metadataAccount);
-
-  if (metadataAccountInfo) {
-    const token = await metaplex.nfts().findByMint({ mintAddress });
-    tokenName = token.name;
-    tokenSymbol = token.symbol;
-  }
-  return { tokenName, tokenSymbol };
-}
 
 /**
  * Sends multiple transactions to the Solana blockchain.

@@ -1,9 +1,3 @@
-import {
-  createTraderAPIMemoInstruction,
-  HttpProvider,
-  MAINNET_API_UK_HTTP,
-  MAINNET_API_NY_HTTP,
-} from "@bloxroute/solana-trader-client-ts";
 import { bloXRoute_auth_header, bloXroute_fee } from "../helpers/config";
 import {
   LAMPORTS_PER_SOL,
@@ -11,22 +5,20 @@ import {
   Keypair,
   SystemProgram,
   Transaction,
+  TransactionInstruction,
 } from "@solana/web3.js";
 import base58 from "bs58";
 
 const TRADER_API_TIP_WALLET = "HWEoBxYs7ssKuudEjzjmpfJVX7Dvi7wescFsVx2L5yoY";
+const ENDPOINT = "http://uk.solana.dex.blxrbdn.com";
+const MEMO_PROGRAM_ID = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
 
-// Lazy provider initialization
-let _provider: HttpProvider | null = null;
-function getProvider(): HttpProvider {
-  if (!_provider) {
-    if (!bloXRoute_auth_header) {
-      throw new Error("BLOXROUTE_AUTH_HEADER not set. Configure via 'outsmart init' or .env");
-    }
-    const privateKey = process.env.PRIVATE_KEY || "";
-    _provider = new HttpProvider(bloXRoute_auth_header, privateKey, MAINNET_API_UK_HTTP);
-  }
-  return _provider;
+function createMemoInstruction(msg: string): TransactionInstruction {
+  return new TransactionInstruction({
+    keys: [],
+    programId: MEMO_PROGRAM_ID,
+    data: Buffer.from(msg, "utf-8"),
+  });
 }
 
 export async function CreateTraderAPITipTransaction(
@@ -47,20 +39,33 @@ export async function bloXroute_executeAndConfirm(
   transaction: Transaction,
   signers: Keypair[]
 ): Promise<void> {
-  const provider = getProvider();
+  if (!bloXRoute_auth_header) {
+    throw new Error("BLOXROUTE_AUTH_HEADER not set. Configure via 'outsmart init' or .env");
+  }
 
-  const memo = createTraderAPIMemoInstruction("Powered by bloXroute Trader Api");
+  const memo = createMemoInstruction("Powered by bloXroute Trader Api");
 
   const privateKey = process.env.PRIVATE_KEY || "";
   const wallet = Keypair.fromSecretKey(base58.decode(privateKey));
-  const recentBlockhash = await provider.getRecentBlockHash({});
 
+  // Get blockhash from bloXroute API
+  const bhResp = await fetch(`${ENDPOINT}/api/v2/system/blockhash`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": bloXRoute_auth_header,
+    },
+  });
+  if (!bhResp.ok) throw new Error(`bloXroute blockhash failed: ${bhResp.status}`);
+  const bhData = await bhResp.json() as { blockHash?: string };
+  if (!bhData.blockHash) throw new Error("No blockHash in bloXroute response");
+
+  const fee = Math.round(bloXroute_fee * LAMPORTS_PER_SOL);
   let tx = new Transaction({
-    recentBlockhash: recentBlockhash.blockHash,
+    recentBlockhash: bhData.blockHash,
     feePayer: wallet.publicKey,
   });
 
-  const fee = Math.round(bloXroute_fee * LAMPORTS_PER_SOL);
   tx.add(transaction);
   tx.add(memo);
   tx.add(await CreateTraderAPITipTransaction(wallet.publicKey, fee));
@@ -72,12 +77,21 @@ export async function bloXroute_executeAndConfirm(
   console.log("Submitting transaction to bloXroute...");
 
   try {
-    const response = await provider.postSubmit({
-      transaction: { content: encodedTx, isCleanup: false },
-      skipPreFlight: false,
-      frontRunningProtection: false,
-      useStakedRPCs: true,
+    const resp = await fetch(`${ENDPOINT}/api/v2/submit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": bloXRoute_auth_header,
+      },
+      body: JSON.stringify({
+        transaction: { content: encodedTx, isCleanup: false },
+        skipPreFlight: false,
+        frontRunningProtection: false,
+        useStakedRPCs: true,
+      }),
     });
+    if (!resp.ok) throw new Error(`bloXroute submit failed: ${resp.status}`);
+    const response = await resp.json() as { signature?: string };
 
     if (response.signature) {
       console.log(`txn landed successfully\nSignature: https://solscan.io/tx/${response.signature}`);
