@@ -286,6 +286,101 @@ outsmart create-damm-config-pool --base <MINT> --base-amount 1000000 --quote-amo
   --config <CONFIG_ADDRESS>
 ```
 
+### Perpetual Futures (Percolator)
+
+Create and operate on-chain perpetual futures exchanges. All prices in USD, all amounts in SOL.
+
+#### perp create-market
+
+Create a new perp market. You become the admin/oracle authority.
+
+```bash
+outsmart perp create-market --price 150 --lp 2
+outsmart perp create-market --price 0.00001 --lp 5 --tier medium --network mainnet
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--price <usd>` | Initial oracle price in USD (required) | |
+| `--lp <sol>` | Initial LP collateral in SOL (required) | |
+| `--tier <size>` | `small` \| `medium` \| `large` | `small` |
+| `--network <net>` | `devnet` \| `mainnet` | `devnet` |
+
+#### perp long / short
+
+Open a leveraged position.
+
+```bash
+outsmart perp long  -m <MARKET> -s 0.1
+outsmart perp short -m <MARKET> -s 0.05
+```
+
+| Flag | Description |
+|------|-------------|
+| `-m, --market <address>` | Market (slab) address (required) |
+| `-s, --size <sol>` | Position size in SOL (required) |
+
+#### perp close
+
+Close your open position.
+
+```bash
+outsmart perp close -m <MARKET>
+```
+
+#### perp status
+
+View your position and market state.
+
+```bash
+outsmart perp status -m <MARKET>
+```
+
+#### perp deposit / withdraw
+
+Manage collateral in your trading account.
+
+```bash
+outsmart perp deposit  -m <MARKET> -a 1.0
+outsmart perp withdraw -m <MARKET> -a 0.5
+outsmart perp withdraw -m <MARKET> -a all
+```
+
+#### perp init-user
+
+Register a trading account on a market (required before first deposit/trade).
+
+```bash
+outsmart perp init-user -m <MARKET>
+```
+
+#### perp set-price
+
+Push a new oracle price (admin-oracle markets only).
+
+```bash
+outsmart perp set-price -m <MARKET> --price 155.50
+```
+
+#### perp crank
+
+Run the permissionless keeper crank (updates funding rates).
+
+```bash
+outsmart perp crank -m <MARKET>
+```
+
+#### perp markets
+
+Discover all markets on-chain.
+
+```bash
+outsmart perp markets
+outsmart perp markets --network mainnet
+```
+
+---
+
 ### Utilities
 
 #### info
@@ -439,7 +534,7 @@ const pos = await percolator.getMyPosition(market.slabAddress, "devnet");
 console.log("PnL:", pos?.account.unrealizedPnl);
 ```
 
-### PercolatorAdapter Methods (15)
+### PercolatorAdapter Methods (20)
 
 | Method | Description |
 |--------|-------------|
@@ -458,6 +553,11 @@ console.log("PnL:", pos?.account.unrealizedPnl);
 | `getMarketState(slab, network?)` | Read full slab state (header, config, engine, params, accounts) |
 | `getMyPosition(slab, network?)` | Find user's account by owner pubkey |
 | `discoverMarkets(network?)` | Find all markets across all program tiers |
+| `adminForceClose(slab, targetIdx, network?, tier?)` | Admin force-close a position |
+| `resolveMarket(slab, network?, tier?)` | Resolve/freeze market (admin only) |
+| `withdrawInsurance(slab, network?, tier?)` | Withdraw insurance fund balance |
+| `closeSlab(slab, network?, tier?)` | Close slab account and recover rent |
+| `teardownMarket(slab, network?, tier?)` | Full teardown: resolve → force-close all → withdraw → close |
 
 ### Math Utilities
 

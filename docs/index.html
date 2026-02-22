@@ -543,9 +543,50 @@ outsmart create-damm-pool --base &lt;MINT&gt; --base-amount 1000000 --quote-amou
 
     <!-- Percolator -->
     <h2 id="percolator"><span class="grad">Percolator Perps</span></h2>
-    <p>Create and operate permissionless perpetual futures exchanges on Solana. The <code>PercolatorAdapter</code> is a standalone class &mdash; perps are fundamentally different from spot DEX operations.</p>
+    <p>Create and operate permissionless perpetual futures exchanges on Solana. First mover creates the perp market for a trending token and captures ALL leveraged volume fees.</p>
 
-    <h3>Create a Market</h3>
+    <h3>CLI Commands</h3>
+    <p>All prices in USD, all amounts in SOL. Auto-cranks before every trade.</p>
+    <pre><span class="td"># Create a perp market (you become admin/oracle)</span>
+outsmart perp create-market <span class="tf">--price</span> <span class="tv">150</span> <span class="tf">--lp</span> <span class="tv">2</span>
+
+<span class="td"># Register + fund your trading account</span>
+outsmart perp init-user <span class="tf">-m</span> &lt;MARKET&gt;
+outsmart perp deposit <span class="tf">-m</span> &lt;MARKET&gt; <span class="tf">-a</span> <span class="tv">1.0</span>
+
+<span class="td"># Trade (positive = long, negative = short)</span>
+outsmart perp long <span class="tf">-m</span> &lt;MARKET&gt; <span class="tf">-s</span> <span class="tv">0.1</span>
+outsmart perp short <span class="tf">-m</span> &lt;MARKET&gt; <span class="tf">-s</span> <span class="tv">0.05</span>
+outsmart perp close <span class="tf">-m</span> &lt;MARKET&gt;
+
+<span class="td"># Check position + market state</span>
+outsmart perp status <span class="tf">-m</span> &lt;MARKET&gt;
+
+<span class="td"># Manage collateral</span>
+outsmart perp withdraw <span class="tf">-m</span> &lt;MARKET&gt; <span class="tf">-a</span> all
+
+<span class="td"># Oracle + keeper</span>
+outsmart perp set-price <span class="tf">-m</span> &lt;MARKET&gt; <span class="tf">--price</span> <span class="tv">155.50</span>
+outsmart perp crank <span class="tf">-m</span> &lt;MARKET&gt;
+
+<span class="td"># Discover all markets on-chain</span>
+outsmart perp markets</pre>
+
+    <div class="tbl"><table>
+      <tr><th>Command</th><th>Description</th></tr>
+      <tr><td>perp create-market</td><td>Create a new perp exchange (<code>--price</code>, <code>--lp</code>, <code>--tier</code>, <code>--network</code>)</td></tr>
+      <tr><td>perp long / short</td><td>Open leveraged position (<code>-m</code>, <code>-s</code> size in SOL)</td></tr>
+      <tr><td>perp close</td><td>Close open position</td></tr>
+      <tr><td>perp status</td><td>View position and market state</td></tr>
+      <tr><td>perp deposit</td><td>Deposit collateral (<code>-a</code> amount in SOL)</td></tr>
+      <tr><td>perp withdraw</td><td>Withdraw collateral (<code>-a all</code> supported)</td></tr>
+      <tr><td>perp init-user</td><td>Register trading account on a market</td></tr>
+      <tr><td>perp set-price</td><td>Push oracle price in USD (admin only)</td></tr>
+      <tr><td>perp crank</td><td>Run permissionless keeper crank</td></tr>
+      <tr><td>perp markets</td><td>Discover all markets on-chain</td></tr>
+    </table></div>
+
+    <h3>Programmatic API</h3>
     <pre><span class="td">import</span> { PercolatorAdapter } <span class="td">from</span> <span class="tok">"outsmart"</span>;
 
 <span class="td">const</span> percolator = <span class="td">new</span> PercolatorAdapter();
@@ -557,10 +598,9 @@ outsmart create-damm-pool --base &lt;MINT&gt; --base-amount 1000000 --quote-amou
   tier: <span class="tok">"small"</span>,
   network: <span class="tok">"devnet"</span>,
   lpCollateral: <span class="tv">1_000_000_000n</span>,
-});</pre>
+});
 
-    <h3>Trade</h3>
-    <pre><span class="td">// Register trader + deposit + open long</span>
+<span class="td">// Register trader + deposit + open long</span>
 <span class="td">const</span> { userIdx } = <span class="td">await</span> percolator.initUser(market.slabAddress, <span class="tok">"devnet"</span>);
 <span class="td">await</span> percolator.deposit(market.slabAddress, userIdx, <span class="tv">500_000_000n</span>, <span class="tok">"devnet"</span>);
 <span class="td">await</span> percolator.trade({
@@ -571,7 +611,7 @@ outsmart create-damm-pool --base &lt;MINT&gt; --base-amount 1000000 --quote-amou
   network: <span class="tok">"devnet"</span>,
 });</pre>
 
-    <h3>Methods (15)</h3>
+    <h3>Methods (20)</h3>
     <div class="tbl"><table>
       <tr><th>Method</th><th>Description</th></tr>
       <tr><td>createMarket</td><td>Full 10-step market creation (slab &rarr; vAMM &rarr; LP)</td></tr>
@@ -589,6 +629,11 @@ outsmart create-damm-pool --base &lt;MINT&gt; --base-amount 1000000 --quote-amou
       <tr><td>getMarketState</td><td>Read full slab state</td></tr>
       <tr><td>getMyPosition</td><td>Find user&rsquo;s position</td></tr>
       <tr><td>discoverMarkets</td><td>Find all markets on-chain</td></tr>
+      <tr><td>adminForceClose</td><td>Admin force-close a position</td></tr>
+      <tr><td>resolveMarket</td><td>Resolve/freeze market (admin)</td></tr>
+      <tr><td>withdrawInsurance</td><td>Withdraw insurance fund balance</td></tr>
+      <tr><td>closeSlab</td><td>Close slab account, recover rent</td></tr>
+      <tr><td>teardownMarket</td><td>Full teardown: resolve &rarr; force-close &rarr; withdraw &rarr; close</td></tr>
     </table></div>
 
     <h3>Deployed Programs</h3>
@@ -720,7 +765,7 @@ outsmart create-damm-pool --base &lt;MINT&gt; --base-amount 1000000 --quote-amou
     types.ts           <span class="td"># IDexAdapter interface</span>
     index.ts           <span class="td"># DexRegistry singleton</span>
     <span class="tf">percolator/</span>
-      adapter.ts       <span class="td"># PercolatorAdapter (15 methods)</span>
+      adapter.ts       <span class="td"># PercolatorAdapter (20 methods)</span>
       <span class="tf">core/</span>            <span class="td"># Vendored @percolator/core SDK</span>
     <span class="td">... 18 adapter files</span>
   <span class="tf">helpers/</span>
