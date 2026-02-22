@@ -83,7 +83,7 @@ When writing or modifying a DEX adapter:
 ## Test Design
 
 - Tests use **hardcoded pool addresses** from `tests/helpers.ts` — NOT auto-discovery
-- Buy amount: `BUY_AMOUNT_SOL = 0.02` in `tests/helpers.ts`
+- Buy amount: `BUY_AMOUNT_SOL = 0.002` in `tests/helpers.ts`
 - `meteora-damm-v1` is excluded from tests (legacy AMM program)
 - Test wallet: `tstXr3NbiMd6FFZF2qbPzxJqxCGXuSjpZVvdjeXiPv1`
 - Run suites one at a time: `npm run test:registry` -> `test:meteora` -> `test:raydium` -> etc.

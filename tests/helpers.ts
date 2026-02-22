@@ -101,7 +101,7 @@ export const PANCAKESWAP_CLMM_POOL = "DbRUHWgc6xmdzn619JWFjCMYJRNZmDsDYSdbsbiF7i
 // ---------------------------------------------------------------------------
 
 /** Amount of SOL to spend on buy tests */
-export const BUY_AMOUNT_SOL = 0.02;
+export const BUY_AMOUNT_SOL = 0.002;
 
 /** Sell percentage for sell tests (sell everything we just bought) */
 export const SELL_PERCENTAGE = 100;
