@@ -1,6 +1,6 @@
 {
   "name": "outsmart",
-  "version": "2.0.0-alpha.6",
+  "version": "2.0.0-alpha.7",
   "description": "Solana trading CLI — 18 DEX adapters, 12 TX landing providers.",
   "engines": {
     "node": ">=20.0.0"
