@@ -85,6 +85,8 @@ import {
   encodeAdminForceClose,
   encodeResolveMarket,
   encodeWithdrawInsurance,
+  encodeSetPythOracle,
+  parseFeedIdHex,
   type InitMarketArgs,
   type InitVammArgs,
 } from "./core/abi/instructions";
@@ -129,7 +131,7 @@ import {
   type Account,
   AccountKind,
 } from "./core/solana/slab";
-import { deriveVaultAuthority, deriveInsuranceLpMint, deriveLpPda } from "./core/solana/pda";
+import { deriveVaultAuthority, deriveInsuranceLpMint, deriveLpPda, derivePythPushOraclePDA, PYTH_PUSH_ORACLE_PROGRAM_ID } from "./core/solana/pda";
 import { discoverMarkets as discoverMarketsCore, SLAB_TIERS, slabDataSize, type DiscoveredMarket, type SlabTierKey } from "./core/solana/discovery";
 import { getProgramId, getMatcherProgramId, getCurrentNetwork, type Network, type SlabTier } from "./core/config/program-ids";
 
@@ -139,6 +141,8 @@ export type {
   InitMarketArgs, InitVammArgs, SlabTierKey, SlabTier, Network,
 };
 export { AccountKind, SLAB_TIERS, slabDataSize };
+export { derivePythPushOraclePDA, PYTH_PUSH_ORACLE_PROGRAM_ID } from "./core/solana/pda";
+export { parseFeedIdHex } from "./core/abi/instructions";
 
 // Re-export math for consumers
 export {
@@ -175,6 +179,21 @@ export interface CreateMarketParams {
   vammParams?: Partial<VammParams>;
   /** Initial LP collateral amount in native token units */
   lpCollateral: bigint;
+  /**
+   * Pyth feed ID hex string (64 hex chars, no 0x prefix).
+   * If provided, creates a Pyth-pinned market — price reads come from Pyth on-chain.
+   * If omitted, creates an admin-oracle (Hyperp) market — you push prices manually.
+   *
+   * Common feeds:
+   *   SOL/USD: ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d
+   *   BTC/USD: e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43
+   *   ETH/USD: ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace
+   */
+  pythFeedId?: string;
+  /** Max Pyth price staleness in seconds (default: 60). Only used with pythFeedId. */
+  pythMaxStalenessSecs?: bigint;
+  /** Max Pyth confidence/price ratio in bps (default: 0 = no check). Only used with pythFeedId. */
+  pythConfFilterBps?: number;
 }
 
 export interface MarketRiskParams {
@@ -263,6 +282,34 @@ const DEFAULT_VAMM_PARAMS: VammParams = {
 // PercolatorAdapter
 // =============================================================================
 
+// =============================================================================
+// Helper: resolve oracle account from slab state
+// =============================================================================
+
+const ALL_ZEROS_FEED = "0".repeat(64);
+
+/** Determine the oracle account for crank/trade instructions.
+ *  - Admin-oracle (Hyperp): indexFeedId is all zeros → oracle = slab itself
+ *  - Pyth-pinned: indexFeedId is real feed → oracle = derivePythPushOraclePDA(feedId)
+ *  Pass pre-fetched slabData to avoid an extra RPC call.
+ */
+function resolveOracleFromConfig(slab: PublicKey, config: MarketConfig): PublicKey {
+  const feedHex = Buffer.from(config.indexFeedId.toBytes()).toString("hex");
+  if (feedHex === ALL_ZEROS_FEED) {
+    return slab; // admin-oracle: oracle = slab
+  }
+  return derivePythPushOraclePDA(feedHex)[0]; // Pyth PDA
+}
+
+async function resolveOracleAccount(
+  connection: Connection,
+  slab: PublicKey,
+): Promise<PublicKey> {
+  const slabData = await fetchSlab(connection, slab);
+  const config = parseConfig(slabData);
+  return resolveOracleFromConfig(slab, config);
+}
+
 export class PercolatorAdapter {
   // -------------------------------------------------------------------------
   // createMarket — full 10-step market lifecycle
@@ -279,6 +326,8 @@ export class PercolatorAdapter {
     const collateralMint = new PublicKey(params.collateralMint);
     const tierInfo = SLAB_TIERS[tier];
     const slabSize = tierInfo.dataSize;
+    const isPyth = !!params.pythFeedId;
+    const feedIdHex = params.pythFeedId ?? "0".repeat(64);
 
     const signatures: string[] = [];
 
@@ -305,12 +354,13 @@ export class PercolatorAdapter {
     );
 
     // Step 3: InitMarket
+    // Pyth-pinned: pass real feed ID at init time. Admin-oracle: all zeros.
     const initMarketArgs: InitMarketArgs = {
       admin: wallet.publicKey,
       collateralMint: collateralMint,
-      indexFeedId: "0".repeat(64), // All zeros = Hyperp mode (admin oracle)
-      maxStalenessSecs: 0n,
-      confFilterBps: 0,
+      indexFeedId: feedIdHex,
+      maxStalenessSecs: isPyth ? (params.pythMaxStalenessSecs ?? 60n) : 0n,
+      confFilterBps: isPyth ? (params.pythConfFilterBps ?? 0) : 0,
       invert: 0,
       unitScale: 0,
       initialMarkPriceE6: params.initialPriceE6,
@@ -352,45 +402,60 @@ export class PercolatorAdapter {
     const sig1 = await sendIxs(connection, [createSlabIx, createVaultAtaIx, initMarketIx], wallet, [slabKeypair]);
     signatures.push(sig1);
 
-    // Step 4: SetOracleAuthority (set admin wallet as oracle authority)
-    const setOracleIx = buildIx({
-      programId,
-      keys: buildAccountMetas(ACCOUNTS_SET_ORACLE_AUTHORITY, [
-        wallet.publicKey,
-        slabKeypair.publicKey,
-      ]),
-      data: encodeSetOracleAuthority({ newAuthority: wallet.publicKey }),
-    });
+    // Oracle account for crank/trade instructions
+    const oracleAccount = isPyth
+      ? derivePythPushOraclePDA(feedIdHex)[0]
+      : slabKeypair.publicKey; // admin-oracle: oracle = slab itself
 
-    // Step 5: PushOraclePrice (seed initial price)
-    const pushPriceIx = buildIx({
-      programId,
-      keys: buildAccountMetas(ACCOUNTS_PUSH_ORACLE_PRICE, [
-        wallet.publicKey,
-        slabKeypair.publicKey,
-      ]),
-      data: encodePushOraclePrice({
-        priceE6: params.initialPriceE6,
-        timestamp: BigInt(Math.floor(Date.now() / 1000)),
-      }),
-    });
+    if (isPyth) {
+      // Pyth-pinned: feedId already set at InitMarket. Just crank to initialize engine.
+      // No SetOracleAuthority or PushOraclePrice needed — Pyth on-chain provides prices.
+      const crankIx = buildIx({
+        programId,
+        keys: buildAccountMetas(ACCOUNTS_KEEPER_CRANK, [
+          wallet.publicKey, slabKeypair.publicKey, SYSVAR_CLOCK_PUBKEY, oracleAccount,
+        ]),
+        data: encodeKeeperCrank({ callerIdx: 65535, allowPanic: false }),
+      });
 
-    // Step 6: KeeperCrank (first crank to initialize engine timestamps)
-    // Admin-oracle mode: oracle account = slab itself
-    const crankIx = buildIx({
-      programId,
-      keys: buildAccountMetas(ACCOUNTS_KEEPER_CRANK, [
-        wallet.publicKey,           // caller
-        slabKeypair.publicKey,      // slab
-        SYSVAR_CLOCK_PUBKEY,        // clock
-        slabKeypair.publicKey,      // oracle (=slab for admin-oracle)
-      ]),
-      data: encodeKeeperCrank({ callerIdx: 65535, allowPanic: false }),
-    });
+      // TX 2: crank only
+      const sig2 = await sendIxs(connection, [crankIx], wallet);
+      signatures.push(sig2);
+    } else {
+      // Admin-oracle (Hyperp): SetOracleAuthority → PushOraclePrice → Crank
+      const setOracleIx = buildIx({
+        programId,
+        keys: buildAccountMetas(ACCOUNTS_SET_ORACLE_AUTHORITY, [
+          wallet.publicKey,
+          slabKeypair.publicKey,
+        ]),
+        data: encodeSetOracleAuthority({ newAuthority: wallet.publicKey }),
+      });
 
-    // TX 2: setOracle + pushPrice + crank
-    const sig2 = await sendIxs(connection, [setOracleIx, pushPriceIx, crankIx], wallet);
-    signatures.push(sig2);
+      const pushPriceIx = buildIx({
+        programId,
+        keys: buildAccountMetas(ACCOUNTS_PUSH_ORACLE_PRICE, [
+          wallet.publicKey,
+          slabKeypair.publicKey,
+        ]),
+        data: encodePushOraclePrice({
+          priceE6: params.initialPriceE6,
+          timestamp: BigInt(Math.floor(Date.now() / 1000)),
+        }),
+      });
+
+      const crankIx = buildIx({
+        programId,
+        keys: buildAccountMetas(ACCOUNTS_KEEPER_CRANK, [
+          wallet.publicKey, slabKeypair.publicKey, SYSVAR_CLOCK_PUBKEY, oracleAccount,
+        ]),
+        data: encodeKeeperCrank({ callerIdx: 65535, allowPanic: false }),
+      });
+
+      // TX 2: setOracle + pushPrice + crank
+      const sig2 = await sendIxs(connection, [setOracleIx, pushPriceIx, crankIx], wallet);
+      signatures.push(sig2);
+    }
 
     // Step 7: Create matcher context account (320 bytes)
     const matcherCtxKeypair = Keypair.generate();
@@ -611,9 +676,11 @@ export class PercolatorAdapter {
     const slab = new PublicKey(params.slabAddress);
     const programId = getProgramId(network, "small"); // TODO: detect tier from slab
 
-    // Read slab to get LP owner and matcher context
+    // Read slab to get LP owner, matcher context, and oracle mode (single RPC call)
     const slabData = await fetchSlab(connection, slab);
     const lpAccount = parseAccount(slabData, params.lpIdx);
+    const config = parseConfig(slabData);
+    const oracle = resolveOracleFromConfig(slab, config);
 
     const [lpPda] = deriveLpPda(programId, slab, params.lpIdx);
 
@@ -621,7 +688,7 @@ export class PercolatorAdapter {
     const crankIx = buildIx({
       programId,
       keys: buildAccountMetas(ACCOUNTS_KEEPER_CRANK, [
-        wallet.publicKey, slab, SYSVAR_CLOCK_PUBKEY, slab,
+        wallet.publicKey, slab, SYSVAR_CLOCK_PUBKEY, oracle,
       ]),
       data: encodeKeeperCrank({ callerIdx: 65535, allowPanic: false }),
     });
@@ -633,7 +700,7 @@ export class PercolatorAdapter {
         lpAccount.owner,                 // lpOwner
         slab,                            // slab
         SYSVAR_CLOCK_PUBKEY,             // clock
-        slab,                            // oracle (=slab for admin-oracle)
+        oracle,                          // oracle (slab for admin, Pyth PDA for Pyth-pinned)
         lpAccount.matcherProgram,        // matcherProg (from slab account data)
         lpAccount.matcherContext,        // matcherCtx
         lpPda,                           // lpPda
@@ -694,11 +761,12 @@ export class PercolatorAdapter {
     const connection = getNetworkConnection(net);
     const slab = new PublicKey(slabAddress);
     const programId = getProgramId(net, tier ?? "small");
+    const oracle = await resolveOracleAccount(connection, slab);
 
     const ix = buildIx({
       programId,
       keys: buildAccountMetas(ACCOUNTS_KEEPER_CRANK, [
-        wallet.publicKey, slab, SYSVAR_CLOCK_PUBKEY, slab,
+        wallet.publicKey, slab, SYSVAR_CLOCK_PUBKEY, oracle,
       ]),
       data: encodeKeeperCrank({ callerIdx: 65535, allowPanic: false }),
     });
@@ -750,11 +818,13 @@ export class PercolatorAdapter {
     const slab = new PublicKey(slabAddress);
     const programId = getProgramId(net, tier ?? "small");
 
+    const oracle = await resolveOracleAccount(connection, slab);
+
     const ix = buildIx({
       programId,
       keys: buildAccountMetas(ACCOUNTS_LIQUIDATE_AT_ORACLE, [
         wallet.publicKey, // unused but must be present
-        slab, SYSVAR_CLOCK_PUBKEY, slab,
+        slab, SYSVAR_CLOCK_PUBKEY, oracle,
       ]),
       data: encodeLiquidateAtOracle({ targetIdx }),
     });

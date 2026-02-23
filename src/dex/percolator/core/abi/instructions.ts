@@ -387,3 +387,43 @@ export function encodeResolveMarket(): Uint8Array {
 export function encodeWithdrawInsurance(): Uint8Array {
   return encU8(IX_TAG.WithdrawInsurance);
 }
+
+// =============================================================================
+// SetPythOracle — configure Pyth feed for a market (Tag 32)
+// Must be called AFTER InitMarket. Cannot convert from Hyperp mode (all-zeros feedId).
+// =============================================================================
+
+export interface SetPythOracleArgs {
+  /** 32-byte Pyth feed ID. All zeros is invalid (reserved for Hyperp mode). */
+  feedId: Uint8Array;
+  /** Maximum age of Pyth price in seconds before OracleStale is returned. Must be > 0. */
+  maxStalenessSecs: bigint;
+  /** Max confidence/price ratio in bps (0 = no confidence check). */
+  confFilterBps: number;
+}
+
+export function encodeSetPythOracle(args: SetPythOracleArgs): Uint8Array {
+  if (args.feedId.length !== 32) throw new Error("feedId must be 32 bytes");
+  if (args.maxStalenessSecs <= 0n) throw new Error("maxStalenessSecs must be > 0");
+
+  const buf = new Uint8Array(43);
+  const dv = new DataView(buf.buffer);
+
+  buf[0] = IX_TAG.SetPythOracle; // Tag 32
+  buf.set(args.feedId, 1);
+  dv.setBigUint64(33, args.maxStalenessSecs, true);
+  dv.setUint16(41, args.confFilterBps, true);
+
+  return buf;
+}
+
+/** Parse a hex feed ID string into a 32-byte Uint8Array */
+export function parseFeedIdHex(feedIdHex: string): Uint8Array {
+  const hex = feedIdHex.startsWith("0x") ? feedIdHex.slice(2) : feedIdHex;
+  if (hex.length !== 64) throw new Error("feedIdHex must be 64 hex chars (32 bytes)");
+  const feedId = new Uint8Array(32);
+  for (let i = 0; i < 32; i++) {
+    feedId[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+  }
+  return feedId;
+}

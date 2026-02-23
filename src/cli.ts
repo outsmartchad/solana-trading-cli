@@ -1940,6 +1940,7 @@ perpCmd
   .option("--lp <sol>", "LP collateral in SOL", "1")
   .option("--tier <size>", "slab tier: small, medium, large", "small")
   .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .option("--oracle <feedId>", "Pyth feed ID hex (64 chars) — creates Pyth-pinned market instead of admin-oracle")
   .action(async (opts) => {
     validateBase58(opts.mint, "--mint");
     const { PercolatorAdapter } = await import("./dex/percolator/adapter");
@@ -1957,7 +1958,17 @@ perpCmd
     const lpAmount = BigInt(Math.round(lpSol * 1e9));
     const isWSol = opts.mint === NATIVE_MINT.toBase58();
 
-    console.log(`\n  creating perp market (price=$${usdPrice}, LP=${lpSol} SOL, ${opts.tier} tier)...`);
+    // Validate Pyth feed ID if provided
+    const pythFeedId = opts.oracle as string | undefined;
+    if (pythFeedId) {
+      const hex = pythFeedId.startsWith("0x") ? pythFeedId.slice(2) : pythFeedId;
+      if (hex.length !== 64 || !/^[0-9a-fA-F]+$/.test(hex)) {
+        die("--oracle must be a 64-char hex string (Pyth feed ID)");
+      }
+    }
+
+    const oracleMode = pythFeedId ? "pyth" : "admin";
+    console.log(`\n  creating perp market (price=$${usdPrice}, LP=${lpSol} SOL, ${opts.tier} tier, oracle=${oracleMode})...`);
 
     // Auto-wrap SOL if collateral is WSOL
     if (isWSol) {
@@ -1984,10 +1995,12 @@ perpCmd
       tier: opts.tier,
       network: opts.network,
       lpCollateral: lpAmount,
+      pythFeedId: pythFeedId ? (pythFeedId.startsWith("0x") ? pythFeedId.slice(2) : pythFeedId) : undefined,
     }));
 
     console.log(`  done\n`);
     console.log(`  market:  ${result.slabAddress}`);
+    console.log(`  oracle:  ${oracleMode}${pythFeedId ? ` (feed: ${pythFeedId.slice(0, 16)}...)` : ""}`);
     console.log(`  browse:  https://percolatorlaunch.com/trade/${result.slabAddress}\n`);
   });
 
