@@ -1,6 +1,6 @@
 # outsmart
 
-**Solana trading CLI — buy, sell, LP, and operate perp exchanges across 18 DEXes with 12 TX landing providers.**
+**Solana trading CLI — buy, sell, LP, stream real-time DEX events, and operate perp exchanges across 18 DEXes with 12 TX landing providers.**
 
 **[Documentation](https://outsmartchad.github.io/outsmart-cli/)** | **[npm](https://www.npmjs.com/package/outsmart)** | **[Discord](https://discord.gg/dc3Kh3Y3yJ)**
 
@@ -628,6 +628,103 @@ import {
 
 ---
 
+## Event Streaming Engine
+
+Real-time gRPC transaction streaming from Solana DEX programs via Yellowstone gRPC (Geyser). Parses live transactions from 18+ DEX programs into typed events.
+
+### CLI
+
+```bash
+# Stream all DEX swaps in real-time
+outsmart stream --preset all-dex-swaps
+
+# Stream specific DEXes
+outsmart stream --preset pumpswap
+outsmart stream --preset raydium
+outsmart stream --preset meteora
+
+# Stream new pool creations
+outsmart stream --preset new-pools
+
+# Stream PumpFun bonding curve events
+outsmart stream --preset pumpfun-bonding
+```
+
+Available presets: `all-dex-swaps`, `new-pools`, `pumpfun-bonding`, `pumpswap`, `raydium`, `meteora`, `other-dexes`, `wallet-trades`
+
+Requires `GRPC_URL` and `GRPC_XTOKEN` env vars (Yellowstone gRPC endpoint).
+
+### Programmatic API
+
+```typescript
+import { EventStream } from "outsmart";
+
+const stream = new EventStream({
+  grpcUrl: process.env.GRPC_URL,
+  grpcXToken: process.env.GRPC_XTOKEN,
+});
+
+// Listen for swap events across all DEXes
+stream.on("Swap", (event) => {
+  console.log(`${event.dex} ${event.direction} ${event.mint}`);
+  console.log(`  in: ${event.amountIn}, out: ${event.amountOut}`);
+  console.log(`  pool: ${event.pool}, trader: ${event.trader}`);
+});
+
+// Listen for new pool creations
+stream.on("NewPool", (event) => {
+  console.log(`New pool on ${event.dex}: ${event.pool}`);
+  console.log(`  ${event.tokenA} / ${event.tokenB}`);
+});
+
+// Listen for PumpFun bonding curve completions
+stream.on("BondingComplete", (event) => {
+  console.log(`Bonding complete: ${event.mint} → ${event.migrationPool}`);
+});
+
+// Large swap alerts (configurable threshold, default 10 SOL)
+stream.on("LargeSwap", (event) => {
+  console.log(`Whale alert: ${event.swap.amountIn} on ${event.swap.dex}`);
+});
+
+// Catch-all listener
+stream.on("*", (event) => { /* any event */ });
+
+await stream.start("all-dex-swaps");
+
+// Custom subscriptions
+import { subscribePoolActivity } from "outsmart";
+await stream.startCustom(subscribePoolActivity(["POOL_ADDRESS"]));
+
+// Stop
+await stream.stop();
+```
+
+### Event Types
+
+| Event | Fields |
+|-------|--------|
+| `Swap` | `dex`, `pool`, `trader`, `direction`, `mint`, `amountIn`, `amountOut`, `priceAfter`, `reserveBase`, `reserveQuote`, `isAggregated` |
+| `NewPool` | `dex`, `pool`, `tokenA`, `tokenB`, `initialReserveA`, `initialReserveB`, `creator` |
+| `BondingComplete` | `mint`, `bondingCurve`, `migrationPool` |
+| `LargeSwap` | `swap` (full SwapEvent), `estimatedUsdValue` |
+
+### Supported DEXes (Streaming)
+
+All swap events use per-DEX vault account layouts with pre/post token balance diffing for accurate amounts:
+
+- **PumpSwap** — buy/sell/create pool (sequential discriminator pairing)
+- **PumpFun** — buy/sell/create/bonding complete (BuyExactSolIn, CreateV2 discriminators)
+- **Raydium** — CLMM, CPMM, AMM V4, LaunchLab
+- **Meteora** — DAMM V2, DLMM, DBC, DAMM V1
+- **Orca** — Whirlpool swap v1 & v2
+- **PancakeSwap** — CLMM
+- **Byreal** — CLMM
+- **Fusion AMM**
+- **Futarchy AMM**
+
+---
+
 ## TX Landing Providers
 
 12 providers with concurrent, race, random, and sequential submission strategies:
@@ -752,6 +849,14 @@ src/
 │   │   ├── grpc-keeper.ts # gRPC oracle keeper (Yellowstone/Geyser)
 │   │   └── core/          # Vendored @percolator/core SDK
 │   └── 18 adapter files
+├── streaming/
+│   ├── event-stream.ts    # EventStream class (auto-reconnect, ping keepalive)
+│   ├── tx-formatter.ts    # Raw gRPC protobuf → FormattedTransaction
+│   ├── tx-parser.ts       # Per-DEX swap/pool/bonding parsers
+│   ├── programs.ts        # 18 DEX program IDs
+│   ├── subscriptions.ts   # 11 subscription preset builders
+│   ├── discriminators.ts  # Instruction discriminator constants
+│   └── types.ts           # Typed event interfaces
 ├── dexscreener/           # Market data (DexScreener API)
 ├── helpers/
 │   ├── config.ts          # Wallet, connection, env loading
