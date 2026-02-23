@@ -33,10 +33,12 @@ export const PUMPSWAP_SELL = [51, 230, 133, 164, 1, 127, 131, 173];
 export const PUMPSWAP_CREATE_POOL = [233, 146, 209, 142, 207, 104, 64, 188];
 export const PUMPSWAP_CREATE_POOL_HEX = "e992d18ecf6840bc";
 
-// PumpFun bonding curve (same discriminators for buy/sell, different program)
+// PumpFun bonding curve
 export const PUMPFUN_BUY = [102, 6, 61, 18, 1, 218, 235, 234];
+export const PUMPFUN_BUY_EXACT_SOL_IN = [56, 252, 116, 8, 158, 223, 205, 95]; // BuyExactSolIn (new variant)
 export const PUMPFUN_SELL = [51, 230, 133, 164, 1, 127, 131, 173];
-export const PUMPFUN_CREATE = [24, 30, 200, 40, 5, 28, 7, 119];
+export const PUMPFUN_CREATE = [24, 30, 200, 40, 5, 28, 7, 119]; // legacy Create
+export const PUMPFUN_CREATE_V2 = [214, 144, 76, 236, 95, 139, 49, 180]; // CreateV2
 
 // ---------------------------------------------------------------------------
 // Raydium CPMM discriminators (hex prefix matching)

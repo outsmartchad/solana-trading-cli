@@ -49,6 +49,11 @@ import {
   PUMPSWAP_BUY,
   PUMPSWAP_SELL,
   PUMPSWAP_CREATE_POOL_HEX,
+  PUMPFUN_BUY,
+  PUMPFUN_BUY_EXACT_SOL_IN,
+  PUMPFUN_SELL,
+  PUMPFUN_CREATE,
+  PUMPFUN_CREATE_V2,
 } from "./discriminators";
 
 // ---------------------------------------------------------------------------
@@ -348,6 +353,7 @@ function parsePumpSwapInnerSwap(
 
 function parsePumpFunTx(tx: FormattedTransaction): StreamEvent[] {
   const events: StreamEvent[] = [];
+  const dex = "pumpfun";
 
   // Check log messages for "Program log: Complete" which indicates bonding curve graduation
   const hasComplete = tx.logMessages.some(
@@ -355,21 +361,17 @@ function parsePumpFunTx(tx: FormattedTransaction): StreamEvent[] {
   );
 
   if (hasComplete) {
-    // Extract mint and bonding curve from the transaction accounts
-    // PumpFun Complete: the mint is typically in the outer instruction accounts
     let mint = "";
     let bondingCurve = "";
     let migrationPool = "";
 
     for (const ix of tx.outerInstructions) {
       if (ix.programId === PUMP_FUN_PROGRAM_ID && ix.accounts.length >= 4) {
-        // PumpFun instruction layout varies, but mint is usually accounts[2] or [3]
         mint = tx.accountList[ix.accounts[2]]?.toBase58() ?? "";
         bondingCurve = tx.accountList[ix.accounts[3]]?.toBase58() ?? "";
       }
     }
 
-    // Look for the migration pool in inner instructions (created by Raydium)
     for (const group of tx.innerInstructions) {
       for (const ix of group.instructions) {
         if (
@@ -394,6 +396,130 @@ function parsePumpFunTx(tx: FormattedTransaction): StreamEvent[] {
         timestamp: tx.timestamp,
       });
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Parse PumpFun buy/sell swaps using balance-diff approach.
+  // PumpFun bonding curve swaps: the bonding curve account owns the token vaults.
+  // Detect direction from discriminator, amounts from pre/post token balance diffs.
+  // ---------------------------------------------------------------------------
+
+  // Collect all PumpFun instructions (outer + inner CPI)
+  const allIxs = collectProgramInstructions(PUMP_FUN_PROGRAM_ID, tx);
+
+  for (const ix of allIxs) {
+    if (ix.data.length < 8) continue;
+
+    const isBuy = matchDiscriminator(ix.data, PUMPFUN_BUY) || matchDiscriminator(ix.data, PUMPFUN_BUY_EXACT_SOL_IN);
+    const isSell = matchDiscriminator(ix.data, PUMPFUN_SELL);
+    const isCreate = matchDiscriminator(ix.data, PUMPFUN_CREATE) || matchDiscriminator(ix.data, PUMPFUN_CREATE_V2);
+
+    // PumpFun Create / CreateV2 — new coin launched on bonding curve
+    if (isCreate) {
+      // CreateV2 account layout (16 accounts):
+      //   [0] = mint, [1] = bondingCurve, [2] = bondingCurveTokenAccount,
+      //   [3] = bondingCurveVaultAuthority, [4] = global, [5] = mplTokenMetadata,
+      //   [6] = metadata, [7] = user (creator), ...
+      // Legacy Create layout:
+      //   [0] = mint, [1] = mintAuthority, [2] = bondingCurve,
+      //   [3] = bondingCurveTokenAccount, ... [7] = user (creator)
+      // Both have mint at [0] and creator at [7]
+      if (ix.accounts.length >= 8) {
+        const mintAddr = tx.accountList[ix.accounts[0]]?.toBase58() ?? "";
+        // bondingCurve is at [1] for CreateV2, [2] for legacy Create
+        const isV2 = matchDiscriminator(ix.data, PUMPFUN_CREATE_V2);
+        const bondingCurve = tx.accountList[ix.accounts[isV2 ? 1 : 2]]?.toBase58() ?? "";
+        const creator = tx.accountList[ix.accounts[7]]?.toBase58() ?? tx.signer;
+
+        events.push({
+          type: "NewPool",
+          dex,
+          pool: bondingCurve,
+          tokenA: mintAddr,
+          tokenB: WSOL_MINT,
+          initialReserveA: 0,
+          initialReserveB: 0,
+          creator,
+          signature: tx.signature,
+          slot: tx.slot,
+          timestamp: tx.timestamp,
+        });
+      }
+      continue;
+    }
+
+    if (!isBuy && !isSell) continue;
+
+    // PumpFun buy/sell account layout:
+    //   [0] = global config, [1] = feeRecipient, [2] = mint, [3] = bondingCurve,
+    //   [4] = bondingCurveTokenAccount, [5] = associatedUser, [6] = user, ...
+    if (ix.accounts.length < 7) continue;
+
+    const bondingCurveAddr = tx.accountList[ix.accounts[3]]?.toBase58() ?? "";
+    const trader = tx.accountList[ix.accounts[6]]?.toBase58() ?? tx.signer;
+    const mintAddr = tx.accountList[ix.accounts[2]]?.toBase58() ?? "";
+
+    // Get bonding curve vault addresses for balance matching
+    const bondingCurveTokenAcct = tx.accountList[ix.accounts[4]]?.toBase58() ?? "";
+
+    // Diff pre/post balances for the bonding curve's vaults by account address
+    let solBefore = 0, solAfter = 0, tokenBefore = 0, tokenAfter = 0;
+    let reserveQuote = 0, reserveBase = 0;
+
+    for (const bal of tx.preTokenBalances) {
+      const acctAddr = tx.accountList[bal.accountIndex]?.toBase58() ?? "";
+      if (acctAddr === bondingCurveTokenAcct) {
+        tokenBefore = bal.uiAmount;
+      }
+    }
+    for (const bal of tx.postTokenBalances) {
+      const acctAddr = tx.accountList[bal.accountIndex]?.toBase58() ?? "";
+      if (acctAddr === bondingCurveTokenAcct) {
+        tokenAfter = bal.uiAmount;
+        reserveBase = bal.uiAmount;
+      }
+    }
+
+    // For SOL, use native lamport balances on the bonding curve account
+    const bcIndex = ix.accounts[3];
+    if (bcIndex < tx.preBalances.length) {
+      solBefore = tx.preBalances[bcIndex] / 1e9;
+      solAfter = tx.postBalances[bcIndex] / 1e9;
+      reserveQuote = solAfter;
+    }
+
+    const tokenDiff = tokenAfter - tokenBefore; // negative = pool lost tokens (buy)
+    const solDiff = solAfter - solBefore;         // positive = pool gained SOL (buy)
+
+    // Determine direction from balance diffs (override discriminator if clear)
+    let direction: "buy" | "sell" = isBuy ? "buy" : "sell";
+    if (tokenDiff > 0 && solDiff < 0) direction = "sell";
+    else if (tokenDiff < 0 && solDiff > 0) direction = "buy";
+
+    const solAmount = Math.abs(solDiff);
+    const tokenAmount = Math.abs(tokenDiff);
+
+    if (solAmount === 0 && tokenAmount === 0) continue;
+
+    const priceAfter = reserveBase > 0 ? reserveQuote / reserveBase : 0;
+
+    events.push({
+      type: "Swap",
+      dex,
+      pool: bondingCurveAddr,
+      trader,
+      direction,
+      mint: mintAddr,
+      amountIn: direction === "buy" ? solAmount : tokenAmount,
+      amountOut: direction === "buy" ? tokenAmount : solAmount,
+      priceAfter,
+      reserveBase,
+      reserveQuote,
+      signature: tx.signature,
+      slot: tx.slot,
+      timestamp: tx.timestamp,
+      isAggregated: false,
+    });
   }
 
   return events;
