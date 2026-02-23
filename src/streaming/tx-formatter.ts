@@ -94,23 +94,23 @@ export function formatTransaction(
     // Build unified account list: static + loaded writable + loaded readonly
     const accountList: PublicKey[] = [];
 
-    // Static account keys (base64 encoded in gRPC)
+    // Static account keys — raw 32-byte Buffers from gRPC protobuf
     const staticKeys = message.accountKeys || message.staticAccountKeys || [];
     for (const key of staticKeys) {
-      accountList.push(new PublicKey(Buffer.from(key, "base64")));
+      accountList.push(toPublicKey(key));
     }
 
     // Loaded writable addresses (from address lookup tables)
     if (meta.loadedWritableAddresses) {
       for (const addr of meta.loadedWritableAddresses) {
-        accountList.push(new PublicKey(Buffer.from(addr, "base64")));
+        accountList.push(toPublicKey(addr));
       }
     }
 
     // Loaded readonly addresses
     if (meta.loadedReadonlyAddresses) {
       for (const addr of meta.loadedReadonlyAddresses) {
-        accountList.push(new PublicKey(Buffer.from(addr, "base64")));
+        accountList.push(toPublicKey(addr));
       }
     }
 
@@ -192,6 +192,29 @@ function formatInstruction(ix: any, accountList: PublicKey[]): FormattedInstruct
   }
 
   return { programIdIndex, programId, accounts, data };
+}
+
+/**
+ * Convert a raw key from gRPC into a PublicKey.
+ * Keys can be raw 32-byte Buffers/Uint8Arrays or base64 strings.
+ */
+function toPublicKey(key: any): PublicKey {
+  if (key instanceof PublicKey) return key;
+  // Raw bytes (Buffer or Uint8Array)
+  if (Buffer.isBuffer(key) || key instanceof Uint8Array) {
+    if (key.length === 32) return new PublicKey(key);
+    // If not 32 bytes, it might be base64-encoded
+    return new PublicKey(Buffer.from(key));
+  }
+  // Base64 string
+  if (typeof key === "string") {
+    // Try as base58 first (44 chars), then as base64
+    if (key.length >= 32 && key.length <= 44 && !key.includes("=")) {
+      try { return new PublicKey(key); } catch {}
+    }
+    return new PublicKey(Buffer.from(key, "base64"));
+  }
+  throw new Error(`Cannot convert to PublicKey: ${typeof key}`);
 }
 
 function formatTokenBalances(balances: any[], accountList: PublicKey[]): TokenBalance[] {
