@@ -100,7 +100,20 @@ export function parseTransaction(tx: FormattedTransaction): StreamEvent[] {
     events.push(...parsed);
   }
 
-  return events;
+  // Deduplicate swap events by (type, dex, pool).
+  // Balance-diff parsers produce identical results for the same pool in a single tx
+  // regardless of which instruction triggered parsing (outer vs inner CPI).
+  // Multi-hop routes through the same pool are also deduplicated since pre/post
+  // balances are per-tx, making repeated events double-counting.
+  const seen = new Set<string>();
+  return events.filter((ev) => {
+    if (ev.type !== "Swap") return true; // keep all non-swap events
+    const swap = ev as SwapEvent;
+    const key = `${swap.dex}|${swap.pool}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -632,128 +645,225 @@ function parseGenericClmmTx(
  * Parse a swap from pre/post token balance differences.
  * This is the universal technique — works across all DEXes including CPI.
  */
+// Known quote mints for direction detection
+const QUOTE_MINTS = new Set([
+  WSOL_MINT,
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
+  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", // USDT
+  "USD1LXRZ8xMaApM9RF3nDJ3Y5N8o3YoGjpeVUMFZpump", // USD1
+]);
+
+/**
+ * Get vault account positions for each DEX's swap instruction.
+ * Returns [vaultAIndex, vaultBIndex, poolIndex, traderIndex] from the
+ * instruction's account list. Matches exact layouts from 100x-algo-bots.
+ */
+function getSwapAccountLayout(
+  programId: string,
+  ix: FormattedInstruction,
+): { vaultA: number; vaultB: number; pool: number; trader: number } | null {
+  const n = ix.accounts.length;
+
+  // Raydium CLMM — swap v1 & v2: trader[0] pool[2] vaultA[5] vaultB[6]
+  if (programId === RAYDIUM_CLMM_PROGRAM_ID) {
+    return n >= 7 ? { trader: 0, pool: 2, vaultA: 5, vaultB: 6 } : null;
+  }
+
+  // Raydium CPMM — swap base in/out: trader[0] pool[3] vaultA[6] vaultB[7]
+  if (programId === RAYDIUM_CPMM_PROGRAM_ID) {
+    return n >= 8 ? { trader: 0, pool: 3, vaultA: 6, vaultB: 7 } : null;
+  }
+
+  // Raydium AMM V4 — disc=9: 17 accts or 18 accts; disc=16: 8 accts
+  if (programId === RAYDIUM_AMM_V4_PROGRAM_ID) {
+    if (ix.data.length > 0 && ix.data[0] === 9) {
+      if (n === 18) return { trader: 17, pool: 1, vaultA: 5, vaultB: 6 };
+      if (n >= 17) return { trader: 16, pool: 1, vaultA: 4, vaultB: 5 };
+    }
+    if (n >= 8) return { trader: n - 1, pool: 1, vaultA: 3, vaultB: 4 };
+    return null;
+  }
+
+  // Raydium LaunchLab — same as CPMM layout
+  if (programId === RAYDIUM_LAUNCHLAB_PROGRAM_ID) {
+    return n >= 8 ? { trader: 0, pool: 3, vaultA: 6, vaultB: 7 } : null;
+  }
+
+  // Meteora DAMM V2 — pool[1] vaultA[4] vaultB[5] trader[8]
+  if (programId === METEORA_DAMM_V2_PROGRAM_ID) {
+    return n >= 9 ? { trader: 8, pool: 1, vaultA: 4, vaultB: 5 } : null;
+  }
+
+  // Meteora DLMM — pool[0] vaultA[3] vaultB[4] trader[6] (varies, common layout)
+  if (programId === METEORA_DLMM_PROGRAM_ID) {
+    return n >= 7 ? { trader: 6, pool: 0, vaultA: 3, vaultB: 4 } : null;
+  }
+
+  // Meteora DBC — pool[0] vaultA[3] vaultB[4] trader[6]
+  if (programId === METEORA_DBC_PROGRAM_ID) {
+    return n >= 7 ? { trader: 6, pool: 0, vaultA: 3, vaultB: 4 } : null;
+  }
+
+  // Meteora DAMM V1 — pool[1] vaultA[4] vaultB[5] trader[8]
+  if (programId === METEORA_DAMM_V1_PROGRAM_ID) {
+    return n >= 9 ? { trader: 8, pool: 1, vaultA: 4, vaultB: 5 } : null;
+  }
+
+  // Orca Whirlpool — swap v1: trader[1] pool[2] vaultA[4] vaultB[6]
+  //                  swap v2: trader[3] pool[4] vaultA[8] vaultB[10]
+  if (programId === ORCA_WHIRLPOOLS_PROGRAM_ID) {
+    const hex = getDiscriminatorHex(ix.data);
+    if (hex === "2b04ed0b1ac91e62" && n >= 11) {
+      return { trader: 3, pool: 4, vaultA: 8, vaultB: 10 };
+    }
+    return n >= 7 ? { trader: 1, pool: 2, vaultA: 4, vaultB: 6 } : null;
+  }
+
+  // PancakeSwap CLMM — trader[0] pool[2] vaultA[5] vaultB[6]
+  if (programId === PANCAKE_SWAP_PROGRAM_ID) {
+    return n >= 7 ? { trader: 0, pool: 2, vaultA: 5, vaultB: 6 } : null;
+  }
+
+  // Byreal CLMM — same layout as Raydium CLMM: trader[0] pool[2] vaultA[5] vaultB[6]
+  if (programId === BYREAL_PROGRAM_ID) {
+    return n >= 7 ? { trader: 0, pool: 2, vaultA: 5, vaultB: 6 } : null;
+  }
+
+  // Fusion AMM — trader[0] pool[3] vaultA[6] vaultB[7] (CPMM-like)
+  if (programId === FUSION_AMM_PROGRAM_ID) {
+    return n >= 8 ? { trader: 0, pool: 3, vaultA: 6, vaultB: 7 } : null;
+  }
+
+  // Futarchy AMM — trader[1] pool[2] vaultA[4] vaultB[6] (Whirlpool-like)
+  if (programId === FUTARCHY_AMM_PROGRAM_ID) {
+    return n >= 7 ? { trader: 1, pool: 2, vaultA: 4, vaultB: 6 } : null;
+  }
+
+  return null;
+}
+
+/**
+ * Parse a swap from pre/post token balance differences.
+ * Uses per-DEX vault account positions (same as 100x-algo-bots reference parsers).
+ * Matches vault account ADDRESSES against token balances, then diffs uiAmount.
+ */
 function parseSwapFromBalanceDiff(
   dex: string,
   ix: FormattedInstruction,
   tx: FormattedTransaction,
   isAggregated: boolean,
+  programId?: string,
 ): SwapEvent | null {
   try {
-    // ---------------------------------------------------------------------------
-    // Find the vault owner/authority by scanning instruction accounts against
-    // token balance owners. The vault authority varies by DEX:
-    //   - AMM pools: accounts[0] is often the pool and vault owner
-    //   - CLMM pools: vault authority is a PDA at a different account index
-    // Strategy: find which instruction account owns token balances for 2+ mints
-    // (one being WSOL/quote, one being the traded token).
-    // If that fails, fall back to checking each account for any token balances.
-    // ---------------------------------------------------------------------------
+    const pid = programId ?? ix.programId;
+    const layout = getSwapAccountLayout(pid, ix);
+    if (!layout) return null;
 
-    // Build a set of all instruction account addresses
-    const ixAcctAddrs = new Set<string>();
-    for (const idx of ix.accounts) {
-      const addr = tx.accountList[idx]?.toBase58();
-      if (addr) ixAcctAddrs.add(addr);
-    }
+    const pool = tx.accountList[ix.accounts[layout.pool]]?.toBase58() ?? "";
+    const trader = tx.accountList[ix.accounts[layout.trader]]?.toBase58() ?? tx.signer;
+    const vaultAAddr = tx.accountList[ix.accounts[layout.vaultA]]?.toBase58() ?? "";
+    const vaultBAddr = tx.accountList[ix.accounts[layout.vaultB]]?.toBase58() ?? "";
 
-    // Count how many distinct mints each owner has in pre+post token balances,
-    // but only for owners that are in the instruction's account list
-    const mintsByOwner = new Map<string, Set<string>>();
-    for (const bal of [...tx.preTokenBalances, ...tx.postTokenBalances]) {
-      if (!ixAcctAddrs.has(bal.owner)) continue;
-      if (!mintsByOwner.has(bal.owner)) mintsByOwner.set(bal.owner, new Set());
-      mintsByOwner.get(bal.owner)!.add(bal.mint);
-    }
-
-    // Pick the owner with the most distinct mints (the vault authority)
-    let vaultOwner = "";
-    let maxMints = 0;
-    for (const [owner, mints] of mintsByOwner) {
-      if (mints.size > maxMints) {
-        maxMints = mints.size;
-        vaultOwner = owner;
-      }
-    }
-
-    // If no instruction account owns token balances, try matching by account ADDRESS
-    // (some DEXes have vaults as direct accounts, not owned by an authority in the ix)
-    if (!vaultOwner) {
-      // Build map of account address → token balance
-      for (const bal of tx.preTokenBalances) {
-        const acctAddr = tx.accountList[bal.accountIndex]?.toBase58() ?? "";
-        if (ixAcctAddrs.has(acctAddr)) {
-          // Use the owner of this token account
-          if (!mintsByOwner.has(bal.owner)) mintsByOwner.set(bal.owner, new Set());
-          mintsByOwner.get(bal.owner)!.add(bal.mint);
-        }
-      }
-      for (const [owner, mints] of mintsByOwner) {
-        if (mints.size > maxMints) {
-          maxMints = mints.size;
-          vaultOwner = owner;
-        }
-      }
-    }
-
-    if (!vaultOwner) return null;
-
-    // Pool address: use accounts[0] for display, or accounts[1] for some DEXes
-    const pool = tx.accountList[ix.accounts[0]]?.toBase58() ?? "";
-
-    // Diff token balances for the vault owner
-    const preByMint = new Map<string, number>();
-    const postByMint = new Map<string, number>();
+    // Match vault addresses against pre/post token balances (same as Meteora parser)
+    let tokenABefore = 0, tokenAAfter = 0, tokenAMint = "", tokenADecimals = 0;
+    let tokenBBefore = 0, tokenBAfter = 0, tokenBMint = "", tokenBDecimals = 0;
 
     for (const bal of tx.preTokenBalances) {
-      if (bal.owner === vaultOwner) {
-        preByMint.set(bal.mint, bal.uiAmount);
+      const acctAddr = tx.accountList[bal.accountIndex]?.toBase58() ?? "";
+      if (acctAddr === vaultAAddr) {
+        tokenABefore = bal.uiAmount;
+        tokenAMint = bal.mint;
+        tokenADecimals = bal.decimals;
+      }
+      if (acctAddr === vaultBAddr) {
+        tokenBBefore = bal.uiAmount;
+        tokenBMint = bal.mint;
+        tokenBDecimals = bal.decimals;
       }
     }
     for (const bal of tx.postTokenBalances) {
-      if (bal.owner === vaultOwner) {
-        postByMint.set(bal.mint, bal.uiAmount);
+      const acctAddr = tx.accountList[bal.accountIndex]?.toBase58() ?? "";
+      if (acctAddr === vaultAAddr) {
+        tokenAAfter = bal.uiAmount;
+        if (!tokenAMint) tokenAMint = bal.mint;
+      }
+      if (acctAddr === vaultBAddr) {
+        tokenBAfter = bal.uiAmount;
+        if (!tokenBMint) tokenBMint = bal.mint;
       }
     }
 
-    // Identify quote token (WSOL, USDC, USDT, USD1) and base token
-    const QUOTE_MINTS = new Set([
-      WSOL_MINT,
-      "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
-      "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", // USDT
-      "USD1LXRZ8xMaApM9RF3nDJ3Y5N8o3YoGjpeVUMFZpump", // USD1
-    ]);
+    if (!tokenAMint && !tokenBMint) return null;
 
-    let mint = "";
-    let quoteMint = "";
-    let direction: "buy" | "sell" = "buy";
-    let amountBase = 0;
-    let amountQuote = 0;
-    let reserveBase = 0;
-    let reserveQuote = 0;
+    // Determine which token increased in pool = input token
+    const diffA = tokenAAfter - tokenABefore;
+    const diffB = tokenBAfter - tokenBBefore;
 
-    for (const m of new Set([...preByMint.keys(), ...postByMint.keys()])) {
-      const pre = preByMint.get(m) ?? 0;
-      const post = postByMint.get(m) ?? 0;
-      const diff = post - pre;
+    let inputMint: string, outputMint: string;
+    let swappedInputAmount: number, swappedOutputAmount: number;
+    let poolAAfter = tokenAAfter, poolBAfter = tokenBAfter;
 
-      if (QUOTE_MINTS.has(m)) {
-        quoteMint = m;
-        amountQuote = Math.abs(diff);
-        reserveQuote = post;
+    if (diffA > diffB) {
+      // Token A increased = Token A is input (user sent it to pool)
+      inputMint = tokenAMint;
+      outputMint = tokenBMint;
+      swappedInputAmount = Math.abs(diffA);
+      swappedOutputAmount = Math.abs(diffB);
+    } else {
+      // Token B increased = Token B is input
+      inputMint = tokenBMint;
+      outputMint = tokenAMint;
+      swappedInputAmount = Math.abs(diffB);
+      swappedOutputAmount = Math.abs(diffA);
+    }
+
+    // Direction: if input is a quote mint (WSOL/USDC/USDT/USD1) → buy, else → sell
+    let direction: "buy" | "sell";
+    if (QUOTE_MINTS.has(inputMint)) {
+      direction = "buy";
+    } else {
+      direction = "sell";
+    }
+
+    // Base = non-quote token, Quote = quote token
+    let mint: string, amountBase: number, amountQuote: number;
+    let reserveBase: number, reserveQuote: number;
+
+    if (QUOTE_MINTS.has(inputMint)) {
+      // Input is quote (buy): base = output token
+      mint = outputMint;
+      amountQuote = swappedInputAmount;
+      amountBase = swappedOutputAmount;
+      // Reserves: find which vault holds which
+      if (tokenAMint === inputMint) {
+        reserveQuote = poolAAfter;
+        reserveBase = poolBAfter;
       } else {
-        mint = m;
-        amountBase = Math.abs(diff);
-        reserveBase = post;
-        // Pool gained tokens = someone sold, pool lost tokens = someone bought
-        if (diff > 0) direction = "sell";
-        else if (diff < 0) direction = "buy";
+        reserveQuote = poolBAfter;
+        reserveBase = poolAAfter;
       }
+    } else if (QUOTE_MINTS.has(outputMint)) {
+      // Output is quote (sell): base = input token
+      mint = inputMint;
+      amountQuote = swappedOutputAmount;
+      amountBase = swappedInputAmount;
+      if (tokenAMint === outputMint) {
+        reserveQuote = poolAAfter;
+        reserveBase = poolBAfter;
+      } else {
+        reserveQuote = poolBAfter;
+        reserveBase = poolAAfter;
+      }
+    } else {
+      // Token-to-token pair (neither is a known quote)
+      // Treat input as "quote" and output as "base" (base = what you're trading)
+      mint = outputMint || inputMint;
+      amountQuote = swappedInputAmount;
+      amountBase = swappedOutputAmount;
+      reserveBase = poolAAfter;
+      reserveQuote = poolBAfter;
     }
 
-    // If no quote mint found (e.g., token-to-token pair), treat the second token as quote
-    if (!quoteMint && !mint) return null;
-
-    // Skip if we couldn't determine meaningful amounts
     if (amountBase === 0 && amountQuote === 0) return null;
 
     const priceAfter = reserveBase > 0 ? reserveQuote / reserveBase : 0;
@@ -762,9 +872,9 @@ function parseSwapFromBalanceDiff(
       type: "Swap",
       dex,
       pool,
-      trader: tx.signer,
+      trader,
       direction,
-      mint: mint || quoteMint,
+      mint,
       amountIn: direction === "buy" ? amountQuote : amountBase,
       amountOut: direction === "buy" ? amountBase : amountQuote,
       priceAfter,
