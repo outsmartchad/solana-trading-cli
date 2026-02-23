@@ -161,8 +161,8 @@ function decodeCpmmPoolInfo(data: Buffer): VaultBasedPoolInfo {
     vault1: new PublicKey(data.slice(104, 136)),
     mint0: new PublicKey(data.slice(168, 200)),
     mint1: new PublicKey(data.slice(200, 232)),
-    decimals0: data.readUInt8(323),
-    decimals1: data.readUInt8(324),
+    decimals0: data.readUInt8(331),
+    decimals1: data.readUInt8(332),
   };
 }
 

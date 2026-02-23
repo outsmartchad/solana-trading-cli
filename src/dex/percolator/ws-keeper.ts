@@ -137,9 +137,14 @@ const WSOL_MINT = "So11111111111111111111111111111111111111112";
  * 136..168   lp_mint
  * 168..200   token_0_mint
  * 200..232   token_1_mint
- * ...
- * 323        mint_0_decimals (u8)
- * 324        mint_1_decimals (u8)
+ * 232..264   token_0_program
+ * 264..296   token_1_program
+ * 296..328   observation_key
+ * 328        auth_bump (u8)
+ * 329        status (u8)
+ * 330        lp_mint_decimals (u8)
+ * 331        mint_0_decimals (u8)
+ * 332        mint_1_decimals (u8)
  */
 function decodeCpmmPoolInfo(data: Buffer): VaultBasedPoolInfo {
   return {
@@ -148,8 +153,8 @@ function decodeCpmmPoolInfo(data: Buffer): VaultBasedPoolInfo {
     vault1: new PublicKey(data.slice(104, 136)),
     mint0: new PublicKey(data.slice(168, 200)),
     mint1: new PublicKey(data.slice(200, 232)),
-    decimals0: data.readUInt8(323),
-    decimals1: data.readUInt8(324),
+    decimals0: data.readUInt8(331),
+    decimals1: data.readUInt8(332),
   };
 }
 
