@@ -5,8 +5,10 @@
  * Subscribes to on-chain transactions, parses them, and emits typed events.
  */
 
-// Main class
+// Main classes
 export { EventStream } from "./event-stream";
+export { WsEventStream } from "./ws-event-stream";
+export type { WsStreamConfig } from "./ws-event-stream";
 
 // Types
 export type {

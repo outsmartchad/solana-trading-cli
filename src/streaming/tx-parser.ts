@@ -865,6 +865,7 @@ function parseSwapFromBalanceDiff(
     }
 
     if (amountBase === 0 && amountQuote === 0) return null;
+    if (!mint) return null; // skip if we couldn't identify the base token
 
     const priceAfter = reserveBase > 0 ? reserveQuote / reserveBase : 0;
 

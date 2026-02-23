@@ -2193,7 +2193,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 
 program
   .command("stream")
-  .description("Stream real-time DEX events via Yellowstone gRPC")
+  .description("Stream real-time DEX events via Yellowstone gRPC or WebSocket")
   .option(
     "-p, --preset <preset>",
     "Subscription preset: all-dex-swaps | new-pools | pumpfun-bonding | pumpswap | raydium | meteora | other-dexes | wallet-trades",
@@ -2203,14 +2203,26 @@ program
   .option("--threshold <sol>", "Large swap threshold in SOL", "10")
   .option("--events <types...>", "Filter event types: Swap NewPool BondingComplete LargeSwap")
   .option("--json", "Output events as JSON (one per line)")
+  .option("--ws", "Use WebSocket mode (free, no gRPC endpoint needed)")
   .option("-v, --verbose", "Verbose logging (debug level)")
   .action(async (opts) => {
-    const { EventStream } = await import("./streaming");
+    const { EventStream, WsEventStream } = await import("./streaming");
 
-    const stream = new EventStream({
-      largeSwapThresholdSol: parseFloat(opts.threshold),
-      logLevel: opts.verbose ? "debug" : "info",
-    });
+    const logLevel = opts.verbose ? "debug" : "info";
+    const threshold = parseFloat(opts.threshold);
+
+    // Use WebSocket mode if --ws flag is set or no gRPC endpoint is configured
+    const useWs = opts.ws || (!process.env.GRPC_URL && !process.env.GRPC_XTOKEN);
+
+    const stream = useWs
+      ? new WsEventStream({
+          largeSwapThresholdSol: threshold,
+          logLevel: logLevel as any,
+        })
+      : new EventStream({
+          largeSwapThresholdSol: threshold,
+          logLevel: logLevel as any,
+        });
 
     const eventFilter = opts.events
       ? new Set(opts.events as string[])

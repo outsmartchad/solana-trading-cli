@@ -1,6 +1,6 @@
 # outsmart
 
-**Solana trading CLI — buy, sell, LP, stream real-time DEX events, and operate perp exchanges across 18 DEXes with 12 TX landing providers.**
+**Buy, sell, LP, trade perps, create AMM pools, launch coins, and stream real-time DEX events from your terminal.**
 
 **[Documentation](https://outsmartchad.github.io/outsmart-cli/)** | **[npm](https://www.npmjs.com/package/outsmart)** | **[Discord](https://discord.gg/dc3Kh3Y3yJ)**
 
@@ -9,6 +9,14 @@ npm install -g outsmart@alpha
 outsmart init
 outsmart buy --dex raydium-cpmm --pool <POOL> --amount 0.1
 ```
+
+## About
+
+outsmart is a Solana trading toolkit that covers every major DEX protocol from a single CLI and Node.js library. It supports 18 on-chain DEX adapters (Raydium, Meteora, Orca, PumpFun, PumpSwap, and more), 2 swap aggregators (Jupiter Ultra, DFlow), 12 TX landing providers for competitive submission, and a real-time event streaming engine powered by Yellowstone gRPC or standard WebSocket.
+
+**For traders** — execute swaps, manage LP positions, launch tokens, and create perpetual futures markets without touching a browser. Stream live swap events and new pool creations to spot opportunities in real-time.
+
+**For developers** — import `outsmart` as a library in your own bots, use the typed event stream for custom analytics, or integrate with AI agents via [outsmart-agent](https://github.com/outsmartchad/outsmart-agent).
 
 ---
 
@@ -630,13 +638,16 @@ import {
 
 ## Event Streaming Engine
 
-Real-time gRPC transaction streaming from Solana DEX programs via Yellowstone gRPC (Geyser). Parses live transactions from 18+ DEX programs into typed events.
+Real-time DEX event streaming with two backends — **gRPC** (Yellowstone/Geyser, lowest latency) and **WebSocket** (free, uses standard RPC). Both produce the same typed events from 18+ DEX programs.
 
 ### CLI
 
 ```bash
-# Stream all DEX swaps in real-time
+# Stream all DEX swaps (auto-selects WebSocket if no gRPC endpoint configured)
 outsmart stream --preset all-dex-swaps
+
+# Force WebSocket mode (free, no gRPC endpoint needed)
+outsmart stream --preset all-dex-swaps --ws
 
 # Stream specific DEXes
 outsmart stream --preset pumpswap
@@ -652,11 +663,14 @@ outsmart stream --preset pumpfun-bonding
 
 Available presets: `all-dex-swaps`, `new-pools`, `pumpfun-bonding`, `pumpswap`, `raydium`, `meteora`, `other-dexes`, `wallet-trades`
 
-Requires `GRPC_URL` and `GRPC_XTOKEN` env vars (Yellowstone gRPC endpoint).
+**gRPC mode** (default if configured): requires `GRPC_URL` and `GRPC_XTOKEN` env vars. Lowest latency (~200ms).
+
+**WebSocket mode** (`--ws` flag or auto-selected): uses your standard `MAINNET_ENDPOINT` RPC. Free, higher latency (~1-3s).
 
 ### Programmatic API
 
 ```typescript
+// gRPC mode (fastest, requires Yellowstone endpoint)
 import { EventStream } from "outsmart";
 
 const stream = new EventStream({
@@ -664,20 +678,25 @@ const stream = new EventStream({
   grpcXToken: process.env.GRPC_XTOKEN,
 });
 
-// Listen for swap events across all DEXes
+// WebSocket mode (free, uses standard RPC)
+import { WsEventStream } from "outsmart";
+
+const stream = new WsEventStream({
+  rpcUrl: process.env.MAINNET_ENDPOINT, // any Solana RPC
+});
+
+// Both emit the same events with the same API:
 stream.on("Swap", (event) => {
   console.log(`${event.dex} ${event.direction} ${event.mint}`);
   console.log(`  in: ${event.amountIn}, out: ${event.amountOut}`);
   console.log(`  pool: ${event.pool}, trader: ${event.trader}`);
 });
 
-// Listen for new pool creations
 stream.on("NewPool", (event) => {
   console.log(`New pool on ${event.dex}: ${event.pool}`);
   console.log(`  ${event.tokenA} / ${event.tokenB}`);
 });
 
-// Listen for PumpFun bonding curve completions
 stream.on("BondingComplete", (event) => {
   console.log(`Bonding complete: ${event.mint} → ${event.migrationPool}`);
 });
@@ -692,7 +711,7 @@ stream.on("*", (event) => { /* any event */ });
 
 await stream.start("all-dex-swaps");
 
-// Custom subscriptions
+// Custom subscriptions (gRPC only)
 import { subscribePoolActivity } from "outsmart";
 await stream.startCustom(subscribePoolActivity(["POOL_ADDRESS"]));
 
