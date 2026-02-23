@@ -2188,6 +2188,113 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 }
 
 // ---------------------------------------------------------------------------
+// lp-manage — Autonomous LP Manager
+// ---------------------------------------------------------------------------
+
+program
+  .command("lp-manage")
+  .description("Autonomous LP position management — rebalance, compound fees, risk monitoring")
+  .requiredOption("-p, --pool <address>", "Pool address to manage")
+  .requiredOption("-d, --dex <name>", "DEX adapter: meteora-dlmm | meteora-damm-v2")
+  .option("--position <address>", "Specific position address (default: all positions in pool)")
+  .option("--rebalance-range <pct>", "Rebalance when price exits +/-N% range (DLMM)", "5")
+  .option("--bins <count>", "Number of bins for new position after rebalance", "50")
+  .option("--strategy <type>", "LP strategy: spot | curve | bid-ask (DLMM)", "spot")
+  .option("--compound-interval <min>", "Compound fees every N minutes (0=disabled)", "30")
+  .option("--il-threshold <pct>", "Exit if impermanent loss exceeds N%", "10")
+  .option("--stop-loss <pct>", "Exit if token price drops N% from entry (0=disabled)", "0")
+  .option("--dry-run", "Log actions without executing")
+  .option("--ws", "Use WebSocket streaming (free)")
+  .option("--json", "Output events as JSON")
+  .option("-v, --verbose", "Verbose logging")
+  .action(async (opts) => {
+    const { LpManager } = await import("./lp-manager");
+
+    if (opts.dex !== "meteora-dlmm" && opts.dex !== "meteora-damm-v2") {
+      console.error("\n  error: --dex must be meteora-dlmm or meteora-damm-v2\n");
+      process.exit(1);
+    }
+
+    // Ensure adapter is loaded
+    if (opts.dex === "meteora-dlmm") await import("./dex/meteora-dlmm");
+    else await import("./dex/meteora-damm-v2");
+
+    const manager = new LpManager({
+      poolAddress: opts.pool,
+      dex: opts.dex,
+      positionAddress: opts.position,
+      rebalanceRangePct: parseFloat(opts.rebalanceRange),
+      rebalanceBins: parseInt(opts.bins),
+      rebalanceStrategy: opts.strategy as any,
+      compoundIntervalMin: parseInt(opts.compoundInterval),
+      ilThresholdPct: parseFloat(opts.ilThreshold),
+      stopLossPct: parseFloat(opts.stopLoss),
+      dryRun: !!opts.dryRun,
+      useWebSocket: !!opts.ws,
+      logLevel: opts.verbose ? "debug" : "info",
+    });
+
+    manager.on("event", (event: any) => {
+      if (opts.json) {
+        console.log(JSON.stringify(event));
+      } else {
+        const ts = new Date(event.timestamp).toLocaleTimeString();
+        const pos = event.position ? ` pos:${event.position.slice(0, 8)}...` : "";
+        console.log(`  [${ts}] ${event.type}${pos} — ${event.message}`);
+      }
+    });
+
+    process.on("SIGINT", async () => {
+      console.log("\n  Stopping LP Manager...");
+      await manager.stop();
+      const stats = manager.getStats();
+      console.log(`\n  Rebalances: ${stats.totalRebalances}  Compounds: ${stats.totalCompounds}  Fees claimed: ${stats.totalFeesClaimed.toFixed(6)}\n`);
+      process.exit(0);
+    });
+
+    try {
+      await manager.start();
+    } catch (err: any) {
+      console.error(`\n  lp-manage error: ${err.message}\n`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("lp-find")
+  .description("Find the best LP pool for a token")
+  .requiredOption("-t, --token <mint>", "Token mint address")
+  .option("-d, --dex <name>", "Filter by DEX: meteora-dlmm | meteora-damm-v2")
+  .option("--json", "Output as JSON")
+  .action(async (opts) => {
+    const { LpManager } = await import("./lp-manager");
+
+    console.log(`\n  Searching for best LP pools for ${opts.token.slice(0, 12)}...\n`);
+
+    const pools = await LpManager.findBestPool(opts.token, opts.dex);
+
+    if (pools.length === 0) {
+      console.log("  No Meteora pools found for this token.\n");
+      return;
+    }
+
+    if (opts.json) {
+      console.log(JSON.stringify(pools, null, 2));
+      return;
+    }
+
+    console.log("  SCORE  DEX               PAIR                    APR%     VOL/TVL  TVL          POOL");
+    console.log("  " + "─".repeat(110));
+
+    for (const pool of pools.slice(0, 10)) {
+      console.log(
+        `  ${pool.score.toFixed(0).padStart(5)}  ${pool.dex.padEnd(18)}${pool.pair.padEnd(24)}${pool.estimatedApr.toFixed(1).padStart(6)}%  ${pool.volumeTvlRatio.toFixed(2).padStart(7)}  $${(pool.tvlUsd / 1000).toFixed(1).padStart(8)}k  ${pool.poolAddress.slice(0, 12)}...`,
+      );
+    }
+    console.log("");
+  });
+
+// ---------------------------------------------------------------------------
 // stream — Real-time event streaming via Yellowstone gRPC
 // ---------------------------------------------------------------------------
 

@@ -131,7 +131,8 @@ export type { SendRpcOptions, SendRpcResult, SendLegacyTxOptions } from "./trans
 export { getInfoFromDexscreener } from "./dexscreener/info";
 
 // Event Streaming Engine
-export { EventStream } from "./streaming";
+export { EventStream, WsEventStream } from "./streaming";
+export type { WsStreamConfig } from "./streaming";
 export type {
   StreamConfig,
   StreamEvent,
@@ -153,6 +154,16 @@ export {
   PROGRAM_TO_DEX,
   ALL_DEX_PROGRAM_IDS,
 } from "./streaming";
+
+// Autonomous LP Manager
+export { LpManager } from "./lp-manager";
+export type {
+  LpManagerConfig,
+  PositionState,
+  LpManagerEvent,
+  PoolScore,
+} from "./lp-manager";
+export { selectBestPool } from "./lp-manager";
 
 // ---------------------------------------------------------------------------
 // Adapter registration — side-effect imports that trigger self-registration
