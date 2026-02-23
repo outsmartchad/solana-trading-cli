@@ -1,6 +1,6 @@
 # outsmart
 
-**Buy, sell, LP, trade perps, create AMM pools, launch coins, and stream real-time DEX events from your terminal.**
+**Buy, sell, LP, auto-manage LP positions, trade perps, create AMM pools, launch coins, and stream real-time DEX events from your terminal.**
 
 **[Documentation](https://outsmartchad.github.io/outsmart-cli/)** | **[npm](https://www.npmjs.com/package/outsmart)** | **[Discord](https://discord.gg/dc3Kh3Y3yJ)**
 
@@ -12,7 +12,7 @@ outsmart buy --dex raydium-cpmm --pool <POOL> --amount 0.1
 
 ## About
 
-outsmart is a Solana trading toolkit that covers every major DEX protocol from a single CLI and Node.js library. It supports 18 on-chain DEX adapters (Raydium, Meteora, Orca, PumpFun, PumpSwap, and more), 2 swap aggregators (Jupiter Ultra, DFlow), 12 TX landing providers for competitive submission, and a real-time event streaming engine powered by Yellowstone gRPC or standard WebSocket.
+outsmart is a Solana trading toolkit that covers every major DEX protocol from a single CLI and Node.js library. It supports 18 on-chain DEX adapters (Raydium, Meteora, Orca, PumpFun, PumpSwap, and more), 2 swap aggregators (Jupiter Ultra, DFlow), 12 TX landing providers for competitive submission, a real-time event streaming engine powered by Yellowstone gRPC or standard WebSocket, and an autonomous LP manager for Meteora positions.
 
 **For traders** — execute swaps, manage LP positions, launch tokens, and create perpetual futures markets without touching a browser. Stream live swap events and new pool creations to spot opportunities in real-time.
 
@@ -744,6 +744,91 @@ All swap events use per-DEX vault account layouts with pre/post token balance di
 
 ---
 
+## Autonomous LP Manager
+
+Automated liquidity position management for **Meteora DLMM** (concentrated, bin-based) and **DAMM v2** (full-range). Monitors positions, auto-rebalances when out of range, compounds fees, and exits on risk thresholds.
+
+### CLI
+
+```bash
+# Start managing a DLMM position (auto-rebalance + compound)
+outsmart lp-manage --dex meteora-dlmm --pool <POOL> --dry-run
+
+# Manage a specific position
+outsmart lp-manage --dex meteora-dlmm --pool <POOL> --position <POSITION>
+
+# DAMM v2 — compound-only (full-range, no rebalancing needed)
+outsmart lp-manage --dex meteora-damm-v2 --pool <POOL>
+
+# Custom thresholds
+outsmart lp-manage --dex meteora-dlmm --pool <POOL> \
+  --bins 30 --strategy curve --compound-interval 15 \
+  --il-threshold 5 --stop-loss 20
+
+# Find the best LP pool for a token
+outsmart lp-find --token <MINT>
+outsmart lp-find --token <MINT> --dex meteora-dlmm --json
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--dex <name>` | `meteora-dlmm` or `meteora-damm-v2` (required) | |
+| `--pool <address>` | Pool address (required) | |
+| `--position <address>` | Specific position (default: all in pool) | |
+| `--bins <count>` | Bins for new position after rebalance (DLMM) | 50 |
+| `--strategy <type>` | `spot` \| `curve` \| `bid-ask` (DLMM) | `spot` |
+| `--compound-interval <min>` | Compound fees every N minutes (0=off) | 30 |
+| `--il-threshold <pct>` | Exit if IL exceeds N% | 10 |
+| `--stop-loss <pct>` | Exit if price drops N% from entry (0=off) | 0 |
+| `--dry-run` | Log actions without executing | false |
+| `--ws` | Use WebSocket streaming (free) | auto |
+
+### Programmatic API
+
+```typescript
+import { LpManager, selectBestPool } from "outsmart";
+import "outsmart/dist/dex/meteora-dlmm";
+
+// Find best pool for a token
+const pools = await selectBestPool("DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263");
+console.log("Top pool:", pools[0].pair, "APR:", pools[0].estimatedApr + "%");
+
+// Start autonomous management
+const manager = new LpManager({
+  poolAddress: "POOL_ADDRESS",
+  dex: "meteora-dlmm",
+  rebalanceBins: 50,
+  compoundIntervalMin: 30,
+  ilThresholdPct: 10,
+  dryRun: false,
+});
+
+manager.on("event", (event) => {
+  console.log(`[${event.type}] ${event.message}`);
+});
+
+await manager.start();
+
+// Check stats
+const stats = manager.getStats();
+console.log("Rebalances:", stats.totalRebalances, "Compounds:", stats.totalCompounds);
+
+// Stop
+await manager.stop();
+```
+
+### How It Works
+
+**DLMM strategy** — Monitors bin positions for out-of-range. When price exits the active bins, removes liquidity, claims fees, and opens a new position centered on current price. Cooldown prevents thrashing.
+
+**DAMM v2 strategy** — Full-range positions never go out of range, so no rebalancing needed. Periodically claims accumulated fees and re-deposits them to compound returns.
+
+**Risk management** — Estimates impermanent loss from entry price; exits position if IL exceeds threshold. Optional stop-loss exits on price drops.
+
+**Pool selector** — Scores Meteora pools from DexScreener data by volume/TVL ratio, estimated fee APR, TVL sweet spot ($10k-$1M), and pool age. Returns ranked results.
+
+---
+
 ## TX Landing Providers
 
 12 providers with concurrent, race, random, and sequential submission strategies:
@@ -868,8 +953,18 @@ src/
 │   │   ├── grpc-keeper.ts # gRPC oracle keeper (Yellowstone/Geyser)
 │   │   └── core/          # Vendored @percolator/core SDK
 │   └── 18 adapter files
+├── lp-manager/
+│   ├── index.ts           # LpManager orchestrator (action loop, event emission)
+│   ├── types.ts           # Config, strategy, position state types
+│   ├── monitor.ts         # Position monitoring (poll + stream hybrid)
+│   ├── risk.ts            # IL threshold, stop-loss exit
+│   ├── pool-selector.ts   # DexScreener-based pool scoring
+│   └── strategies/
+│       ├── dlmm-strategy.ts  # DLMM rebalance + compound
+│       └── damm-strategy.ts  # DAMM v2 compound
 ├── streaming/
 │   ├── event-stream.ts    # EventStream class (auto-reconnect, ping keepalive)
+│   ├── ws-event-stream.ts # WsEventStream class (free WebSocket alternative)
 │   ├── tx-formatter.ts    # Raw gRPC protobuf → FormattedTransaction
 │   ├── tx-parser.ts       # Per-DEX swap/pool/bonding parsers
 │   ├── programs.ts        # 18 DEX program IDs
