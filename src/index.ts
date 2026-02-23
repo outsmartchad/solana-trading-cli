@@ -74,6 +74,14 @@ export {
   parseFeedIdHex,
 } from "./dex/percolator/adapter";
 
+// WebSocket oracle keeper
+export { WsKeeper, loadKeeperConfig } from "./dex/percolator/ws-keeper";
+export type {
+  DexType as KeeperDexType,
+  KeeperPoolConfig,
+  WsKeeperOptions,
+} from "./dex/percolator/ws-keeper";
+
 export {
   UnsupportedOperationError,
   PoolNotFoundError,

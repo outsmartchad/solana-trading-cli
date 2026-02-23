@@ -35,7 +35,8 @@
     "test:api": "jest --testPathPattern=api-adapters",
     "test:unit": "jest --testPathPattern=unit",
     "test:percolator": "jest --testPathPattern=percolator",
-    "keeper": "npx tsx scripts/keeper.ts"
+    "keeper": "npx tsx scripts/keeper.ts",
+    "keeper:ws": "npx tsx scripts/ws-keeper.ts"
   },
   "keywords": [
     "solana",

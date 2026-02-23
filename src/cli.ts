@@ -2057,6 +2057,65 @@ perpCmd
     console.log();
   });
 
+// --- perp keeper ---
+perpCmd
+  .command("keeper")
+  .description("Start WebSocket oracle keeper — push live DEX prices to Percolator markets")
+  .option("-p, --pool <address>", "DEX pool address (single-pool mode)")
+  .option("-m, --market <address>", "Percolator slab/market address (single-pool mode)")
+  .option("-d, --dex <type>", "DEX type: raydium-cpmm, raydium-amm-v4, raydium-clmm, raydium-launchlab, pumpswap, meteora-damm-v2, meteora-dbc, meteora-dlmm")
+  .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .option("-c, --config <path>", "JSON config file for multi-pool mode")
+  .action(async (opts) => {
+    const { WsKeeper, loadKeeperConfig } = await import("./dex/percolator/ws-keeper");
+    type KeeperPoolConfig = import("./dex/percolator/ws-keeper").KeeperPoolConfig;
+    type DexType = import("./dex/percolator/ws-keeper").DexType;
+
+    let pools: KeeperPoolConfig[];
+
+    if (opts.config) {
+      pools = await loadKeeperConfig(opts.config);
+      console.log(`\n  Loaded ${pools.length} pool(s) from ${opts.config}`);
+    } else {
+      if (!opts.pool) die("--pool is required (or use --config for multi-pool mode)");
+      if (!opts.market) die("--market is required");
+      if (!opts.dex) die("--dex is required");
+      validateBase58(opts.pool, "--pool");
+      validateBase58(opts.market, "--market");
+      pools = [{
+        pool: opts.pool,
+        market: opts.market,
+        dex: opts.dex as DexType,
+        network: opts.network,
+      }];
+    }
+
+    console.log(`\n  WebSocket Oracle Keeper`);
+    console.log(`  ──────────────────────`);
+    console.log(`  mode:     ${pools.length === 1 ? "single-pool" : "multi-pool"}`);
+    console.log(`  pools:    ${pools.length}`);
+    console.log(`  network:  ${opts.network}`);
+    console.log(`  source:   on-chain WebSocket\n`);
+
+    const keeper = new WsKeeper(pools, {
+      network: opts.network,
+      logLevel: "info",
+    });
+
+    await keeper.start();
+
+    // Keep process alive — shutdown via Ctrl+C (handled by global SIGINT handler)
+    const shutdown = async () => {
+      await keeper.stop();
+      process.exit(0);
+    };
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
+
+    // Block forever
+    await new Promise(() => {});
+  });
+
 program.addCommand(perpCmd);
 
 // ---------------------------------------------------------------------------
