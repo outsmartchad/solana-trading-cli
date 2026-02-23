@@ -1,7 +1,7 @@
 {
   "name": "outsmart",
   "version": "2.0.0-alpha.16",
-  "description": "Solana trading CLI — 18 DEX adapters, 12 TX landing providers.",
+  "description": "The most complete Solana DEX toolkit for autonomous agents, bots, and builders — 18 adapters, event streaming, LP manager, perp engine.",
   "engines": {
     "node": ">=20.0.0"
   },

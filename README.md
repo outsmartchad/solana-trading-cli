@@ -1,6 +1,6 @@
 # outsmart
 
-**Buy, sell, LP, auto-manage LP positions, trade perps, create AMM pools, launch coins, and stream real-time DEX events from your terminal.**
+**The most complete Solana DEX toolkit for autonomous agents, bots, and builders.**
 
 **[Documentation](https://outsmartchad.github.io/outsmart-cli/)** | **[npm](https://www.npmjs.com/package/outsmart)** | **[Discord](https://discord.gg/dc3Kh3Y3yJ)**
 
@@ -12,11 +12,11 @@ outsmart buy --dex raydium-cpmm --pool <POOL> --amount 0.1
 
 ## About
 
-outsmart is a Solana trading toolkit that covers every major DEX protocol from a single CLI and Node.js library. It supports 18 on-chain DEX adapters (Raydium, Meteora, Orca, PumpFun, PumpSwap, and more), 2 swap aggregators (Jupiter Ultra, DFlow), 12 TX landing providers for competitive submission, a real-time event streaming engine powered by Yellowstone gRPC or standard WebSocket, and an autonomous LP manager for Meteora positions.
+outsmart unifies every major Solana DEX protocol into a single CLI and Node.js library. 18 on-chain adapters (Raydium, Meteora, Orca, PumpFun, PumpSwap, and more), 2 swap aggregators (Jupiter Ultra, DFlow), 12 concurrent TX landing providers, real-time event streaming via Yellowstone gRPC or WebSocket, an autonomous LP manager with auto-rebalancing and fee compounding, and a permissionless perpetual futures engine — all from one package.
 
-**For traders** — execute swaps, manage LP positions, launch tokens, and create perpetual futures markets without touching a browser. Stream live swap events and new pool creations to spot opportunities in real-time.
+**For agents** — plug into [outsmart-agent](https://github.com/outsmartchad/outsmart-agent) (MCP server + 9 AI skills) and give any LLM full DeFi capabilities: swap, LP, snipe, trench, create perp markets, and farm — with survival-aware capital allocation for autonomous operation on Conway Cloud.
 
-**For developers** — import `outsmart` as a library in your own bots, use the typed event stream for custom analytics, or integrate with AI agents via [outsmart-agent](https://github.com/outsmartchad/outsmart-agent).
+**For builders** — `import { getDexAdapter, LpManager, EventStream } from "outsmart"` and ship your own strategies. Typed event streams, per-DEX vault parsing, and a unified adapter interface mean you write the logic — outsmart handles the protocol plumbing across 18 DEXes.
 
 ---
 
