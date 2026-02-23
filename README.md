@@ -370,6 +370,45 @@ Run the permissionless keeper crank (updates funding rates).
 outsmart perp crank -m <MARKET>
 ```
 
+#### perp keeper
+
+Start the WebSocket oracle keeper — watches DEX pool accounts in real-time and pushes prices to your market.
+
+```bash
+# Single pool
+outsmart perp keeper --pool <POOL> --market <MARKET> --dex raydium-cpmm
+
+# Multi-pool config
+outsmart perp keeper --config ~/.outsmart/keeper.json
+```
+
+| Flag | Description |
+|------|-------------|
+| `-p, --pool <address>` | DEX pool address |
+| `-m, --market <address>` | Percolator market address |
+| `-d, --dex <type>` | DEX type (see supported list below) |
+| `-c, --config <path>` | JSON config for multi-pool mode |
+| `-n, --network <net>` | `devnet` \| `mainnet` (default: devnet) |
+
+Supported DEX types: `raydium-cpmm`, `raydium-amm-v4`, `raydium-clmm`, `raydium-launchlab`, `pumpswap`, `meteora-damm-v2`, `meteora-dbc`, `meteora-dlmm`
+
+Config format (`keeper.json`):
+```json
+[
+  { "pool": "<POOL>", "market": "<SLAB>", "dex": "raydium-cpmm", "network": "devnet" }
+]
+```
+
+#### perp grpc-keeper
+
+Same as `perp keeper` but uses Yellowstone gRPC (Geyser) instead of WebSocket. More reliable for production — handles reconnects and works with dedicated gRPC endpoints.
+
+```bash
+outsmart perp grpc-keeper --pool <POOL> --market <MARKET> --dex pumpswap
+```
+
+Requires `GRPC_URL` and `GRPC_XTOKEN` env vars.
+
 #### perp markets
 
 Discover all markets on-chain.
@@ -632,6 +671,8 @@ Set any provider's API key and it's automatically enabled. The orchestrator send
 | `DEVNET_ENDPOINT` | Solana devnet RPC endpoint (for Percolator) | not set |
 | `JUPITER_API_KEY` | Jupiter Ultra API key ([portal.jup.ag](https://portal.jup.ag)) | works without key |
 | `DFLOW_API_KEY` | DFlow intent API key ([pond.dflow.net](https://pond.dflow.net/build/api-key)) | required for dflow |
+| `GRPC_URL` | Yellowstone gRPC endpoint (for gRPC keeper) | not set |
+| `GRPC_XTOKEN` | Yellowstone gRPC auth token | not set |
 
 ---
 
@@ -706,7 +747,9 @@ src/
 │   ├── index.ts           # DexRegistry singleton
 │   ├── shared/clmm-base.ts
 │   ├── percolator/
-│   │   ├── adapter.ts     # PercolatorAdapter (15 methods)
+│   │   ├── adapter.ts     # PercolatorAdapter (20 methods)
+│   │   ├── ws-keeper.ts   # WebSocket oracle keeper (8 DEX types)
+│   │   ├── grpc-keeper.ts # gRPC oracle keeper (Yellowstone/Geyser)
 │   │   └── core/          # Vendored @percolator/core SDK
 │   └── 18 adapter files
 ├── dexscreener/           # Market data (DexScreener API)

@@ -74,13 +74,15 @@ export {
   parseFeedIdHex,
 } from "./dex/percolator/adapter";
 
-// WebSocket oracle keeper
+// Oracle keepers (WebSocket + gRPC)
 export { WsKeeper, loadKeeperConfig } from "./dex/percolator/ws-keeper";
+export { GrpcKeeper } from "./dex/percolator/grpc-keeper";
 export type {
   DexType as KeeperDexType,
   KeeperPoolConfig,
   WsKeeperOptions,
 } from "./dex/percolator/ws-keeper";
+export type { GrpcKeeperOptions } from "./dex/percolator/grpc-keeper";
 
 export {
   UnsupportedOperationError,

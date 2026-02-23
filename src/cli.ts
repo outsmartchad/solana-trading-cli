@@ -2116,6 +2116,64 @@ perpCmd
     await new Promise(() => {});
   });
 
+// --- perp grpc-keeper ---
+perpCmd
+  .command("grpc-keeper")
+  .description("Start gRPC oracle keeper — push live DEX prices via Yellowstone gRPC (Geyser)")
+  .option("-p, --pool <address>", "DEX pool address (single-pool mode)")
+  .option("-m, --market <address>", "Percolator slab/market address (single-pool mode)")
+  .option("-d, --dex <type>", "DEX type: raydium-cpmm, raydium-amm-v4, raydium-clmm, raydium-launchlab, pumpswap, meteora-damm-v2, meteora-dbc, meteora-dlmm")
+  .option("-n, --network <net>", "devnet or mainnet (default: devnet)", "devnet")
+  .option("-c, --config <path>", "JSON config file for multi-pool mode")
+  .action(async (opts) => {
+    const { GrpcKeeper } = await import("./dex/percolator/grpc-keeper");
+    const { loadKeeperConfig } = await import("./dex/percolator/ws-keeper");
+    type KeeperPoolConfig = import("./dex/percolator/ws-keeper").KeeperPoolConfig;
+    type DexType = import("./dex/percolator/ws-keeper").DexType;
+
+    let pools: KeeperPoolConfig[];
+
+    if (opts.config) {
+      pools = await loadKeeperConfig(opts.config);
+      console.log(`\n  Loaded ${pools.length} pool(s) from ${opts.config}`);
+    } else {
+      if (!opts.pool) die("--pool is required (or use --config for multi-pool mode)");
+      if (!opts.market) die("--market is required");
+      if (!opts.dex) die("--dex is required");
+      validateBase58(opts.pool, "--pool");
+      validateBase58(opts.market, "--market");
+      pools = [{
+        pool: opts.pool,
+        market: opts.market,
+        dex: opts.dex as DexType,
+        network: opts.network,
+      }];
+    }
+
+    console.log(`\n  gRPC Oracle Keeper`);
+    console.log(`  ──────────────────`);
+    console.log(`  mode:      ${pools.length === 1 ? "single-pool" : "multi-pool"}`);
+    console.log(`  pools:     ${pools.length}`);
+    console.log(`  network:   ${opts.network}`);
+    console.log(`  transport: Yellowstone gRPC\n`);
+
+    const keeper = new GrpcKeeper(pools, {
+      network: opts.network,
+      logLevel: "info",
+    });
+
+    await keeper.start();
+
+    const shutdown = async () => {
+      await keeper.stop();
+      process.exit(0);
+    };
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
+
+    await new Promise(() => {});
+  });
+
 program.addCommand(perpCmd);
 
 // ---------------------------------------------------------------------------

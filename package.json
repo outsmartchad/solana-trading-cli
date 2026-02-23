@@ -1,6 +1,6 @@
 {
   "name": "outsmart",
-  "version": "2.0.0-alpha.11",
+  "version": "2.0.0-alpha.12",
   "description": "Solana trading CLI — 18 DEX adapters, 12 TX landing providers.",
   "engines": {
     "node": ">=20.0.0"
@@ -36,7 +36,8 @@
     "test:unit": "jest --testPathPattern=unit",
     "test:percolator": "jest --testPathPattern=percolator",
     "keeper": "npx tsx scripts/keeper.ts",
-    "keeper:ws": "npx tsx scripts/ws-keeper.ts"
+    "keeper:ws": "npx tsx scripts/ws-keeper.ts",
+    "keeper:grpc": "npx tsx scripts/grpc-keeper.ts"
   },
   "keywords": [
     "solana",
