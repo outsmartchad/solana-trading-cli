@@ -81,15 +81,35 @@ export function formatTransaction(
   slotTimestamp?: number,
 ): FormattedTransaction | null {
   try {
-    const rawTx = data.transaction;
-    if (!rawTx?.transaction?.message) return null;
+    // gRPC structure: data = { signature, isVote, transaction: { signatures, message }, meta, index }
+    // OR nested: data = { transaction: { transaction: { signatures, message }, meta }, slot }
+    // We handle both: the direct gRPC format and the wrapper format.
+    let meta: any;
+    let message: any;
+    let slot: number;
+    let signatureBytes: any;
 
-    const meta = rawTx.meta;
-    if (!meta) return null;
+    if (data.transaction?.message) {
+      // Direct format: data = { transaction: { signatures, message }, meta, ... }
+      meta = data.meta;
+      message = data.transaction.message;
+      slot = Number(data.slot ?? 0);
+      signatureBytes = data.signature || data.transaction?.signatures?.[0];
+    } else if (data.transaction?.transaction?.message) {
+      // Nested format (100x-algo-bots style)
+      meta = data.transaction.meta;
+      message = data.transaction.transaction.message;
+      slot = Number(data.slot ?? data.transaction?.slot ?? 0);
+      signatureBytes = data.transaction.signature || data.transaction.transaction?.signatures?.[0];
+    } else {
+      return null;
+    }
 
-    const message = rawTx.transaction.message;
-    const slot = Number(data.slot);
-    const signature = bs58.encode(Buffer.from(rawTx.transaction.signature));
+    if (!meta || !message) return null;
+
+    const signature = signatureBytes
+      ? bs58.encode(Buffer.from(signatureBytes))
+      : "";
 
     // Build unified account list: static + loaded writable + loaded readonly
     const accountList: PublicKey[] = [];

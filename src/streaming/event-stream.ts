@@ -325,16 +325,18 @@ export class EventStream extends EventEmitter {
       const txData = data.transaction;
 
       // Skip if no inner instructions (no DEX interaction)
-      if (!txData.transaction?.meta?.innerInstructions?.length) return;
+      // gRPC format: txData = { signature, transaction: { signatures, message }, meta, ... }
+      const meta = txData.meta ?? txData.transaction?.meta;
+      if (!meta?.innerInstructions?.length) return;
 
       // Skip failed transactions
-      if (txData.transaction?.meta?.err) return;
+      if (meta.err) return;
 
       // Get timestamp for this slot
-      const slot = Number(txData.slot ?? 0);
+      const slot = Number(txData.slot ?? data.slot ?? 0);
       const timestamp = this.slotToTimestamp.get(slot) ?? this.latestTimestamp;
 
-      // Format the raw transaction
+      // Format the raw transaction — pass the txData directly
       const formatted = formatTransaction(txData, timestamp);
       if (!formatted) return;
 
