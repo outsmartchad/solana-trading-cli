@@ -89,12 +89,12 @@ const VAULT_BASED_DEXES: DexType[] = [
   "raydium-cpmm",
   "raydium-amm-v4",
   "pumpswap",
+  "meteora-damm-v2",
 ];
 
 const POOL_STATE_DEXES: DexType[] = [
   "raydium-clmm",
   "raydium-launchlab",
-  "meteora-damm-v2",
   "meteora-dbc",
   "meteora-dlmm",
 ];
@@ -271,36 +271,26 @@ function decodeLaunchLabPoolInfo(data: Buffer): PoolStatePoolInfo {
 }
 
 /**
- * Decode Meteora DAMM v2 pool account — extract mints + decimals.
+ * Decode Meteora DAMM v2 pool account — extract vaults + mints.
  *
- * Layout (Anchor zero_copy, 8-byte discriminator, INIT_SPACE=1104):
- * The pool struct starts with PoolFees, then various fields. We need to
- * compute the PoolFees struct size to find the mints.
+ * Layout (Anchor zero_copy, 8-byte discriminator, total 1112 bytes):
+ * Verified on mainnet pool 9x7WTW... (MET/SOL):
  *
- * From the Rust source (MeteoraAg/damm-v2 → programs/cp-amm/src/state/pool.rs):
- *   PoolFees has 6 fields: base_fee(u64), ..., protocol_fee_percent(u64)
- *   = 6 * 8 = 48 bytes for PoolFees
+ * 168..200    token_a_mint (32 bytes)
+ * 200..232    token_b_mint (32 bytes)
+ * 232..264    token_a_vault (32 bytes)
+ * 264..296    token_b_vault (32 bytes)
  *
- * After discriminator (8 bytes):
- *   8..56      pool_fees (PoolFees, 48 bytes)
- *  56..88      token_a_mint (32 bytes)
- *  88..120     token_b_mint (32 bytes)
- * 120..152     token_a_vault (32 bytes)
- * 152..184     token_b_vault (32 bytes)
- * 184..216     lp_mint (32 bytes)
- * 216..232     sqrt_price (u128, 16 bytes)
- *
- * For decimal extraction: We look up mint accounts at startup.
- * The pool state itself stores token_a_flag/token_b_flag but not decimals directly.
- * We'll fetch decimals from the mint accounts.
+ * Decimals are fetched from mint accounts at startup (not stored in pool).
+ * Treated as vault-based: price = quoteVaultBalance / baseVaultBalance.
  */
-function decodeDammV2PoolInfo(data: Buffer): PoolStatePoolInfo & { vaultA: PublicKey; vaultB: PublicKey } {
+function decodeDammV2PoolInfo(data: Buffer): VaultBasedPoolInfo {
   return {
-    kind: "pool-state",
-    mint0: new PublicKey(data.slice(56, 88)),
-    mint1: new PublicKey(data.slice(88, 120)),
-    vaultA: new PublicKey(data.slice(120, 152)),
-    vaultB: new PublicKey(data.slice(152, 184)),
+    kind: "vault",
+    mint0: new PublicKey(data.slice(168, 200)),
+    mint1: new PublicKey(data.slice(200, 232)),
+    vault0: new PublicKey(data.slice(232, 264)),
+    vault1: new PublicKey(data.slice(264, 296)),
     // Decimals must be fetched from mint accounts — set placeholder, will be filled at startup
     decimals0: 0,
     decimals1: 0,
@@ -308,43 +298,22 @@ function decodeDammV2PoolInfo(data: Buffer): PoolStatePoolInfo & { vaultA: Publi
 }
 
 /**
- * Decode Meteora DBC (Dynamic Bonding Curve) pool account.
+ * Decode Meteora DBC (Dynamic Bonding Curve) pool account — extract vaults + mints.
  *
- * Layout (Anchor zero_copy, 8-byte discriminator, INIT_SPACE=416):
- * From the Rust source (MeteoraAg/dynamic-bonding-curve → programs/.../state/virtual_pool.rs):
+ * DBC uses a bonding curve with virtual reserves; vault ratios and raw sqrtPrice
+ * offsets are unreliable across program versions. We use the DBC SDK for price
+ * calculation (like DLMM) and watch vault token accounts for change notifications.
  *
- * The VirtualPool struct layout after 8-byte discriminator:
- *   VolatilityTracker struct comes first. From the source:
- *     last_update_timestamp: i64 (8)
- *     padding: [u8; 8] (8)
- *     sqrt_price_reference: u128 (16)
- *     cumulative_seconds_with_empty_liquidity_position: u64 (8)
- *     = 40 bytes total
+ * Verified mainnet layout (pool DgxYpX..., 424 bytes):
+ * 168..200    base_vault (token account, mint = base token)
+ * 200..232    quote_vault (token account, mint = SOL/quote)
  *
- *  After VolatilityTracker (offset 8+40 = 48):
- *   48..80     config (Pubkey, 32 bytes) — links to PoolConfig which has quote_mint
- *   80..112    creator (Pubkey, 32 bytes)
- *  112..144    base_mint (Pubkey, 32 bytes)
- *  144..176    base_vault (Pubkey, 32 bytes)
- *  176..208    quote_vault (Pubkey, 32 bytes)
- *  208..216    base_reserve (u64, 8 bytes)
- *  216..224    quote_reserve (u64, 8 bytes)
- *  224..232    protocol_base_fee (u64, 8 bytes)
- *  232..240    protocol_quote_fee (u64, 8 bytes)
- *  240..248    trading_base_fee (u64, 8 bytes)
- *  248..256    trading_quote_fee (u64, 8 bytes)
- *  256..272    sqrt_price (u128, 16 bytes)
+ * The base_mint and quote_mint are resolved from vault token accounts at startup.
  */
-function decodeDbcPoolInfo(data: Buffer): PoolStatePoolInfo & { config: PublicKey } {
+function decodeDbcVaults(data: Buffer): { baseVault: PublicKey; quoteVault: PublicKey } {
   return {
-    kind: "pool-state",
-    config: new PublicKey(data.slice(48, 80)),
-    mint0: new PublicKey(data.slice(112, 144)),
-    // quote_mint comes from PoolConfig, not the pool itself — will be resolved at startup
-    mint1: PublicKey.default,
-    // Decimals fetched from mint accounts at startup
-    decimals0: 0,
-    decimals1: 0,
+    baseVault: new PublicKey(data.slice(168, 200)),
+    quoteVault: new PublicKey(data.slice(200, 232)),
   };
 }
 
@@ -497,6 +466,9 @@ interface PoolWatcherState {
   vault1Balance: bigint;
   // For DLMM: store the pool instance
   dlmmPool?: any;
+  // For DBC: store pool address + connection for SDK price fetch
+  dbcPoolAddress?: string;
+  dbcConnection?: Connection;
 }
 
 // ---------------------------------------------------------------------------
@@ -597,6 +569,13 @@ export class WsKeeper {
     // Decode pool layout based on DEX type
     if (VAULT_BASED_DEXES.includes(dex)) {
       poolInfo = this.decodeVaultBasedPool(dex, poolData);
+      // For DAMM v2, decimals need to be fetched from mint accounts
+      const vaultInfo = poolInfo as VaultBasedPoolInfo;
+      if (vaultInfo.decimals0 === 0 && vaultInfo.decimals1 === 0) {
+        const [d0, d1] = await this.fetchMintDecimals(connection, vaultInfo.mint0, vaultInfo.mint1);
+        vaultInfo.decimals0 = d0;
+        vaultInfo.decimals1 = d1;
+      }
     } else {
       poolInfo = await this.decodePoolStatePool(dex, poolData, connection, poolCfg.pool);
     }
@@ -629,6 +608,8 @@ export class WsKeeper {
         return decodeAmmV4PoolInfo(data);
       case "pumpswap":
         return decodePumpSwapPoolInfo(data);
+      case "meteora-damm-v2":
+        return decodeDammV2PoolInfo(data);
       default:
         throw new Error(`Not a vault-based DEX: ${dex}`);
     }
@@ -647,29 +628,19 @@ export class WsKeeper {
       case "raydium-launchlab":
         return decodeLaunchLabPoolInfo(data);
 
-      case "meteora-damm-v2": {
-        const raw = decodeDammV2PoolInfo(data);
-        // Fetch decimals from mint accounts
-        const [dec0, dec1] = await this.fetchMintDecimals(connection, raw.mint0, raw.mint1);
-        return { kind: "pool-state", mint0: raw.mint0, mint1: raw.mint1, decimals0: dec0, decimals1: dec1 };
-      }
-
       case "meteora-dbc": {
-        const raw = decodeDbcPoolInfo(data);
-        // Fetch quote_mint from PoolConfig account and both decimals
-        const configAccount = await connection.getAccountInfo(raw.config);
-        if (!configAccount) throw new Error(`DBC PoolConfig not found: ${raw.config.toBase58()}`);
-        // PoolConfig layout: quote_mint is at offset 8+32 = 40..72
-        // (8 disc + 32 bytes for some field, then quote_mint)
-        // Actually from the DBC SDK source, PoolConfig has:
-        //   8 disc, then various fee fields, then quote_mint.
-        // We'll use a simpler approach: fetch the vault token accounts to determine the quote mint
-        const quoteVaultPk = new PublicKey(data.slice(176, 208));
-        const quoteVaultAccount = await connection.getAccountInfo(quoteVaultPk);
-        if (!quoteVaultAccount) throw new Error(`DBC quote vault not found`);
-        const quoteMint = new PublicKey(quoteVaultAccount.data.slice(0, 32));
-        const [dec0, dec1] = await this.fetchMintDecimals(connection, raw.mint0, quoteMint);
-        return { kind: "pool-state", mint0: raw.mint0, mint1: quoteMint, decimals0: dec0, decimals1: dec1 };
+        // DBC uses SDK for price (bonding curve math is complex).
+        // Resolve mints from vault token accounts.
+        const vaults = decodeDbcVaults(data);
+        const [baseVaultAcct, quoteVaultAcct] = await Promise.all([
+          connection.getAccountInfo(vaults.baseVault),
+          connection.getAccountInfo(vaults.quoteVault),
+        ]);
+        if (!baseVaultAcct || !quoteVaultAcct) throw new Error("DBC vault account(s) not found");
+        const baseMint = new PublicKey(baseVaultAcct.data.slice(0, 32));
+        const quoteMint = new PublicKey(quoteVaultAcct.data.slice(0, 32));
+        const [dec0, dec1] = await this.fetchMintDecimals(connection, baseMint, quoteMint);
+        return { kind: "pool-state", mint0: baseMint, mint1: quoteMint, decimals0: dec0, decimals1: dec1 };
       }
 
       case "meteora-dlmm": {
@@ -791,13 +762,16 @@ export class WsKeeper {
     const { connection } = watcher;
     const info = watcher.poolInfo as PoolStatePoolInfo;
 
-    // For DLMM, we need the SDK pool instance
+    // For SDK-based DEXes (DLMM, DBC), initialize the SDK pool instance
     if (dex === "meteora-dlmm") {
       const dlmmData = await this.initDlmmPool(connection, poolPk.toBase58());
       watcher.dlmmPool = dlmmData.dlmmPool;
-
-      // Get initial price
       const initialPrice = await this.getDlmmPrice(watcher);
+      await this.maybePushPrice(watcher, initialPrice);
+    } else if (dex === "meteora-dbc") {
+      watcher.dbcPoolAddress = poolPk.toBase58();
+      watcher.dbcConnection = connection;
+      const initialPrice = await this.getDbcPrice(watcher);
       await this.maybePushPrice(watcher, initialPrice);
     } else {
       // Get initial price from current pool data
@@ -814,8 +788,9 @@ export class WsKeeper {
         try {
           let price: number;
           if (dex === "meteora-dlmm") {
-            // Re-fetch active bin via SDK
             price = await this.getDlmmPrice(watcher);
+          } else if (dex === "meteora-dbc") {
+            price = await this.getDbcPrice(watcher);
           } else {
             price = this.extractPoolStatePrice(dex, accountInfo.data, info);
           }
@@ -854,10 +829,6 @@ export class WsKeeper {
         return clmmPriceFromPoolData(data, info.decimals0, info.decimals1);
       case "raydium-launchlab":
         return launchLabPriceFromPoolData(data, info.decimals0, info.decimals1);
-      case "meteora-damm-v2":
-        return dammV2PriceFromPoolData(data, info.decimals0, info.decimals1);
-      case "meteora-dbc":
-        return dbcPriceFromPoolData(data, info.decimals0, info.decimals1);
       default:
         throw new Error(`No pool-state price extractor for: ${dex}`);
     }
@@ -869,6 +840,21 @@ export class WsKeeper {
     const { price: rawPrice } = await watcher.dlmmPool.getActiveBin();
     const priceFactor = Math.pow(10, info.decimals1 - info.decimals0);
     return Number(rawPrice) / priceFactor;
+  }
+
+  /**
+   * Get DBC price using the adapter's getPrice() which wraps the DBC SDK.
+   * This is more reliable than raw sqrtPrice decoding since DBC uses a complex
+   * bonding curve with virtual reserves.
+   */
+  private async getDbcPrice(watcher: PoolWatcherState): Promise<number> {
+    if (!watcher.dbcPoolAddress) throw new Error("DBC pool address not set");
+    const { getDexAdapter } = await import("../../dex");
+    await import("../../dex/meteora-dbc");
+    const adapter = getDexAdapter("meteora-dbc");
+    if (!adapter.getPrice) throw new Error("meteora-dbc adapter missing getPrice()");
+    const priceInfo = await adapter.getPrice(watcher.dbcPoolAddress);
+    return priceInfo.price;
   }
 
   // -----------------------------------------------------------------------

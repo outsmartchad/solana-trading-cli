@@ -111,6 +111,7 @@ const VAULT_BASED_DEXES: DexType[] = [
   "raydium-cpmm",
   "raydium-amm-v4",
   "pumpswap",
+  "meteora-damm-v2",
 ];
 
 // ---------------------------------------------------------------------------
@@ -227,12 +228,16 @@ function launchLabPriceFromData(data: Buffer, decA: number, decB: number): numbe
   return (Number(virtualB) / Number(virtualA)) * 10 ** (decA - decB);
 }
 
-function dammV2PriceFromData(data: Buffer, decA: number, decB: number): number {
-  return sqrtPriceX64ToPrice(readU128LE(data, 216), decA, decB);
-}
-
-function dbcPriceFromData(data: Buffer, baseDec: number, quoteDec: number): number {
-  return sqrtPriceX64ToPrice(readU128LE(data, 256), baseDec, quoteDec);
+function decodeDammV2PoolInfo(data: Buffer): VaultBasedPoolInfo {
+  return {
+    kind: "vault",
+    mint0: new PublicKey(data.slice(168, 200)),
+    mint1: new PublicKey(data.slice(200, 232)),
+    vault0: new PublicKey(data.slice(232, 264)),
+    vault1: new PublicKey(data.slice(264, 296)),
+    decimals0: 0, // fetched from mint accounts at init
+    decimals1: 0,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -497,7 +502,14 @@ export class GrpcKeeper {
         await this.maybePushPrice(watcher, price);
       } else if (mapping.role === "pool") {
         // Pool state update
-        const price = this.extractPoolStatePrice(watcher.config.dex, accountData, watcher.poolInfo as PoolStatePoolInfo);
+        let price: number;
+        if (watcher.config.dex === "meteora-dlmm") {
+          price = await this.getDlmmPrice(watcher);
+        } else if (watcher.config.dex === "meteora-dbc") {
+          price = await this.getDbcPrice(watcher.config.pool);
+        } else {
+          price = this.extractPoolStatePrice(watcher.config.dex, accountData, watcher.poolInfo as PoolStatePoolInfo);
+        }
         await this.maybePushPrice(watcher, price);
       }
     }
@@ -526,6 +538,13 @@ export class GrpcKeeper {
     if (VAULT_BASED_DEXES.includes(dex)) {
       poolInfo = this.decodeVaultBasedPool(dex, poolData);
       const vaultInfo = poolInfo as VaultBasedPoolInfo;
+
+      // For DAMM v2, decimals need to be fetched from mint accounts
+      if (vaultInfo.decimals0 === 0 && vaultInfo.decimals1 === 0) {
+        const [d0, d1] = await this.fetchMintDecimals(connection, vaultInfo.mint0, vaultInfo.mint1);
+        vaultInfo.decimals0 = d0;
+        vaultInfo.decimals1 = d1;
+      }
 
       // Determine base/quote orientation
       if (vaultInfo.mint0.toBase58() === WSOL_MINT) baseIdx = 1;
@@ -580,6 +599,9 @@ export class GrpcKeeper {
         watcher.dlmmPool = dlmmData.dlmmPool;
         const price = await this.getDlmmPrice(watcher);
         await this.maybePushPrice(watcher, price);
+      } else if (dex === "meteora-dbc") {
+        const price = await this.getDbcPrice(poolCfg.pool);
+        await this.maybePushPrice(watcher, price);
       } else {
         const price = this.extractPoolStatePrice(dex, poolData, poolInfo as PoolStatePoolInfo);
         await this.maybePushPrice(watcher, price);
@@ -592,6 +614,7 @@ export class GrpcKeeper {
       case "raydium-cpmm": return decodeCpmmPoolInfo(data);
       case "raydium-amm-v4": return decodeAmmV4PoolInfo(data);
       case "pumpswap": return decodePumpSwapPoolInfo(data);
+      case "meteora-damm-v2": return decodeDammV2PoolInfo(data);
       default: throw new Error(`Not a vault-based DEX: ${dex}`);
     }
   }
@@ -607,18 +630,17 @@ export class GrpcKeeper {
         return decodeClmmPoolInfo(data);
       case "raydium-launchlab":
         return decodeLaunchLabPoolInfo(data);
-      case "meteora-damm-v2": {
-        const mint0 = new PublicKey(data.slice(56, 88));
-        const mint1 = new PublicKey(data.slice(88, 120));
-        const [dec0, dec1] = await this.fetchMintDecimals(connection, mint0, mint1);
-        return { kind: "pool-state", mint0, mint1, decimals0: dec0, decimals1: dec1 };
-      }
       case "meteora-dbc": {
-        const baseMint = new PublicKey(data.slice(112, 144));
-        const quoteVaultPk = new PublicKey(data.slice(176, 208));
-        const quoteVaultAccount = await connection.getAccountInfo(quoteVaultPk);
-        if (!quoteVaultAccount) throw new Error("DBC quote vault not found");
-        const quoteMint = new PublicKey(quoteVaultAccount.data.slice(0, 32));
+        // Resolve mints from vault token accounts (offsets 168, 200)
+        const baseVault = new PublicKey(data.slice(168, 200));
+        const quoteVault = new PublicKey(data.slice(200, 232));
+        const [bvAcct, qvAcct] = await Promise.all([
+          connection.getAccountInfo(baseVault),
+          connection.getAccountInfo(quoteVault),
+        ]);
+        if (!bvAcct || !qvAcct) throw new Error("DBC vault account(s) not found");
+        const baseMint = new PublicKey(bvAcct.data.slice(0, 32));
+        const quoteMint = new PublicKey(qvAcct.data.slice(0, 32));
         const [dec0, dec1] = await this.fetchMintDecimals(connection, baseMint, quoteMint);
         return { kind: "pool-state", mint0: baseMint, mint1: quoteMint, decimals0: dec0, decimals1: dec1 };
       }
@@ -676,10 +698,17 @@ export class GrpcKeeper {
     switch (dex) {
       case "raydium-clmm": return clmmPriceFromData(data, info.decimals0, info.decimals1);
       case "raydium-launchlab": return launchLabPriceFromData(data, info.decimals0, info.decimals1);
-      case "meteora-damm-v2": return dammV2PriceFromData(data, info.decimals0, info.decimals1);
-      case "meteora-dbc": return dbcPriceFromData(data, info.decimals0, info.decimals1);
       default: throw new Error(`No pool-state price extractor for: ${dex}`);
     }
+  }
+
+  private async getDbcPrice(poolAddress: string): Promise<number> {
+    const { getDexAdapter } = await import("../../dex");
+    await import("../../dex/meteora-dbc");
+    const adapter = getDexAdapter("meteora-dbc");
+    if (!adapter.getPrice) throw new Error("meteora-dbc adapter missing getPrice()");
+    const priceInfo = await adapter.getPrice(poolAddress);
+    return priceInfo.price;
   }
 
   private async getDlmmPrice(watcher: GrpcWatcherState): Promise<number> {
