@@ -2188,6 +2188,102 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) {
 }
 
 // ---------------------------------------------------------------------------
+// stream — Real-time event streaming via Yellowstone gRPC
+// ---------------------------------------------------------------------------
+
+program
+  .command("stream")
+  .description("Stream real-time DEX events via Yellowstone gRPC")
+  .option(
+    "-p, --preset <preset>",
+    "Subscription preset: all-dex-swaps | new-pools | pumpfun-bonding | pumpswap | raydium | meteora | other-dexes | wallet-trades",
+    "pumpswap",
+  )
+  .option("-w, --wallet <addresses...>", "Wallet addresses for wallet-trades preset")
+  .option("--threshold <sol>", "Large swap threshold in SOL", "10")
+  .option("--events <types...>", "Filter event types: Swap NewPool BondingComplete LargeSwap")
+  .option("--json", "Output events as JSON (one per line)")
+  .option("-v, --verbose", "Verbose logging (debug level)")
+  .action(async (opts) => {
+    const { EventStream } = await import("./streaming");
+
+    const stream = new EventStream({
+      largeSwapThresholdSol: parseFloat(opts.threshold),
+      logLevel: opts.verbose ? "debug" : "info",
+    });
+
+    const eventFilter = opts.events
+      ? new Set(opts.events as string[])
+      : null;
+
+    // Set up event listeners
+    stream.on("*", (event: any) => {
+      // Apply event type filter
+      if (eventFilter && !eventFilter.has(event.type)) return;
+
+      if (opts.json) {
+        console.log(JSON.stringify(event));
+      } else {
+        printEvent(event);
+      }
+    });
+
+    // Handle graceful shutdown
+    process.on("SIGINT", async () => {
+      console.log("\n  Stopping stream...");
+      await stream.stop();
+      process.exit(0);
+    });
+
+    try {
+      await stream.start(opts.preset, { wallets: opts.wallet });
+    } catch (err: any) {
+      console.error(`\n  stream error: ${err.message}\n`);
+      process.exit(1);
+    }
+  });
+
+function printEvent(event: any): void {
+  const ts = event.timestamp
+    ? new Date(event.timestamp * 1000).toLocaleTimeString()
+    : new Date().toLocaleTimeString();
+
+  switch (event.type) {
+    case "Swap": {
+      const dir = event.direction === "buy" ? "BUY " : "SELL";
+      const sol = event.direction === "buy" ? event.amountIn : event.amountOut;
+      console.log(
+        `  [${ts}] ${dir} ${event.dex.padEnd(16)} ${sol.toFixed(4)} SOL  ${event.mint?.slice(0, 8) ?? "???"}...  pool:${event.pool?.slice(0, 8) ?? "???"}...  sig:${event.signature.slice(0, 8)}...`,
+      );
+      break;
+    }
+    case "NewPool": {
+      console.log(
+        `  [${ts}] NEW  ${event.dex.padEnd(16)} pool:${event.pool?.slice(0, 8) ?? "???"}...  ${event.tokenA?.slice(0, 8) ?? "???"}... / ${event.tokenB?.slice(0, 8) ?? "???"}...  sig:${event.signature.slice(0, 8)}...`,
+      );
+      break;
+    }
+    case "BondingComplete": {
+      console.log(
+        `  [${ts}] GRAD pumpfun          mint:${event.mint?.slice(0, 8) ?? "???"}...  pool:${event.migrationPool?.slice(0, 8) ?? "???"}...  sig:${event.signature.slice(0, 8)}...`,
+      );
+      break;
+    }
+    case "LargeSwap": {
+      const s = event.swap;
+      const dir = s.direction === "buy" ? "BUY " : "SELL";
+      const sol = s.direction === "buy" ? s.amountIn : s.amountOut;
+      console.log(
+        `  [${ts}] 🐋   ${s.dex.padEnd(16)} ${dir} ${sol.toFixed(4)} SOL  ${s.mint?.slice(0, 8) ?? "???"}...  sig:${s.signature.slice(0, 8)}...`,
+      );
+      break;
+    }
+    default:
+      console.log(`  [${ts}] ${event.type} ${JSON.stringify(event).slice(0, 120)}...`);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Parse & run
 // ---------------------------------------------------------------------------
 

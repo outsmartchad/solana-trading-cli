@@ -130,6 +130,30 @@ export type { SendRpcOptions, SendRpcResult, SendLegacyTxOptions } from "./trans
 // DexScreener utility
 export { getInfoFromDexscreener } from "./dexscreener/info";
 
+// Event Streaming Engine
+export { EventStream } from "./streaming";
+export type {
+  StreamConfig,
+  StreamEvent,
+  StreamEventType,
+  SubscriptionPreset,
+  NewPoolEvent,
+  SwapEvent,
+  BondingCompleteEvent,
+  LargeSwapEvent,
+} from "./streaming";
+export {
+  subscribeAllDexSwaps,
+  subscribeNewPools,
+  subscribePumpSwap,
+  subscribeRaydium,
+  subscribeMeteora,
+  subscribeWalletTrades,
+  subscribePoolActivity,
+  PROGRAM_TO_DEX,
+  ALL_DEX_PROGRAM_IDS,
+} from "./streaming";
+
 // ---------------------------------------------------------------------------
 // Adapter registration — side-effect imports that trigger self-registration
 // ---------------------------------------------------------------------------
