@@ -141,8 +141,23 @@ function parsePumpSwapTx(tx: FormattedTransaction, isAggregated: boolean): Strea
   const events: StreamEvent[] = [];
   const dex = "pumpswap";
 
-  // Check all inner instructions for PumpSwap CPI calls
+  // Determine instruction type from outer instructions first (native PumpSwap calls)
+  let outerInstructionType: "buy" | "sell" | null = null;
+  for (const ix of tx.outerInstructions) {
+    if (ix.programId === PUMP_SWAP_PROGRAM_ID && ix.data.length >= 8) {
+      if (matchDiscriminator(ix.data, PUMPSWAP_BUY)) outerInstructionType = "buy";
+      else if (matchDiscriminator(ix.data, PUMPSWAP_SELL)) outerInstructionType = "sell";
+    }
+  }
+
+  // Process inner instructions SEQUENTIALLY within each group.
+  // Pattern: a short instruction (≥8 bytes, <300) with buy/sell discriminator
+  // is followed by a long instruction (≥320 bytes) with the event data.
+  // Each discriminator applies to the NEXT 320-byte event in the same group.
   for (const group of tx.innerInstructions) {
+    // Track the most recently seen buy/sell discriminator within this group
+    let currentDirection: "buy" | "sell" | null = outerInstructionType;
+
     for (const ix of group.instructions) {
       if (ix.programId !== PUMP_SWAP_PROGRAM_ID) continue;
 
@@ -155,17 +170,23 @@ function parsePumpSwapTx(tx: FormattedTransaction, isAggregated: boolean): Strea
         continue;
       }
 
-      // Buy/Sell detection via inner instruction data (320+ byte event data)
+      // Short instruction with buy/sell discriminator — remember it for the next event
+      if (ix.data.length >= 8 && ix.data.length < 300) {
+        if (matchDiscriminator(ix.data, PUMPSWAP_BUY)) currentDirection = "buy";
+        else if (matchDiscriminator(ix.data, PUMPSWAP_SELL)) currentDirection = "sell";
+        continue;
+      }
+
+      // Long instruction (≥320 bytes) — this is the event data, pair with currentDirection
       if (ix.data.length >= 300) {
-        const swapEvent = parsePumpSwapInnerSwap(ix, tx, dex, isAggregated);
+        const swapEvent = parsePumpSwapInnerSwap(ix, tx, dex, isAggregated, currentDirection ?? "buy");
         if (swapEvent) events.push(swapEvent);
+        // Reset direction after consuming — next event needs its own discriminator
+        // (unless it's a native call where outer ix applies to all)
+        if (!outerInstructionType) currentDirection = null;
       }
     }
   }
-
-  // Also check outer instructions for discriminator to determine buy/sell direction
-  // (The outer ix has the discriminator, inner ix has the event data)
-  // This is handled by parsePumpSwapInnerSwap looking at outer ix discriminators
 
   return events;
 }
@@ -217,76 +238,85 @@ function parsePumpSwapInnerSwap(
   tx: FormattedTransaction,
   dex: string,
   isAggregated: boolean,
+  direction: "buy" | "sell",
 ): SwapEvent | null {
   try {
     const data = ix.data;
     if (data.length < 300) return null;
 
-    // Parse the 320+ byte inner instruction event data
-    // Layout: [16] timestamp, [24] baseAmountOut, [32] maxQuoteAmountIn,
-    //         [56] poolBaseTokenReserves, [64] poolQuoteTokenReserves,
-    //         [72] quoteAmountOut, [112] quoteAmountOutWithoutLpFee,
-    //         [128] pool pubkey, [160] user pubkey, [320] coinCreator pubkey
-    const poolBaseReserves = Number(readU64LE(data, 56)) / 1e6;
-    const poolQuoteReserves = Number(readU64LE(data, 64)) / 1e9;
-    const baseAmountOut = Number(readU64LE(data, 24)) / 1e6;
-    const quoteAmountOutWithoutFee = Number(readU64LE(data, 112)) / 1e9;
-
-    // Extract pool and trader from the 320-byte event data
+    // Extract pool and trader from the event data pubkeys (these offsets are stable)
     let poolAddr = "";
     let trader = "";
     try {
       poolAddr = new PublicKey(data.slice(128, 160)).toBase58();
       trader = new PublicKey(data.slice(160, 192)).toBase58();
     } catch { /* fallback below */ }
-
     if (!poolAddr) poolAddr = "";
     if (!trader) trader = tx.signer;
 
-    // Determine direction from outer instruction discriminator
-    let direction: "buy" | "sell" = "buy";
-    for (const outerIx of tx.outerInstructions) {
-      if (outerIx.programId === PUMP_SWAP_PROGRAM_ID || outerIx.data.length >= 8) {
-        if (matchDiscriminator(outerIx.data, PUMPSWAP_SELL)) {
-          direction = "sell";
-          break;
-        }
-        if (matchDiscriminator(outerIx.data, PUMPSWAP_BUY)) {
-          direction = "buy";
-          break;
-        }
-      }
-    }
+    // ---------------------------------------------------------------------------
+    // Use pre/post token balance diff approach (same as Meteora parser).
+    // This is reliable regardless of instruction data layout variations because
+    // uiAmount is already decimal-adjusted by the runtime.
+    // ---------------------------------------------------------------------------
 
-    // Also check inner instructions for buy/sell discriminator
-    for (const group of tx.innerInstructions) {
-      for (const innerIx of group.instructions) {
-        if (innerIx.programId !== PUMP_SWAP_PROGRAM_ID) continue;
-        if (innerIx.data.length >= 8 && innerIx.data.length < 300) {
-          if (matchDiscriminator(innerIx.data, PUMPSWAP_SELL)) direction = "sell";
-          else if (matchDiscriminator(innerIx.data, PUMPSWAP_BUY)) direction = "buy";
-        }
-      }
-    }
+    // Build pre/post maps keyed by (owner, mint) → uiAmount
+    const preByOwnerMint = new Map<string, number>();
+    const postByOwnerMint = new Map<string, number>();
+    const decimalsByMint = new Map<string, number>();
 
-    // Find mint from token balances (non-WSOL token owned by the pool)
-    let mint = "";
     for (const bal of tx.preTokenBalances) {
-      if (bal.owner === poolAddr && bal.mint !== WSOL_MINT) {
-        mint = bal.mint;
-        break;
+      if (bal.owner === poolAddr) {
+        preByOwnerMint.set(bal.mint, bal.uiAmount);
+        decimalsByMint.set(bal.mint, bal.decimals);
       }
     }
-    if (!mint) {
-      for (const bal of tx.postTokenBalances) {
-        if (bal.owner === poolAddr && bal.mint !== WSOL_MINT) {
-          mint = bal.mint;
-          break;
-        }
+    for (const bal of tx.postTokenBalances) {
+      if (bal.owner === poolAddr) {
+        postByOwnerMint.set(bal.mint, bal.uiAmount);
+        decimalsByMint.set(bal.mint, bal.decimals);
       }
     }
 
-    const priceAfter = poolBaseReserves > 0 ? poolQuoteReserves / poolBaseReserves : 0;
+    // Find the non-WSOL mint (the "token" being traded) and compute diffs
+    let mint = "";
+    let solDiff = 0;   // positive = pool gained SOL
+    let tokenDiff = 0; // positive = pool gained tokens
+    let reserveQuote = 0;
+    let reserveBase = 0;
+
+    for (const m of new Set([...preByOwnerMint.keys(), ...postByOwnerMint.keys()])) {
+      const pre = preByOwnerMint.get(m) ?? 0;
+      const post = postByOwnerMint.get(m) ?? 0;
+      const diff = post - pre;
+
+      if (m === WSOL_MINT) {
+        solDiff = diff;
+        reserveQuote = post;
+      } else {
+        mint = m;
+        tokenDiff = diff;
+        reserveBase = post;
+      }
+    }
+
+    // Determine direction from balance diffs (override discriminator if clear)
+    // Pool gained tokens + lost SOL = SELL (user sold tokens for SOL)
+    // Pool lost tokens + gained SOL = BUY (user bought tokens with SOL)
+    if (tokenDiff > 0 && solDiff < 0) {
+      direction = "sell";
+    } else if (tokenDiff < 0 && solDiff > 0) {
+      direction = "buy";
+    }
+    // If diffs are ambiguous (e.g., multi-swap same pool), keep discriminator-based direction
+
+    const solAmount = Math.abs(solDiff);
+    const tokenAmount = Math.abs(tokenDiff);
+
+    // Skip if we couldn't determine the swap
+    if (!mint || (solAmount === 0 && tokenAmount === 0)) return null;
+
+    const priceAfter = reserveBase > 0 ? reserveQuote / reserveBase : 0;
 
     return {
       type: "Swap",
@@ -295,11 +325,13 @@ function parsePumpSwapInnerSwap(
       trader,
       direction,
       mint,
-      amountIn: direction === "buy" ? quoteAmountOutWithoutFee : baseAmountOut,
-      amountOut: direction === "buy" ? baseAmountOut : quoteAmountOutWithoutFee,
+      // BUY:  amountIn = SOL spent, amountOut = tokens received
+      // SELL: amountIn = tokens spent, amountOut = SOL received
+      amountIn: direction === "buy" ? solAmount : tokenAmount,
+      amountOut: direction === "buy" ? tokenAmount : solAmount,
       priceAfter,
-      reserveBase: poolBaseReserves,
-      reserveQuote: poolQuoteReserves,
+      reserveBase,
+      reserveQuote,
       signature: tx.signature,
       slot: tx.slot,
       timestamp: tx.timestamp,
