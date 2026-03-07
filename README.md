@@ -4,12 +4,6 @@
 
 **[Documentation](https://outsmartchad.github.io/outsmart-cli/)** | **[npm](https://www.npmjs.com/package/outsmart)** | **[Discord](https://discord.gg/dc3Kh3Y3yJ)**
 
-```bash
-npm install -g outsmart@alpha
-outsmart init
-outsmart buy --dex raydium-cpmm --pool <POOL> --amount 0.1
-```
-
 ## Table of Contents
 
 - [About](#about)
