@@ -10,6 +10,34 @@ outsmart init
 outsmart buy --dex raydium-cpmm --pool <POOL> --amount 0.1
 ```
 
+## Table of Contents
+
+- [About](#about)
+- [Quick Start](#quick-start)
+- [Commands](#commands)
+  - [Trading](#trading)
+  - [Liquidity](#liquidity)
+  - [Event Streaming](#event-streaming)
+  - [Wallet Management](#wallet-management)
+  - [Balances](#balances)
+  - [Utilities](#utilities)
+  - [Perpetual Futures (Percolator)](#perpetual-futures-percolator)
+- [Shared Swap Options](#shared-swap-options)
+- [Stablecoin Auto-Swap](#stablecoin-auto-swap)
+- [DEX Adapters](#dex-adapters)
+- [Programmatic API](#programmatic-api)
+- [Event Streaming (Programmatic)](#event-streaming-1)
+- [Autonomous LP Manager](#autonomous-lp-manager)
+- [TX Landing Providers](#tx-landing-providers)
+- [Environment Variables](#environment-variables)
+- [Testing](#testing)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [Disclaimer](#disclaimer)
+- [License](#license)
+
+---
+
 ## About
 
 outsmart unifies every major Solana DEX protocol into a single CLI and Node.js library. 18 on-chain adapters (Raydium, Meteora, Orca, PumpFun, PumpSwap, and more), 2 swap aggregators (Jupiter Ultra, DFlow), 12 concurrent TX landing providers, real-time event streaming via Yellowstone gRPC or WebSocket, and an autonomous LP manager with auto-rebalancing and fee compounding — all from one package.
