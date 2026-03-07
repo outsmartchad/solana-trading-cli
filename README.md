@@ -36,9 +36,9 @@
 
 outsmart unifies every major Solana DEX protocol into a single CLI and Node.js library. 18 on-chain adapters (Raydium, Meteora, Orca, PumpFun, PumpSwap, and more), 2 swap aggregators (Jupiter Ultra, DFlow), 12 concurrent TX landing providers, real-time event streaming via Yellowstone gRPC or WebSocket, and an autonomous LP manager with auto-rebalancing and fee compounding — all from one package.
 
-**For agents** — plug into [outsmart-agent](https://github.com/outsmartchad/outsmart-agent) (MCP server + 9 AI skills) and give any LLM full DeFi capabilities: swap, LP, snipe, trench, and devving coins.
-
 **For builders** — `import { getDexAdapter, LpManager, EventStream } from "outsmart"` and ship your own strategies. Typed event streams, per-DEX vault parsing, and a unified adapter interface mean you write the logic — outsmart handles the protocol plumbing across 18 DEXes.
+
+**For agents** — plug into [outsmart-agent](https://github.com/outsmartchad/outsmart-agent) (MCP server + 9 AI skills) and give any LLM full DeFi capabilities: swap, LP, snipe, trench, and devving coins.
 
 ---
 
