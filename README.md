@@ -38,7 +38,7 @@ outsmart unifies every major Solana DEX protocol into a single CLI and Node.js l
 
 **For builders** — `import { getDexAdapter, LpManager, EventStream } from "outsmart"` and ship your own strategies. Typed event streams, per-DEX vault parsing, and a unified adapter interface mean you write the logic — outsmart handles the protocol plumbing across 18 DEXes.
 
-**For agents** — plug into [outsmart-agent](https://github.com/outsmartchad/outsmart-agent) (MCP server + 9 AI skills) and give any LLM full DeFi capabilities: swap, LP, snipe, trench, and devving coins.
+**For AI agents** — use the CLI to interact with any major Solana DeFi protocol autonomously. Swap, manage LP positions, stream real-time events, and execute complex strategies — all from a single command.
 
 ---
 
