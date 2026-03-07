@@ -1,6 +1,6 @@
 # outsmart
 
-**The most complete Solana DEX toolkit for builders, traders, and ai agents**
+**The most complete Solana DEX CLI and toolkit for builders, traders, and AI agents**
 
 **[Documentation](https://outsmartchad.github.io/outsmart-cli/)** | **[npm](https://www.npmjs.com/package/outsmart)** | **[Discord](https://discord.gg/dc3Kh3Y3yJ)**
 
