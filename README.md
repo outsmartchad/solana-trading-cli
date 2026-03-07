@@ -21,7 +21,7 @@
 - [DEX Adapters](#dex-adapters)
 - [Programmatic API](#programmatic-api)
 - [Event Streaming (Programmatic)](#event-streaming-1)
-- [Autonomous LP Manager](#autonomous-lp-manager)
+- [LP Manager](#lp-manager)
 - [TX Landing Providers](#tx-landing-providers)
 - [Environment Variables](#environment-variables)
 - [Testing](#testing)
@@ -34,7 +34,7 @@
 
 ## About
 
-outsmart unifies every major Solana DEX protocol into a single CLI and Node.js library. 18 on-chain adapters (Raydium, Meteora, Orca, PumpFun, PumpSwap, and more), 2 swap aggregators (Jupiter Ultra, DFlow), 12 concurrent TX landing providers, real-time event streaming via Yellowstone gRPC or WebSocket, and an autonomous LP manager with auto-rebalancing and fee compounding — all from one package.
+outsmart unifies every major Solana DEX protocol into a single CLI and Node.js library. 18 on-chain adapters (Raydium, Meteora, Orca, PumpFun, PumpSwap, and more), 2 swap aggregators (Jupiter Ultra, DFlow), 12 concurrent TX landing providers, real-time event streaming via Yellowstone gRPC or WebSocket, and an LP manager with auto-rebalancing and fee compounding — all from one package.
 
 **For builders** — `import { getDexAdapter, LpManager, EventStream } from "outsmart"` and ship your own strategies. Typed event streams, per-DEX vault parsing, and a unified adapter interface mean you write the logic — outsmart handles the protocol plumbing across 18 DEXes.
 
@@ -197,7 +197,7 @@ outsmart positions --dex meteora-damm-v2 --pool <POOL>
 
 #### lp-manage
 
-Start autonomous LP position management. See [Autonomous LP Manager](#autonomous-lp-manager) for full details and programmatic API.
+Start LP position management. See [LP Manager](#lp-manager) for full details and programmatic API.
 
 ```bash
 # Start managing a DLMM position (auto-rebalance + compound)
@@ -612,7 +612,7 @@ All swap events use per-DEX vault account layouts with pre/post token balance di
 
 ---
 
-## Autonomous LP Manager
+## LP Manager
 
 Automated liquidity position management for **Meteora DLMM** (concentrated, bin-based) and **DAMM v2** (full-range). Monitors positions, auto-rebalances when out of range, compounds fees, and exits on risk thresholds.
 
@@ -626,7 +626,7 @@ import "outsmart/dist/dex/meteora-dlmm";
 const pools = await selectBestPool("DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263");
 console.log("Top pool:", pools[0].pair, "APR:", pools[0].estimatedApr + "%");
 
-// Start autonomous management
+// Start management
 const manager = new LpManager({
   poolAddress: "POOL_ADDRESS",
   dex: "meteora-dlmm",
