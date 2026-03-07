@@ -129,6 +129,156 @@ Discover a pool for a token pair on a specific DEX.
 outsmart find-pool --dex raydium-cpmm --token <MINT>
 ```
 
+### Liquidity
+
+#### add-liq
+
+Add liquidity to a pool.
+
+```bash
+outsmart add-liq --dex meteora-damm-v2 --pool <POOL> --amount-sol 1.0
+outsmart add-liq --dex meteora-dlmm --pool <POOL> --amount-sol 0.5 --amount-token 1000
+```
+
+| Flag | Description |
+|------|-------------|
+| `-d, --dex <name>` | DEX adapter name (required) |
+| `-p, --pool <address>` | Pool address (required) |
+| `--amount-sol <amount>` | Amount of SOL to deposit |
+| `--amount-token <amount>` | Amount of non-SOL token to deposit |
+| `--strategy <type>` | Distribution: `spot` \| `curve` \| `bid-ask` (DLMM only, default: spot) |
+| `--bins <count>` | Number of bins (DLMM only, default: 50, max: 70) |
+
+#### remove-liq
+
+Remove liquidity from a pool.
+
+```bash
+outsmart remove-liq --dex meteora-damm-v2 --pool <POOL> --pct 100
+```
+
+#### claim-fees
+
+Claim accumulated swap fees from LP positions.
+
+```bash
+outsmart claim-fees --dex meteora-damm-v2 --pool <POOL>
+```
+
+#### positions
+
+List LP positions in a pool.
+
+```bash
+outsmart positions --dex meteora-damm-v2 --pool <POOL>
+```
+
+#### lp-manage
+
+Start autonomous LP position management. See [Autonomous LP Manager](#autonomous-lp-manager) for full details and programmatic API.
+
+```bash
+# Start managing a DLMM position (auto-rebalance + compound)
+outsmart lp-manage --dex meteora-dlmm --pool <POOL> --dry-run
+
+# Manage a specific position
+outsmart lp-manage --dex meteora-dlmm --pool <POOL> --position <POSITION>
+
+# DAMM v2 — compound-only (full-range, no rebalancing needed)
+outsmart lp-manage --dex meteora-damm-v2 --pool <POOL>
+
+# Custom thresholds
+outsmart lp-manage --dex meteora-dlmm --pool <POOL> \
+  --bins 30 --strategy curve --compound-interval 15 \
+  --il-threshold 5 --stop-loss 20
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--dex <name>` | `meteora-dlmm` or `meteora-damm-v2` (required) | |
+| `--pool <address>` | Pool address (required) | |
+| `--position <address>` | Specific position (default: all in pool) | |
+| `--bins <count>` | Bins for new position after rebalance (DLMM) | 50 |
+| `--strategy <type>` | `spot` \| `curve` \| `bid-ask` (DLMM) | `spot` |
+| `--compound-interval <min>` | Compound fees every N minutes (0=off) | 30 |
+| `--il-threshold <pct>` | Exit if IL exceeds N% | 10 |
+| `--stop-loss <pct>` | Exit if price drops N% from entry (0=off) | 0 |
+| `--dry-run` | Log actions without executing | false |
+| `--ws` | Use WebSocket streaming (free) | auto |
+
+#### lp-find
+
+Find the best LP pool for a token.
+
+```bash
+outsmart lp-find --token <MINT>
+outsmart lp-find --token <MINT> --dex meteora-dlmm --json
+```
+
+#### create-pump-coin
+
+Create a new PumpFun token with a bonding curve.
+
+```bash
+outsmart create-pump-coin --name "My Token" --symbol "MYTKN" --uri "https://ipfs.io/ipfs/Qm..."
+```
+
+#### create-pool
+
+Create a new PumpSwap AMM pool with initial liquidity.
+
+```bash
+outsmart create-pool --base <MINT> --quote So111...112 --base-amount 1000000 --quote-amount 1
+```
+
+#### create-damm-pool
+
+Create a Meteora DAMM v2 custom pool with full fee configuration.
+
+```bash
+outsmart create-damm-pool --base <MINT> --base-amount 1000000 --quote-amount 0.5
+outsmart create-damm-pool --base <MINT> --base-amount 1000000 --quote-amount 0.5 \
+  --max-fee 5000 --min-fee 100 --fee-mode 1 --dynamic-fee
+```
+
+#### create-damm-config-pool
+
+Create a Meteora DAMM v2 pool using an existing on-chain config.
+
+```bash
+outsmart create-damm-config-pool --base <MINT> --base-amount 1000000 --quote-amount 0.5 \
+  --config <CONFIG_ADDRESS>
+```
+
+### Event Streaming
+
+See [Event Streaming](#event-streaming) for full details, programmatic API, and supported DEXes.
+
+```bash
+# Stream all DEX swaps (auto-selects WebSocket if no gRPC endpoint configured)
+outsmart stream --preset all-dex-swaps
+
+# Force WebSocket mode (free, no gRPC endpoint needed)
+outsmart stream --preset all-dex-swaps --ws
+
+# Stream specific DEXes
+outsmart stream --preset pumpswap
+outsmart stream --preset raydium
+outsmart stream --preset meteora
+
+# Stream new pool creations
+outsmart stream --preset new-pools
+
+# Stream PumpFun bonding curve events
+outsmart stream --preset pumpfun-bonding
+```
+
+Available presets: `all-dex-swaps`, `new-pools`, `pumpfun-bonding`, `pumpswap`, `raydium`, `meteora`, `other-dexes`, `wallet-trades`
+
+**gRPC mode** (default if configured): requires `GRPC_URL` and `GRPC_XTOKEN` env vars. Lowest latency (~200ms).
+
+**WebSocket mode** (`--ws` flag or auto-selected): uses your standard `MAINNET_ENDPOINT` RPC. Free, higher latency (~1-3s).
+
 ### Wallet Management
 
 #### wallet
@@ -213,99 +363,6 @@ Check the balance of a specific token.
 outsmart balance --token <MINT>
 ```
 
-### Liquidity
-
-#### add-liq
-
-Add liquidity to a pool.
-
-```bash
-outsmart add-liq --dex meteora-damm-v2 --pool <POOL> --amount-sol 1.0
-outsmart add-liq --dex meteora-dlmm --pool <POOL> --amount-sol 0.5 --amount-token 1000
-```
-
-| Flag | Description |
-|------|-------------|
-| `-d, --dex <name>` | DEX adapter name (required) |
-| `-p, --pool <address>` | Pool address (required) |
-| `--amount-sol <amount>` | Amount of SOL to deposit |
-| `--amount-token <amount>` | Amount of non-SOL token to deposit |
-| `--strategy <type>` | Distribution: `spot` \| `curve` \| `bid-ask` (DLMM only, default: spot) |
-| `--bins <count>` | Number of bins (DLMM only, default: 50, max: 70) |
-
-#### remove-liq
-
-Remove liquidity from a pool.
-
-```bash
-outsmart remove-liq --dex meteora-damm-v2 --pool <POOL> --pct 100
-```
-
-#### claim-fees
-
-Claim accumulated swap fees from LP positions.
-
-```bash
-outsmart claim-fees --dex meteora-damm-v2 --pool <POOL>
-```
-
-#### positions
-
-List LP positions in a pool.
-
-```bash
-outsmart positions --dex meteora-damm-v2 --pool <POOL>
-```
-
-### Pool Creation
-
-#### create-pump-coin
-
-Create a new PumpFun token with a bonding curve.
-
-```bash
-outsmart create-pump-coin --name "My Token" --symbol "MYTKN" --uri "https://ipfs.io/ipfs/Qm..."
-```
-
-#### create-pool
-
-Create a new PumpSwap AMM pool with initial liquidity.
-
-```bash
-outsmart create-pool --base <MINT> --quote So111...112 --base-amount 1000000 --quote-amount 1
-```
-
-#### create-damm-pool
-
-Create a Meteora DAMM v2 custom pool with full fee configuration.
-
-```bash
-outsmart create-damm-pool --base <MINT> --base-amount 1000000 --quote-amount 0.5
-outsmart create-damm-pool --base <MINT> --base-amount 1000000 --quote-amount 0.5 \
-  --max-fee 5000 --min-fee 100 --fee-mode 1 --dynamic-fee
-```
-
-#### create-damm-config-pool
-
-Create a Meteora DAMM v2 pool using an existing on-chain config.
-
-```bash
-outsmart create-damm-config-pool --base <MINT> --base-amount 1000000 --quote-amount 0.5 \
-  --config <CONFIG_ADDRESS>
-```
-
-### Perpetual Futures (Percolator)
-
-> ⚠️ Work in progress — currently devnet only. See [PERCOLATOR.md](./PERCOLATOR.md) for full CLI reference and programmatic API.
-
-```bash
-outsmart perp create-market --price 150 --lp 2
-outsmart perp long -m <MARKET> -s 0.1
-outsmart perp keeper --pool <POOL> --market <MARKET> --dex raydium-cpmm
-```
-
----
-
 ### Utilities
 
 #### info
@@ -342,6 +399,31 @@ Interactive setup — prompts for wallet key and RPC endpoint.
 outsmart init
 ```
 
+### Perpetual Futures (Percolator)
+
+> Warning: Work in progress — currently devnet only. See [PERCOLATOR.md](./PERCOLATOR.md) for full CLI reference and programmatic API.
+
+```bash
+outsmart perp create-market --price 150 --lp 2
+outsmart perp long -m <MARKET> -s 0.1
+outsmart perp keeper --pool <POOL> --market <MARKET> --dex raydium-cpmm
+```
+
+---
+
+## Shared Swap Options
+
+All swap commands (`buy`, `sell`) accept these options:
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--slippage <bps>` | Slippage tolerance in basis points | 300 (3%) |
+| `--priority <microLamports>` | Priority fee per compute unit | from env |
+| `--tip <sol>` | MEV tip in SOL | 0.001 |
+| `--cu <units>` | Compute unit limit | auto |
+| `--jito` | Use Jito bundle submission | false |
+| `--quote <mint>` | Quote token mint | WSOL |
+
 ---
 
 ## Stablecoin Auto-Swap
@@ -362,21 +444,6 @@ outsmart sell --dex raydium-launchlab --pool <POOL> --pct 100
 ```
 
 Uses Jupiter Ultra if `JUPITER_API_KEY` is set, otherwise falls back to on-chain DEX pools. Get a free key at [portal.jup.ag](https://portal.jup.ag) (optional).
-
----
-
-## Shared Swap Options
-
-All swap commands (`buy`, `sell`) accept these options:
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--slippage <bps>` | Slippage tolerance in basis points | 300 (3%) |
-| `--priority <microLamports>` | Priority fee per compute unit | from env |
-| `--tip <sol>` | MEV tip in SOL | 0.001 |
-| `--cu <units>` | Compute unit limit | auto |
-| `--jito` | Use Jito bundle submission | false |
-| `--quote <mint>` | Quote token mint | WSOL |
 
 ---
 
@@ -407,44 +474,52 @@ All swap commands (`buy`, `sell`) accept these options:
 
 All ✅ adapters confirmed on Solana mainnet with real transactions.
 
-## Percolator — Permissionless Perpetual Futures
+---
 
-> ⚠️ Work in progress — currently devnet only.
+## Programmatic API
 
-See **[PERCOLATOR.md](./PERCOLATOR.md)** for the full CLI reference, programmatic API, method list, deployed program addresses, and testing guide.
+Use outsmart as a library in your own bots:
+
+```typescript
+import { getDexAdapter, listDexAdapters } from "outsmart";
+
+// Import only the adapters you need
+import "outsmart/dist/dex/raydium-cpmm";
+import "outsmart/dist/dex/jupiter-ultra";
+
+const cpmm = getDexAdapter("raydium-cpmm");
+
+// Buy
+const result = await cpmm.buy({
+  tokenMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  amountSol: 0.1,
+  opts: { slippageBps: 300, tipSol: 0.001 },
+});
+console.log("TX:", result.txSignature);
+console.log("Received:", result.amountOut);
+
+// Sell
+const sellResult = await cpmm.sell({
+  tokenMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  percentage: 100,
+  opts: { slippageBps: 300 },
+});
+
+// Get price
+const price = await cpmm.getPrice!("POOL_ADDRESS");
+console.log("Price:", price.price);
+
+// List adapters
+const adapters = listDexAdapters();
+```
+
+For AI agent integration (MCP server, OpenClaw workflows), see [outsmart-agent](https://github.com/outsmartchad/outsmart-agent).
 
 ---
 
-## Event Streaming Engine
+## Event Streaming
 
 Real-time DEX event streaming with two backends — **gRPC** (Yellowstone/Geyser, lowest latency) and **WebSocket** (free, uses standard RPC). Both produce the same typed events from 18+ DEX programs.
-
-### CLI
-
-```bash
-# Stream all DEX swaps (auto-selects WebSocket if no gRPC endpoint configured)
-outsmart stream --preset all-dex-swaps
-
-# Force WebSocket mode (free, no gRPC endpoint needed)
-outsmart stream --preset all-dex-swaps --ws
-
-# Stream specific DEXes
-outsmart stream --preset pumpswap
-outsmart stream --preset raydium
-outsmart stream --preset meteora
-
-# Stream new pool creations
-outsmart stream --preset new-pools
-
-# Stream PumpFun bonding curve events
-outsmart stream --preset pumpfun-bonding
-```
-
-Available presets: `all-dex-swaps`, `new-pools`, `pumpfun-bonding`, `pumpswap`, `raydium`, `meteora`, `other-dexes`, `wallet-trades`
-
-**gRPC mode** (default if configured): requires `GRPC_URL` and `GRPC_XTOKEN` env vars. Lowest latency (~200ms).
-
-**WebSocket mode** (`--ws` flag or auto-selected): uses your standard `MAINNET_ENDPOINT` RPC. Free, higher latency (~1-3s).
 
 ### Programmatic API
 
@@ -507,7 +582,7 @@ await stream.stop();
 | `BondingComplete` | `mint`, `bondingCurve`, `migrationPool` |
 | `LargeSwap` | `swap` (full SwapEvent), `estimatedUsdValue` |
 
-### Supported DEXes (Streaming)
+### Supported DEXes
 
 All swap events use per-DEX vault account layouts with pre/post token balance diffing for accurate amounts:
 
@@ -526,41 +601,6 @@ All swap events use per-DEX vault account layouts with pre/post token balance di
 ## Autonomous LP Manager
 
 Automated liquidity position management for **Meteora DLMM** (concentrated, bin-based) and **DAMM v2** (full-range). Monitors positions, auto-rebalances when out of range, compounds fees, and exits on risk thresholds.
-
-### CLI
-
-```bash
-# Start managing a DLMM position (auto-rebalance + compound)
-outsmart lp-manage --dex meteora-dlmm --pool <POOL> --dry-run
-
-# Manage a specific position
-outsmart lp-manage --dex meteora-dlmm --pool <POOL> --position <POSITION>
-
-# DAMM v2 — compound-only (full-range, no rebalancing needed)
-outsmart lp-manage --dex meteora-damm-v2 --pool <POOL>
-
-# Custom thresholds
-outsmart lp-manage --dex meteora-dlmm --pool <POOL> \
-  --bins 30 --strategy curve --compound-interval 15 \
-  --il-threshold 5 --stop-loss 20
-
-# Find the best LP pool for a token
-outsmart lp-find --token <MINT>
-outsmart lp-find --token <MINT> --dex meteora-dlmm --json
-```
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--dex <name>` | `meteora-dlmm` or `meteora-damm-v2` (required) | |
-| `--pool <address>` | Pool address (required) | |
-| `--position <address>` | Specific position (default: all in pool) | |
-| `--bins <count>` | Bins for new position after rebalance (DLMM) | 50 |
-| `--strategy <type>` | `spot` \| `curve` \| `bid-ask` (DLMM) | `spot` |
-| `--compound-interval <min>` | Compound fees every N minutes (0=off) | 30 |
-| `--il-threshold <pct>` | Exit if IL exceeds N% | 10 |
-| `--stop-loss <pct>` | Exit if price drops N% from entry (0=off) | 0 |
-| `--dry-run` | Log actions without executing | false |
-| `--ws` | Use WebSocket streaming (free) | auto |
 
 ### Programmatic API
 
@@ -653,47 +693,6 @@ Set any provider's API key and it's automatically enabled. The orchestrator send
 | `DFLOW_API_KEY` | DFlow intent API key ([pond.dflow.net](https://pond.dflow.net/build/api-key)) | required for dflow |
 | `GRPC_URL` | Yellowstone gRPC endpoint (for gRPC keeper) | not set |
 | `GRPC_XTOKEN` | Yellowstone gRPC auth token | not set |
-
----
-
-## Programmatic API
-
-Use outsmart as a library in your own bots:
-
-```typescript
-import { getDexAdapter, listDexAdapters } from "outsmart";
-
-// Import only the adapters you need
-import "outsmart/dist/dex/raydium-cpmm";
-import "outsmart/dist/dex/jupiter-ultra";
-
-const cpmm = getDexAdapter("raydium-cpmm");
-
-// Buy
-const result = await cpmm.buy({
-  tokenMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-  amountSol: 0.1,
-  opts: { slippageBps: 300, tipSol: 0.001 },
-});
-console.log("TX:", result.txSignature);
-console.log("Received:", result.amountOut);
-
-// Sell
-const sellResult = await cpmm.sell({
-  tokenMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-  percentage: 100,
-  opts: { slippageBps: 300 },
-});
-
-// Get price
-const price = await cpmm.getPrice!("POOL_ADDRESS");
-console.log("Price:", price.price);
-
-// List adapters
-const adapters = listDexAdapters();
-```
-
-For AI agent integration (MCP server, OpenClaw workflows), see [outsmart-agent](https://github.com/outsmartchad/outsmart-agent).
 
 ---
 
