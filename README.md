@@ -12,9 +12,9 @@ outsmart buy --dex raydium-cpmm --pool <POOL> --amount 0.1
 
 ## About
 
-outsmart unifies every major Solana DEX protocol into a single CLI and Node.js library. 18 on-chain adapters (Raydium, Meteora, Orca, PumpFun, PumpSwap, and more), 2 swap aggregators (Jupiter Ultra, DFlow), 12 concurrent TX landing providers, real-time event streaming via Yellowstone gRPC or WebSocket, an autonomous LP manager with auto-rebalancing and fee compounding, and a permissionless perpetual futures engine — all from one package.
+outsmart unifies every major Solana DEX protocol into a single CLI and Node.js library. 18 on-chain adapters (Raydium, Meteora, Orca, PumpFun, PumpSwap, and more), 2 swap aggregators (Jupiter Ultra, DFlow), 12 concurrent TX landing providers, real-time event streaming via Yellowstone gRPC or WebSocket, and an autonomous LP manager with auto-rebalancing and fee compounding — all from one package.
 
-**For agents** — plug into [outsmart-agent](https://github.com/outsmartchad/outsmart-agent) (MCP server + 9 AI skills) and give any LLM full DeFi capabilities: swap, LP, snipe, trench, create onchain perp markets, and devving coins.
+**For agents** — plug into [outsmart-agent](https://github.com/outsmartchad/outsmart-agent) (MCP server + 9 AI skills) and give any LLM full DeFi capabilities: swap, LP, snipe, trench, and devving coins.
 
 **For builders** — `import { getDexAdapter, LpManager, EventStream } from "outsmart"` and ship your own strategies. Typed event streams, per-DEX vault parsing, and a unified adapter interface mean you write the logic — outsmart handles the protocol plumbing across 18 DEXes.
 
@@ -296,134 +296,12 @@ outsmart create-damm-config-pool --base <MINT> --base-amount 1000000 --quote-amo
 
 ### Perpetual Futures (Percolator)
 
-Create and operate on-chain perpetual futures exchanges. All prices in USD, all amounts in SOL.
-
-#### perp create-market
-
-Create a new perp market. You become the admin/oracle authority.
+> ⚠️ Work in progress — currently devnet only. See [PERCOLATOR.md](./PERCOLATOR.md) for full CLI reference and programmatic API.
 
 ```bash
 outsmart perp create-market --price 150 --lp 2
-outsmart perp create-market --price 0.00001 --lp 5 --tier medium --network mainnet
-```
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--price <usd>` | Initial oracle price in USD (required) | |
-| `--lp <sol>` | Initial LP collateral in SOL (required) | |
-| `--tier <size>` | `small` \| `medium` \| `large` | `small` |
-| `--network <net>` | `devnet` \| `mainnet` | `devnet` |
-
-#### perp long / short
-
-Open a leveraged position.
-
-```bash
-outsmart perp long  -m <MARKET> -s 0.1
-outsmart perp short -m <MARKET> -s 0.05
-```
-
-| Flag | Description |
-|------|-------------|
-| `-m, --market <address>` | Market (slab) address (required) |
-| `-s, --size <sol>` | Position size in SOL (required) |
-
-#### perp close
-
-Close your open position.
-
-```bash
-outsmart perp close -m <MARKET>
-```
-
-#### perp status
-
-View your position and market state.
-
-```bash
-outsmart perp status -m <MARKET>
-```
-
-#### perp deposit / withdraw
-
-Manage collateral in your trading account.
-
-```bash
-outsmart perp deposit  -m <MARKET> -a 1.0
-outsmart perp withdraw -m <MARKET> -a 0.5
-outsmart perp withdraw -m <MARKET> -a all
-```
-
-#### perp init-user
-
-Register a trading account on a market (required before first deposit/trade).
-
-```bash
-outsmart perp init-user -m <MARKET>
-```
-
-#### perp set-price
-
-Push a new oracle price (admin-oracle markets only).
-
-```bash
-outsmart perp set-price -m <MARKET> --price 155.50
-```
-
-#### perp crank
-
-Run the permissionless keeper crank (updates funding rates).
-
-```bash
-outsmart perp crank -m <MARKET>
-```
-
-#### perp keeper
-
-Start the WebSocket oracle keeper — watches DEX pool accounts in real-time and pushes prices to your market.
-
-```bash
-# Single pool
+outsmart perp long -m <MARKET> -s 0.1
 outsmart perp keeper --pool <POOL> --market <MARKET> --dex raydium-cpmm
-
-# Multi-pool config
-outsmart perp keeper --config ~/.outsmart/keeper.json
-```
-
-| Flag | Description |
-|------|-------------|
-| `-p, --pool <address>` | DEX pool address |
-| `-m, --market <address>` | Percolator market address |
-| `-d, --dex <type>` | DEX type (see supported list below) |
-| `-c, --config <path>` | JSON config for multi-pool mode |
-| `-n, --network <net>` | `devnet` \| `mainnet` (default: devnet) |
-
-Supported DEX types: `raydium-cpmm`, `raydium-amm-v4`, `raydium-clmm`, `raydium-launchlab`, `pumpswap`, `meteora-damm-v2`, `meteora-dbc`, `meteora-dlmm`
-
-Config format (`keeper.json`):
-```json
-[
-  { "pool": "<POOL>", "market": "<SLAB>", "dex": "raydium-cpmm", "network": "devnet" }
-]
-```
-
-#### perp grpc-keeper
-
-Same as `perp keeper` but uses Yellowstone gRPC (Geyser) instead of WebSocket. More reliable for production — handles reconnects and works with dedicated gRPC endpoints.
-
-```bash
-outsmart perp grpc-keeper --pool <POOL> --market <MARKET> --dex pumpswap
-```
-
-Requires `GRPC_URL` and `GRPC_XTOKEN` env vars.
-
-#### perp markets
-
-Discover all markets on-chain.
-
-```bash
-outsmart perp markets
-outsmart perp markets --network mainnet
 ```
 
 ---
@@ -531,108 +409,9 @@ All ✅ adapters confirmed on Solana mainnet with real transactions.
 
 ## Percolator — Permissionless Perpetual Futures
 
-Create and operate your own on-chain perpetual futures exchange on Solana. The `PercolatorAdapter` is a standalone class (not `IDexAdapter` — perps are fundamentally different from spot).
+> ⚠️ Work in progress — currently devnet only.
 
-### Why This Matters
-
-First mover creates the perp market for a trending token and captures ALL leveraged volume fees. Nobody else has done AI-operated perp exchanges yet. This is the Percolator alpha.
-
-### Quick Start (Programmatic API)
-
-```typescript
-import { PercolatorAdapter } from "outsmart";
-
-const percolator = new PercolatorAdapter();
-
-// 1. Create a perp market (devnet, BONK collateral, $1 initial price)
-const market = await percolator.createMarket({
-  collateralMint: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", // BONK
-  initialPriceE6: 1_000_000n, // $1.00
-  tier: "small",
-  network: "devnet",
-  lpCollateral: 1_000_000_000n, // 1B BONK for LP
-});
-console.log("Market:", market.slabAddress);
-
-// 2. Register a trader
-const { userIdx } = await percolator.initUser(market.slabAddress, "devnet");
-
-// 3. Deposit collateral
-await percolator.deposit(market.slabAddress, userIdx, 500_000_000n, "devnet");
-
-// 4. Open a long position (positive size = long, negative = short)
-await percolator.trade({
-  slabAddress: market.slabAddress,
-  userIdx,
-  lpIdx: market.lpIndex,
-  size: 100_000_000n, // long 100M units
-  network: "devnet",
-});
-
-// 5. Push oracle price (admin-oracle mode)
-await percolator.pushOraclePrice(market.slabAddress, 1_100_000n, "devnet"); // $1.10
-
-// 6. Read market state
-const state = await percolator.getMarketState(market.slabAddress, "devnet");
-console.log("Open interest:", state.engine.openInterestLong);
-
-// 7. Check your position
-const pos = await percolator.getMyPosition(market.slabAddress, "devnet");
-console.log("PnL:", pos?.account.unrealizedPnl);
-```
-
-### PercolatorAdapter Methods (20)
-
-| Method | Description |
-|--------|-------------|
-| `createMarket(params)` | Full 10-step market creation (slab → init → oracle → crank → vAMM → LP) |
-| `initUser(slab, network?, tier?)` | Register a trader account, returns assigned index |
-| `deposit(slab, idx, amount, network?, tier?)` | Deposit collateral |
-| `withdraw(slab, idx, amount, network?, tier?)` | Withdraw collateral |
-| `trade(params)` | Open/close/modify positions via TradeCpi |
-| `closeAccount(slab, idx, network?, tier?)` | Close account and recover rent |
-| `crank(slab, network?, tier?)` | Permissionless keeper crank |
-| `pushOraclePrice(slab, priceE6, network?, tier?)` | Update oracle price (admin only) |
-| `liquidate(slab, targetIdx, network?, tier?)` | Permissionless liquidation |
-| `createInsuranceMint(slab, network?, tier?)` | One-time insurance LP mint creation |
-| `depositInsuranceLP(slab, amount, network?, tier?)` | Deposit into insurance fund |
-| `withdrawInsuranceLP(slab, lpAmount, network?, tier?)` | Withdraw from insurance fund |
-| `getMarketState(slab, network?)` | Read full slab state (header, config, engine, params, accounts) |
-| `getMyPosition(slab, network?)` | Find user's account by owner pubkey |
-| `discoverMarkets(network?)` | Find all markets across all program tiers |
-| `adminForceClose(slab, targetIdx, network?, tier?)` | Admin force-close a position |
-| `resolveMarket(slab, network?, tier?)` | Resolve/freeze market (admin only) |
-| `withdrawInsurance(slab, network?, tier?)` | Withdraw insurance fund balance |
-| `closeSlab(slab, network?, tier?)` | Close slab account and recover rent |
-| `teardownMarket(slab, network?, tier?)` | Full teardown: resolve → force-close all → withdraw → close |
-
-### Math Utilities
-
-Exported for PnL calculation, risk analysis, and pre-trade simulation:
-
-```typescript
-import {
-  computeMarkPnl,
-  computeLiqPrice,
-  computePreTradeLiqPrice,
-  computeTradingFee,
-  computePnlPercent,
-  computeEstimatedEntryPrice,
-  computeFundingRateAnnualized,
-  computeRequiredMargin,
-  computeMaxLeverage,
-  computeVammQuote,
-} from "outsmart";
-```
-
-### Deployed Programs
-
-| Tier | Devnet | Mainnet |
-|------|--------|---------|
-| Small | `FxfD37s1AZTeWfFQps9Zpebi2dNQ9QSSDtfMKdbsfKrD` | `GM8zjJ8LTBMv9xEsverh6H6wLyevgMHEJXcEzyY3rY24` |
-| Medium | `FwfBKZXbYr4vTK23bMFkbgKq3npJ3MSDxEaKmq9Aj4Qn` | — |
-| Large | `g9msRSV3sJmmE3r5Twn9HuBsxzuuRGTjKCVTKudm9in` | — |
-| Matcher | `4HcGCsyjAqnFua5ccuXyt8KRRQzKFbGTJkVChpS7Yfzy` | `DHP6DtwXP1yJsz8YzfoeigRFPB979gzmumkmCxDLSkUX` |
+See **[PERCOLATOR.md](./PERCOLATOR.md)** for the full CLI reference, programmatic API, method list, deployed program addresses, and testing guide.
 
 ---
 
@@ -869,7 +648,7 @@ Set any provider's API key and it's automatically enabled. The orchestrator send
 | `DEFAULT_TIP_SOL` | MEV tip in SOL | `0.001` |
 | `DEFAULT_SLIPPAGE_BPS` | Slippage in basis points | `300` |
 | `DEFAULT_PRIORITY_FEE` | Priority fee in microLamports per CU | `4000` |
-| `DEVNET_ENDPOINT` | Solana devnet RPC endpoint (for Percolator) | not set |
+| `DEVNET_ENDPOINT` | Solana devnet RPC endpoint (for [Percolator](./PERCOLATOR.md)) | not set |
 | `JUPITER_API_KEY` | Jupiter Ultra API key ([portal.jup.ag](https://portal.jup.ag)) | works without key |
 | `DFLOW_API_KEY` | DFlow intent API key ([pond.dflow.net](https://pond.dflow.net/build/api-key)) | required for dflow |
 | `GRPC_URL` | Yellowstone gRPC endpoint (for gRPC keeper) | not set |
@@ -930,10 +709,10 @@ npm run test:orca        # Orca Whirlpool (mainnet)
 npm run test:clmm        # Byreal + PancakeSwap CLMM (mainnet)
 npm run test:fusion      # Fusion + Futarchy AMM (mainnet)
 npm run test:api         # Jupiter Ultra + DFlow (mainnet)
-npm run test:percolator  # Percolator perps (devnet)
+npm run test:percolator  # Percolator perps (devnet) — see PERCOLATOR.md
 ```
 
-Mainnet tests require `PRIVATE_KEY` and `MAINNET_ENDPOINT` env vars. Percolator tests require `DEVNET_ENDPOINT`. Tests use tiny amounts (0.002 SOL per buy). Run suites one at a time — tests share a wallet and cannot run in parallel.
+Mainnet tests require `PRIVATE_KEY` and `MAINNET_ENDPOINT` env vars. Tests use tiny amounts (0.002 SOL per buy). Run suites one at a time — tests share a wallet and cannot run in parallel.
 
 ---
 
