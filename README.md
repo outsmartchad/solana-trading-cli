@@ -393,14 +393,6 @@ outsmart balance --token <MINT>
 
 ### Utilities
 
-#### info
-
-Fetch token market data from DexScreener.
-
-```bash
-outsmart info --token <MINT>
-```
-
 #### list-dex
 
 List all registered DEX adapters and their capabilities.
@@ -672,7 +664,7 @@ await manager.stop();
 
 **Risk management** — Estimates impermanent loss from entry price; exits position if IL exceeds threshold. Optional stop-loss exits on price drops.
 
-**Pool selector** — Scores Meteora pools from DexScreener data by volume/TVL ratio, estimated fee APR, TVL sweet spot ($10k-$1M), and pool age. Returns ranked results.
+**Pool selector** — Scores Meteora pools by volume/TVL ratio, estimated fee APR, TVL sweet spot ($10k-$1M), and pool age. Returns ranked results.
 
 ---
 
@@ -764,7 +756,7 @@ src/
 │   ├── types.ts           # Config, strategy, position state types
 │   ├── monitor.ts         # Position monitoring (poll + stream hybrid)
 │   ├── risk.ts            # IL threshold, stop-loss exit
-│   ├── pool-selector.ts   # DexScreener-based pool scoring
+│   ├── pool-selector.ts   # Pool scoring by volume/TVL/APR
 │   └── strategies/
 │       ├── dlmm-strategy.ts  # DLMM rebalance + compound
 │       └── damm-strategy.ts  # DAMM v2 compound
@@ -777,7 +769,6 @@ src/
 │   ├── subscriptions.ts   # 11 subscription preset builders
 │   ├── discriminators.ts  # Instruction discriminator constants
 │   └── types.ts           # Typed event interfaces
-├── dexscreener/           # Market data (DexScreener API)
 ├── helpers/
 │   ├── config.ts          # Wallet, connection, env loading
 │   ├── wallets.ts         # Multi-wallet management

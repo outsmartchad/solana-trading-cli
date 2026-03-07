@@ -127,8 +127,7 @@ export {
 } from "./transactions/send-rpc";
 export type { SendRpcOptions, SendRpcResult, SendLegacyTxOptions } from "./transactions/send-rpc";
 
-// DexScreener utility
-export { getInfoFromDexscreener } from "./dexscreener/info";
+
 
 // Event Streaming Engine
 export { EventStream, WsEventStream } from "./streaming";

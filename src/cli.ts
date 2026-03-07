@@ -1676,37 +1676,6 @@ program
   });
 
 // ---------------------------------------------------------------------------
-// outsmart info
-// ---------------------------------------------------------------------------
-
-program
-  .command("info")
-  .description("Show token info from DexScreener")
-  .requiredOption("-t, --token <mint>", "token mint address")
-  .action(async (cmdOpts) => {
-    const { getInfoFromDexscreener } = await import("./dexscreener/info");
-    const info = await getInfoFromDexscreener(cmdOpts.token);
-
-    console.log();
-    console.log(`  name:       ${info.name}`);
-    console.log(`  address:    ${info.address}`);
-    console.log(`  price:      $${info.priceInUSD}`);
-    console.log(`  mcap:       $${Number(info.marketCap).toLocaleString()}`);
-    console.log(`  age:        ${info.pairAge}`);
-    console.log(`  liq (SOL):  ${info.liquidityInSOL}`);
-    console.log(`  pool:       ${info.poolId}`);
-    console.log();
-    console.log(`  vol 5m/1h/6h/24h:    ${info.volume5m} / ${info.volume1h} / ${info.volume6h} / ${info.volume24h}`);
-    console.log(`  buyers 5m/1h/6h/24h: ${info.buyers5m} / ${info.buyers1h} / ${info.buyers6h} / ${info.buyers24h}`);
-    console.log();
-    if (info.dexscreenerURL) console.log(`  dexscreener: ${info.dexscreenerURL}`);
-    if (info.twitterURL) console.log(`  twitter:     ${info.twitterURL}`);
-    if (info.telegramURL) console.log(`  telegram:    ${info.telegramURL}`);
-    if (info.websiteURL) console.log(`  website:     ${info.websiteURL}`);
-    console.log();
-  });
-
-// ---------------------------------------------------------------------------
 // outsmart perp — Percolator perpetual futures
 // ---------------------------------------------------------------------------
 
