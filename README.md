@@ -664,7 +664,7 @@ await manager.stop();
 
 ## TX Landing Providers
 
-12 providers with concurrent, race, random, and sequential submission strategies:
+13 providers with concurrent, race, random, and sequential submission strategies:
 
 | Provider | Env Var |
 |----------|---------|
@@ -680,6 +680,7 @@ await manager.stop();
 | Stellium | `STELLIUM_API_KEY` |
 | Flashblock | `FLASHBLOCK_API_KEY` |
 | Node1 | `NODE1_API_KEY` |
+| OrbitFlare Apex | `APEX_API_KEY` (optional `APEX_REGION`, default `global`) |
 
 Set any provider's API key and it's automatically enabled. The orchestrator sends your transaction through all enabled providers simultaneously for the fastest possible landing.
 
@@ -773,7 +774,7 @@ src/
         ├── orchestrator.ts    # Multi-provider concurrent submission
         ├── nonce-manager.ts   # Durable nonce for dedup
         ├── tip-accounts.ts    # Tip account registry
-        └── providers/         # 12 provider implementations
+        └── providers/         # 13 provider implementations
 ```
 
 ## Discord

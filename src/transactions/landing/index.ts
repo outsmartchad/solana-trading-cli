@@ -55,3 +55,4 @@ export { createProvider as createFlashblockProvider } from "./providers/flashblo
 export { createProvider as createJitoProvider } from "./providers/jito";
 export { createProvider as createNextblockProvider } from "./providers/nextblock";
 export { createProvider as createSoyasProvider } from "./providers/soyas";
+export { createProvider as createApexProvider } from "./providers/apex";

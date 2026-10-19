@@ -1483,6 +1483,8 @@ configCmd
       "STELLIUM_API_KEY",
       "FLASHBLOCK_API_KEY",
       "NODE1_API_KEY",
+      "APEX_API_KEY",
+      "APEX_REGION",
       "TX_LANDING_MODE",
       "TX_LANDING_PROVIDERS",
       "DEFAULT_TIP_SOL",
@@ -1535,6 +1537,8 @@ SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
 # STELLIUM_API_KEY=
 # FLASHBLOCK_API_KEY=
 # NODE1_API_KEY=
+# APEX_API_KEY=
+# APEX_REGION=global      # global|fra|ams|dub|lon|nyc|slc|sgp|tyo|sqq
 
 # ─── TX Landing Strategy ───
 # TX_LANDING_MODE=race          # concurrent|race|random|sequential
@@ -1641,6 +1645,8 @@ program
       "# STELLIUM_API_KEY=",
       "# FLASHBLOCK_API_KEY=",
       "# NODE1_API_KEY=",
+      "# APEX_API_KEY=",
+      "# APEX_REGION=global",
       "",
       "# ─── Trading Defaults (optional) ───",
       "# TX_LANDING_MODE=concurrent",
