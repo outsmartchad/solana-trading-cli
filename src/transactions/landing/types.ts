@@ -2,8 +2,8 @@
  * TX Landing Layer — Shared Types & Interfaces
  *
  * This module defines the provider interface and shared types used by
- * all 12+ TX landing providers (0slot, nozomi, helius-sender, blockrazor,
- * node1.me, bloXroute, astralane, stellium, flashblock, jito, nextblock, soyas).
+ * all 13 TX landing providers (0slot, nozomi, helius-sender, blockrazor,
+ * node1.me, bloXroute, astralane, stellium, flashblock, jito, nextblock, soyas, apex).
  *
  * Each provider implements ILandingProvider. The orchestrator calls them
  * using a uniform interface — no provider-specific logic leaks out.

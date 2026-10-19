@@ -124,6 +124,18 @@ export const TIP_ACCOUNTS: readonly TipAccount[] = [
   { provider: "soyas", address: "soyascXFW5wEEYiwfEmHy2pNwomqzvggJosGVD6TJdY" },
   { provider: "soyas", address: "soyasDBdKjADwPz3xk82U3TNPRDKEWJj7wWLajNHZ1L" },
   { provider: "soyas", address: "soyasE2abjBAynmHbGWgEwk4ctBy7JMTUCNrMbjcnyH" },
+
+  // apex
+  { provider: "apex", address: "APeX2oLtjYehgTMUCA971L8htM7tGNqsXHDz5NrivhhX" },
+  { provider: "apex", address: "APeXAKT6spXSmU3uRv2MoEgQ7ckhAS4nexTgaxwLEfJ9" },
+  { provider: "apex", address: "APeXB4mu1X7BSjwyPtiNUnKyhvc4wrq5SKEdmnPKWR95" },
+  { provider: "apex", address: "APeXJTSGoxLWmwb9o1tiiEL5RXVUakazYgjLmZdDc2Ef" },
+  { provider: "apex", address: "APeXUUaKFfPXjPxKHEdwCsJ4BfTuGg4qnVQyJE9K37PU" },
+  { provider: "apex", address: "APeXVWXKDRAAujckMjmMsV61a4DQiXa98MPUAkL46sim" },
+  { provider: "apex", address: "APeXW6PKFZRDz7WXBBybBMcoJaQo97UtLa5TAQnchNBY" },
+  { provider: "apex", address: "APeXZuKaKuqouyfU8fFL1woeWvSEVFkY4EMrmkvbfhhD" },
+  { provider: "apex", address: "APeXbYdbmrYWsastf6GurexGe3dwnuWKLD2mcsDoEuBU" },
+  { provider: "apex", address: "APeXn29deoxpsZz6r7n63Ymmv2skBr3WhKYLB1mB2fR7" },
 ] as const;
 
 /**

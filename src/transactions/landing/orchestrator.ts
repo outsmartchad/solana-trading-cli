@@ -37,6 +37,7 @@ import { createProvider as createFlashblock } from "./providers/flashblock";
 import { createProvider as createJito } from "./providers/jito";
 import { createProvider as createNextblock } from "./providers/nextblock";
 import { createProvider as createSoyas } from "./providers/soyas";
+import { createProvider as createApex } from "./providers/apex";
 
 // ---------------------------------------------------------------------------
 // Provider registry
@@ -55,12 +56,13 @@ const PROVIDER_FACTORIES: Record<string, () => ILandingProvider> = {
   "jito": createJito,
   "nextblock": createNextblock,
   "soyas": createSoyas,
+  "apex": createApex,
 };
 
 /** Default providers for concurrent snipe submission (matches source orchestrator) */
 const DEFAULT_SNIPE_PROVIDERS = [
   "zero-slot", "nozomi", "helius-sender", "astralane",
-  "stellium", "blockrazor", "flashblock", "node1", "soyas",
+  "stellium", "blockrazor", "flashblock", "node1", "soyas", "apex",
 ];
 
 /** Default providers for random pick strategy */
